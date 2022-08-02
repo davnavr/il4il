@@ -1,0 +1,9 @@
+[package]
+name = "il4il"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.62"
+
+[dependencies]
+rustc-hash = "1.1.0"
+thiserror = "1.0.30"
