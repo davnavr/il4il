@@ -18,15 +18,15 @@ use std::cmp::{Ord, PartialOrd};
 use std::fmt::{Debug, Display, Formatter};
 use std::num::{NonZeroU32, NonZeroU8};
 
-/// Error type when the indicated length of an integer is too large.
-#[derive(Clone, Debug, thiserror::Error)]
+/// Error type when the indicated length of an integer is invalid.
+#[derive(Clone, Debug, thiserror::Error, Eq, PartialEq)]
 #[error("integers of byte length {length} are not supported by SAILAR")]
 pub struct LengthError {
     length: u8,
 }
 
 /// Error type used when an attempt to store an integer value fails.
-#[derive(Clone, Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error, Eq, PartialEq)]
 #[error("integer too large to be encoded")]
 pub struct EncodingError(());
 
@@ -383,6 +383,20 @@ impl VarI28 {
         })
     }
 
+    /// Creates a new signed integer, returning `None` if the value cannot fit in 28 bits.
+    #[must_use]
+    pub const fn new(value: i32) -> Option<Self> {
+        let bytes = value as u32;
+        if bytes & Self::UNUSED_BITS == 0 {
+            Some(unsafe {
+                // Safety: Validation is performed above
+                Self::new_unchecked(value)
+            })
+        } else {
+            None
+        }
+    }
+
     /// Creates a signed integer from an unsigned byte value.
     ///
     /// # Example
@@ -393,6 +407,7 @@ impl VarI28 {
     /// assert_eq!(VarI28::from_u8(u8::MIN), VarI28::ZERO);
     /// assert_eq!(VarI28::from_u8(u8::MAX).get(), u8::MAX.into());
     /// ```
+    #[must_use]
     pub const fn from_u8(value: u8) -> Self {
         unsafe {
             // Safety: Unsigned byte is always valid
@@ -410,6 +425,7 @@ impl VarI28 {
     /// assert_eq!(VarI28::from_u16(u16::MIN), VarI28::ZERO);
     /// assert_eq!(VarI28::from_u16(u16::MAX).get(), u16::MAX.into());
     /// ```
+    #[must_use]
     pub const fn from_u16(value: u16) -> Self {
         unsafe {
             // Safety: Unsigned 16-bit integer is always valid
@@ -428,6 +444,7 @@ impl VarI28 {
     /// assert_eq!(VarI28::from_i8(i8::MIN).get(), i8::MIN.into());
     /// assert_eq!(VarI28::from_i8(i8::MAX).get(), i8::MAX.into());
     /// ```
+    #[must_use]
     pub const fn from_i8(value: i8) -> Self {
         let b = value as u8;
         if b & 0x80u8 == 0 {
@@ -451,6 +468,7 @@ impl VarI28 {
     /// assert_eq!(VarI28::from_i16(i16::MIN).get(), i16::MIN.into());
     /// assert_eq!(VarI28::from_i16(i16::MAX).get(), i16::MAX.into());
     /// ```
+    #[must_use]
     pub const fn from_i16(value: i16) -> Self {
         let b = value as u16;
         if b & 0x8000u16 == 0 {
@@ -584,10 +602,76 @@ impl VarI28 {
         value as i32
     }
 
+    /// Returns a value representing the sign of `self`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::integer::VarI28;
+    /// assert_eq!(VarI28::from_i8(55).signum(), 1);
+    /// assert_eq!(VarI28::ZERO.signum(), 0);
+    /// assert_eq!(VarI28::from_i8(-55).signum(), -1);
+    /// ```
+    #[must_use]
+    pub const fn signum(self) -> i8 {
+        if self.0.get() & Self::SIGN_BIT != 0 {
+            -1
+        } else if self.0.get() == 0 {
+            0
+        } else {
+            1
+        }
+    }
+
     /// Gets the number of bytes needed to contain this signed integer value.
     #[must_use]
-    pub const fn byte_length(self) -> NonZeroU8 {
-        todo!()
+    pub fn byte_length(self) -> NonZeroU8 {
+        // Safety: Sizes are guaranteed to not be zero.
+        unsafe {
+            NonZeroU8::new_unchecked(if self >= Self::MIN_1 && self <= Self::MAX_1 {
+                1
+            } else if self >= Self::MIN_2 && self <= Self::MAX_2 {
+                2
+            } else if self >= Self::MIN_3 && self <= Self::MAX_3 {
+                3
+            } else if self >= Self::MIN_4 && self <= Self::MAX_4 {
+                4
+            } else {
+                unreachable!("value is not valid")
+            })
+        }
+    }
+
+    pub fn write_to<W: std::io::Write>(self, mut destination: W) -> std::io::Result<()> {
+        let value = self.get();
+        match self.byte_length().get() {
+            1 if self.signum() != -1 => destination.write_all(&[value as u8]),
+            1 => destination.write_all(&[(value as u8) & 0b0111_1111u8]),
+            2 if self.signum() != -1 => {
+                todo!()
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    /// Returns a `Vec` containing the representation of `self`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::integer::VarI28;
+    /// assert_eq!(VarI28::ZERO.into_vec(), &[0u8]);
+    /// assert_eq!(VarI28::from_i8(5).into_vec(), &[5u8]);
+    /// assert_eq!(VarI28::from_i8(-5).into_vec(), &[0x7Bu8]);
+    /// assert_eq!(VarI28::from_i8(64).into_vec(), &[0xC0, 0u8]);
+    /// assert_eq!(VarI28::MAX_2.into_vec(), &[0xFF, 0x3Fu8]);
+    /// assert_eq!(VarI28::from_i8(-64).into_vec(), &[5u8]);
+    /// todo!()
+    /// ```
+    pub fn into_vec(self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(1);
+        self.write_to(&mut bytes).unwrap();
+        bytes
     }
 }
 
