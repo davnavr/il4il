@@ -1,8 +1,5 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
+//! INSERT COMMENT HERE
+
+#![deny(unsafe_op_in_unsafe_fn)]
+
+pub mod identifier;
