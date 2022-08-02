@@ -1,10 +1,9 @@
 //! Module for manipulating SAILAR identifier strings.
-///
-/// [`Id`] is to [`Identifier`] as [`str`] is to [`String`].
-
-use std::fmt::{Debug, Display, Formatter};
 use std::borrow::{Borrow, ToOwned};
 use std::convert::AsRef;
+///
+/// [`Id`] is to [`Identifier`] as [`str`] is to [`String`].
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 
 /// The error type used to indicate that a string is not a valid SAILAR identifier.
@@ -59,22 +58,21 @@ impl Id {
     }
 
     /// Attempts to create a reference to an identifier string.
-    /// 
+    ///
     /// If an owned [`Identifier`] is needed, use [`Identifier::from_string`] or [`Identifier::from_str`] instead.
     ///
     /// # Errors
     ///
     /// If the string is empty or contains a `NUL` character, then an error is returned.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
-    /// # use il4il::identifier::*; 
+    /// # use il4il::identifier::*;
     /// assert_eq!(Id::from_str("very_very_long_function_name").map(Id::as_str), Ok("very_very_long_function_name"));
     /// assert_eq!(Id::from_str(""), Err(InvalidError::Empty));
     /// assert_eq!(Id::from_str("\0"), Err(InvalidError::ContainsNull));
     /// ```
-    #[must_use]
     pub fn from_str(identifier: &str) -> Result<&Id, InvalidError> {
         if identifier.is_empty() {
             Err(InvalidError::Empty)
@@ -87,15 +85,14 @@ impl Id {
     }
 
     /// Converts a slice of bytes into a SAILAR identifier string.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
-    /// # use il4il::identifier::*; 
+    /// # use il4il::identifier::*;
     /// assert!(Id::from_utf8(&[]).is_err());
     /// assert!(Id::from_utf8(&[0u8]).is_err());
     /// ```
-    #[must_use]
     pub fn from_utf8(bytes: &[u8]) -> Result<&Id, ParseError> {
         Ok(Self::from_str(std::str::from_utf8(bytes)?)?)
     }
@@ -118,7 +115,7 @@ impl Id {
 
 impl Deref for Id {
     type Target = str;
-    
+
     #[inline]
     fn deref(&self) -> &str {
         self.as_str()
@@ -209,7 +206,6 @@ impl Identifier {
     /// # Errors
     ///
     /// If the string is empty or contains a `NUL` character, then an error is returned.
-    #[must_use]
     pub fn from_str(identifier: &str) -> Result<Self, InvalidError> {
         Id::from_str(identifier).map(Id::to_identifier)
     }
@@ -219,7 +215,6 @@ impl Identifier {
     /// # Errors
     ///
     /// If the string is empty or contains a `NUL` character, then an error is returned.
-    #[must_use]
     pub fn from_string(identifier: String) -> Result<Self, InvalidError> {
         Id::from_str(&identifier)?;
         Ok(Self(identifier))
@@ -239,15 +234,14 @@ impl Identifier {
     /// # Errors
     ///
     /// If the string is empty or contains a `NUL` character, then an error is returned.
-    #[must_use]
     pub fn from_boxed_str(identifier: Box<str>) -> Result<Self, InvalidError> {
         Self::from_string(identifier.into())
     }
 
     /// Appends an identifier string to the end of this identifier.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// # use il4il::identifier::*;
     /// let mut id = Identifier::from_str("MyName").unwrap();
