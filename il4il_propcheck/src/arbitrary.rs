@@ -109,10 +109,28 @@ impl Arb for char {
     type Shrinker = CharShrinker;
 
     fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self {
-        gen.source().gen()
+        if gen.source().gen_bool(66.0) {
+            gen.source().gen_range(' '..'~')
+        } else {
+            gen.source().gen()
+        }
     }
 
     fn shrink(self) -> Self::Shrinker {
         CharShrinker::new(self)
+    }
+}
+
+impl Arb for String {
+    type Shrinker = std::iter::Empty<String>;
+
+    fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self {
+        let maximum = gen.size();
+        let count = gen.source().gen_range(0..maximum);
+        (0..count).map(|_| char::arbitrary(gen)).collect()
+    }
+
+    fn shrink(self) -> Self::Shrinker {
+        std::iter::empty()
     }
 }
