@@ -92,7 +92,6 @@ impl SupportedFormat {
     /// # use il4il::versioning::{Format, SupportedFormat};
     /// assert!(SupportedFormat::new(Format::new(0, 0)).is_err());
     /// ```
-    #[must_use]
     pub fn new(version: Format) -> Result<Self, UnsupportedFormatError> {
         if version >= Self::MINIMUM.0 && version <= Self::CURRENT.0 {
             Ok(Self(version))
