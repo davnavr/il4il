@@ -1,5 +1,5 @@
 //! Module for manipulating IL4IL identifier strings.
-//! 
+//!
 //! For more information, see the documentation for [`Id`].
 
 use std::borrow::{Borrow, ToOwned};
