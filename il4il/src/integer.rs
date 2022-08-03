@@ -465,9 +465,9 @@ impl VarI28 {
     /// ```
     /// # use il4il::integer::VarI28;
     /// assert!(VarI28::MAX_1 < VarI28::MAX_2);
-    /// assert_eq!(VarI28::MAX_2.get(), 16383);
+    /// assert_eq!(VarI28::MAX_2.get(), 8191);
     /// ```
-    pub const MAX_2: Self = Self::from_u16(0b0011_1111_1111_1111u16);
+    pub const MAX_2: Self = Self::from_u16(0b0001_1111_1111_1111u16);
 
     /// The minimum negative value that can be encoded in two bytes.
     ///
@@ -476,9 +476,9 @@ impl VarI28 {
     /// ```
     /// # use il4il::integer::VarI28;
     /// assert!(VarI28::MIN_2 < VarI28::MIN_1);
-    /// assert_eq!(VarI28::MIN_2.get(), -16384);
+    /// assert_eq!(VarI28::MIN_2.get(), -8192);
     /// ```
-    pub const MIN_2: Self = Self::from_i16(0xC000u16 as i16);
+    pub const MIN_2: Self = Self::from_i16(0b1110_0000_0000_0000u16 as i16);
 
     /// The maximum positive value that can be encoded in three bytes.
     ///
@@ -487,9 +487,9 @@ impl VarI28 {
     /// ```
     /// # use il4il::integer::VarI28;
     /// assert!(VarI28::MAX_2 < VarI28::MAX_3);
-    /// assert_eq!(VarI28::MAX_3.get(), 2097151);
+    /// assert_eq!(VarI28::MAX_3.get(), 1048575);
     /// ```
-    pub const MAX_3: Self = Self::new(0x001F_FFFFi32);
+    pub const MAX_3: Self = Self::new(0x000F_FFFFi32);
 
     /// The minimum negative value that can be encoded in three bytes.
     ///
@@ -498,9 +498,9 @@ impl VarI28 {
     /// ```
     /// # use il4il::integer::VarI28;
     /// assert!(VarI28::MIN_3 < VarI28::MIN_2);
-    /// assert_eq!(VarI28::MIN_3.get(), -2097152);
+    /// assert_eq!(VarI28::MIN_3.get(), -1048576);
     /// ```
-    pub const MIN_3: Self = Self::new(0x0FE0_0000u32 as i32);
+    pub const MIN_3: Self = Self::new(0x0FF0_0000u32 as i32);
 
     /// The maximum positive value that can be encoded in four bytes.
     ///
@@ -535,27 +535,6 @@ impl VarI28 {
         value as i32
     }
 
-    /// Returns a value representing the sign of `self`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use il4il::integer::VarI28;
-    /// assert_eq!(VarI28::from_i8(55).signum(), 1);
-    /// assert_eq!(VarI28::ZERO.signum(), 0);
-    /// assert_eq!(VarI28::from_i8(-55).signum(), -1);
-    /// ```
-    #[must_use]
-    pub const fn signum(self) -> i8 {
-        if self.0.get() & Self::SIGN_BIT != 0 {
-            -1
-        } else if self.0.get() == 0 {
-            0
-        } else {
-            1
-        }
-    }
-
     /// Gets the number of bytes needed to contain this signed integer value.
     #[must_use]
     pub fn byte_length(self) -> NonZeroU8 {
@@ -575,15 +554,15 @@ impl VarI28 {
         }
     }
 
+    /// Writes a signed variable-length integer value.
     pub fn write_to<W: std::io::Write>(self, mut destination: W) -> std::io::Result<()> {
         let value = self.get();
-        todo!("low bits should contain len");
+        // Note that the sign bit is already correct
         match self.byte_length().get() {
-            1 if self.signum() != -1 => destination.write_all(&[value as u8]),
-            1 => destination.write_all(&[(value as u8) & 0b0111_1111u8]),
-            2 if self.signum() != -1 => {
-                todo!()
-            }
+            1 => destination.write_all(&[(value as u8) << 1]),
+            2 => destination.write_all(&(((value as u16) << 2) | 1u16).to_le_bytes()),
+            3 => destination.write_all(&(((value as u32) << 3) | 0b11u32).to_le_bytes()[0..3]),
+            4 => destination.write_all(&(((value as u32) << 4) | 0b111u32).to_le_bytes()),
             _ => unreachable!(),
         }
     }
@@ -594,13 +573,19 @@ impl VarI28 {
     ///
     /// ```
     /// # use il4il::integer::VarI28;
-    /// assert_eq!(VarI28::ZERO.into_vec(), &[0u8]);
-    /// assert_eq!(VarI28::from_i8(5).into_vec(), &[5u8]);
-    /// assert_eq!(VarI28::from_i8(-5).into_vec(), &[0x7Bu8]);
-    /// assert_eq!(VarI28::from_i8(64).into_vec(), &[0xC0, 0u8]);
-    /// assert_eq!(VarI28::MAX_2.into_vec(), &[0xFF, 0x3Fu8]);
-    /// assert_eq!(VarI28::from_i8(-64).into_vec(), &[5u8]);
-    /// todo!()
+    /// assert_eq!(VarI28::ZERO.into_vec(), &[0]);
+    /// assert_eq!(VarI28::from_i8(5).into_vec(), &[0b0000_1010]);
+    /// assert_eq!(VarI28::from_i8(-5).into_vec(), &[0b1111_0110]);
+    /// assert_eq!(VarI28::from_i8(64).into_vec(), &[1, 1]);
+    /// assert_eq!(VarI28::from_i8(-64).into_vec(), &[0b1000_0000]);
+    /// assert_eq!(VarI28::MAX_1.into_vec(), &[0b0111_1110]);
+    /// assert_eq!(VarI28::MIN_1.into_vec(), &[0x80]);
+    /// assert_eq!(VarI28::MAX_2.into_vec(), &[0b1111_1101, 0x7F]);
+    /// assert_eq!(VarI28::MIN_2.into_vec(), &[0b0000_0001, 0x80]);
+    /// assert_eq!(VarI28::MAX_3.into_vec(), &[0b1111_1011, 0xFF, 0x7F]);
+    /// assert_eq!(VarI28::MIN_3.into_vec(), &[0b0000_0011, 0, 0x80]);
+    /// assert_eq!(VarI28::MAX_4.into_vec(), &[0b1111_0111, 0xFF, 0xFF, 0x7F]);
+    /// assert_eq!(VarI28::MIN_4.into_vec(), &[0b0000_0111, 0, 0, 0x80]);
     /// ```
     pub fn into_vec(self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(1);
