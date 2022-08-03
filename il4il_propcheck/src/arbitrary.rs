@@ -30,6 +30,15 @@ macro_rules! unsigned_integer_arb {
                 halved: $ty,
             }
 
+            impl $shrinker_name {
+                pub fn new(initial: $ty) -> Self {
+                    Self {
+                        current: initial,
+                        halved: initial / 2,
+                    }
+                }
+            }
+
             impl Iterator for $shrinker_name {
                 type Item = $ty;
 
@@ -52,10 +61,7 @@ macro_rules! unsigned_integer_arb {
                 }
 
                 fn shrink(&self) -> Self::Shrinker {
-                    Self::Shrinker {
-                        current: *self,
-                        halved: *self / 2,
-                    }
+                    Self::Shrinker::new(*self)
                 }
             }
         )*
