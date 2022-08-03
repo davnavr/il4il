@@ -109,7 +109,7 @@ impl Arb for char {
     type Shrinker = CharShrinker;
 
     fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self {
-        if gen.source().gen_bool(66.0) {
+        if gen.source().gen_bool(0.66) {
             gen.source().gen_range(' '..'~')
         } else {
             gen.source().gen()

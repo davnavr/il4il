@@ -343,4 +343,10 @@ mod tests {
             std::iter::empty()
         }
     }
+
+    propcheck::property! {
+        fn all_identifiers_are_valid(identifier: Identifier) {
+            propcheck::assertion!(Id::new(identifier.as_str()).is_ok())
+        }
+    }
 }

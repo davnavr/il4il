@@ -98,7 +98,7 @@ macro_rules! property {
     (fn $test_name:ident($input_name:ident: $input_type:ty) {
         $test:expr
     }) => {
-        property! {
+        $crate::property! {
             fn $test_name<$crate::setup::DefaultSetup>($input_name: $input_type) {
                 $test
             }
