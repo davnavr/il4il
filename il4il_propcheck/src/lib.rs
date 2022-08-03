@@ -15,6 +15,15 @@ fn test_runner<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> assertion::Assert
         Message(&'static str),
     }
 
+    impl Failure {
+        fn message(&self) -> &'static str {
+            match self {
+                Self::Panic(_) => "panic occured",
+                Self::Message(message) => message,
+            }
+        }
+    }
+
     fn run_test<I, F, R>(gen: &mut generator::Gen<'_, R>, test: &F) -> Result<(), (I, Failure)> where I: arbitrary::Arb, F: Fn(I) -> assertion::Assertion, R: rand::Rng + ?Sized {
         let value = I::arbitrary(gen);
         let assertion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -40,7 +49,7 @@ fn test_runner<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> assertion::Assert
     };
 
     if let Err(error) = failure {
-        
+        eprintln!("test failed with {:?}, {:?}", error.0, error.1.message());
         todo!("handle test failure")
     }
 }

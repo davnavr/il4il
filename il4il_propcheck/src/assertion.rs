@@ -11,7 +11,7 @@ macro_rules! assertion {
         if $e {
             Assertion::Success
         } else {
-            Assertion::Failure(stringify!($e))
+            Assertion::Failure(concat!("assertion failed: ", stringify!($e)))
         }
     };
 }
