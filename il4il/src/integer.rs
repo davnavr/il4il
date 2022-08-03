@@ -195,9 +195,7 @@ impl VarU28 {
     /// assert!(matches!(VarU28::read_from([0b0110_1100u8].as_slice()), Ok(Ok(n)) if n.get() == 0b0011_0110));
     /// assert!(matches!(VarU28::read_from([1u8].as_slice()), Err(_)));
     /// ```
-    pub fn read_from<R: std::io::Read>(
-        mut source: R,
-    ) -> std::io::Result<Result<Self, LengthError>> {
+    pub fn read_from<R: std::io::Read>(mut source: R) -> std::io::Result<Result<Self, LengthError>> {
         let mut buffer = [0u8; 4];
         source.read_exact(&mut buffer[0..1])?;
 
@@ -206,11 +204,7 @@ impl VarU28 {
             1 => source.read_exact(&mut buffer[1..2])?,
             2 => source.read_exact(&mut buffer[1..3])?,
             3 => source.read_exact(&mut buffer[1..4])?,
-            byte_length => {
-                return Ok(Err(LengthError {
-                    length: byte_length as u8,
-                }))
-            }
+            byte_length => return Ok(Err(LengthError { length: byte_length as u8 })),
         }
 
         Ok(Ok(Self::new(u32::from_le_bytes(buffer) >> 1)))
@@ -567,6 +561,17 @@ impl VarI28 {
         }
     }
 
+    /// Reads a variable-length signed integer value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::integer::VarI28;
+    /// ```
+    pub fn read_from<R: std::io::Read>(mut source: R) -> std::io::Result<Result<Self, LengthError>> {
+        todo!()
+    }
+
     /// Returns a `Vec` containing the representation of `self`.
     ///
     /// # Examples
@@ -630,23 +635,14 @@ mod tests {
 
     #[test]
     fn bitor() {
-        assert_eq!(
-            VarU28::from_u8(0b0110_1001) | VarU28::from_u8(0b0010),
-            VarU28::from_u8(0b0110_1011)
-        );
-        assert_eq!(
-            VarU28::from_u16(46) | VarU28::from_u8(92),
-            VarU28::from_u16(46u16 | 92u16)
-        );
+        assert_eq!(VarU28::from_u8(0b0110_1001) | VarU28::from_u8(0b0010), VarU28::from_u8(0b0110_1011));
+        assert_eq!(VarU28::from_u16(46) | VarU28::from_u8(92), VarU28::from_u16(46u16 | 92u16));
         assert_eq!(VarU28::MAX | VarU28::MIN, VarU28::MAX);
     }
 
     #[test]
     fn bitand() {
-        assert_eq!(
-            VarU28::from_u16(543) & VarU28::from_u16(63),
-            VarU28::from_u16(543u16 & 63)
-        );
+        assert_eq!(VarU28::from_u16(543) & VarU28::from_u16(63), VarU28::from_u16(543u16 & 63));
         assert_eq!(VarU28::MAX & VarU28::MIN, VarU28::MIN);
     }
 }
