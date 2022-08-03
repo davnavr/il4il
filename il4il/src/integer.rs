@@ -567,9 +567,58 @@ impl VarI28 {
     ///
     /// ```
     /// # use il4il::integer::VarI28;
+    /// assert_eq!(VarI28::read_from([0].as_slice()).unwrap(), Ok(VarI28::ZERO));
+    /// assert_eq!(VarI28::read_from([0b1100].as_slice()).unwrap().unwrap().get(), 6);
+    /// assert_eq!(VarI28::read_from([0b1111_1100].as_slice()).unwrap().unwrap().get(), -2);
+    /// assert_eq!(VarI28::read_from([0b0000_0001, 4].as_slice()).unwrap().unwrap().get(), 256);
+    /// assert_eq!(VarI28::read_from([0b0000_0001, 0b1111_1000].as_slice()).unwrap().unwrap().get(), -512);
+    /// assert_eq!(VarI28::read_from([0b0000_0011, 0, 8].as_slice()).unwrap().unwrap().get(), 65536);
+    /// assert_eq!(VarI28::read_from([0b0001_0111, 0, 0, 8].as_slice()).unwrap().unwrap().get(), 8388609);
     /// ```
     pub fn read_from<R: std::io::Read>(mut source: R) -> std::io::Result<Result<Self, LengthError>> {
-        todo!()
+        let mut leading_byte = 0u8;
+        source.read_exact(std::slice::from_mut(&mut leading_byte))?;
+
+        Ok(match leading_byte.trailing_ones() {
+            0 => {
+                let mut value = leading_byte >> 1;
+                if leading_byte & 0x80u8 != 0 {
+                    value |= 0x80u8; // Sign extend
+                }
+                Ok(Self::from_i8(value as i8))
+            }
+            1 => {
+                let mut buffer = [leading_byte, 0];
+                source.read_exact(&mut buffer[1..])?;
+                let bytes = u16::from_le_bytes(buffer);
+                let mut value = bytes >> 2;
+                if bytes & 0x8000u16 != 0 {
+                    value |= 0xC000u16; // Sign extend
+                }
+                Ok(Self::from_i16(value as i16))
+            }
+            2 => {
+                let mut buffer = [leading_byte, 0, 0, 0];
+                source.read_exact(&mut buffer[1..3])?;
+                let bytes = u32::from_le_bytes(buffer);
+                let mut value = bytes >> 3;
+                if bytes & 0x0080_0000u32 != 0 {
+                    value |= 0xFFE0_0000u32; // Sign extend
+                }
+                Ok(Self::new(value as i32))
+            }
+            3 => {
+                let mut buffer = [leading_byte, 0, 0, 0];
+                source.read_exact(&mut buffer[1..])?;
+                let bytes = u32::from_le_bytes(buffer);
+                let mut value = bytes >> 4;
+                if bytes & 0x8000_0000u32 != 0 {
+                    value |= 0xF000_0000u32; // Sign extend
+                }
+                Ok(Self::new(value as i32))
+            }
+            byte_length => Err(LengthError { length: byte_length as u8 }),
+        })
     }
 
     /// Returns a `Vec` containing the representation of `self`.
