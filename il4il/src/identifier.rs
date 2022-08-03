@@ -1,4 +1,4 @@
-//! Module for manipulating SAILAR identifier strings.
+//! Module for manipulating IL4IL identifier strings.
 use std::borrow::{Borrow, ToOwned};
 use std::convert::AsRef;
 ///
@@ -6,7 +6,7 @@ use std::convert::AsRef;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 
-/// The error type used to indicate that a string is not a valid SAILAR identifier.
+/// The error type used to indicate that a string is not a valid IL4IL identifier.
 #[derive(Clone, Debug, Eq, thiserror::Error, PartialEq)]
 #[non_exhaustive]
 pub enum InvalidError {
@@ -16,7 +16,7 @@ pub enum InvalidError {
     ContainsNull,
 }
 
-/// The error type used when parsing a SAILAR identifier from a sequence of bytes fails.
+/// The error type used when parsing a IL4IL identifier from a sequence of bytes fails.
 #[derive(Clone, Debug, Eq, thiserror::Error, PartialEq)]
 #[non_exhaustive]
 pub enum ParseError {
@@ -26,7 +26,7 @@ pub enum ParseError {
     InvalidSequence(#[from] std::str::Utf8Error),
 }
 
-/// Represents a SAILAR identifier string, which is a valid UTF-8 string that cannot be empty or contain any `NUL` bytes.
+/// Represents a IL4IL identifier string, which is a valid UTF-8 string that cannot be empty or contain any `NUL` bytes.
 #[derive(Eq, Hash, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Id(str);
@@ -84,7 +84,7 @@ impl Id {
         }
     }
 
-    /// Converts a slice of bytes into a SAILAR identifier string.
+    /// Converts a slice of bytes into a IL4IL identifier string.
     ///
     /// # Examples
     ///
@@ -160,7 +160,7 @@ impl Display for Id {
     }
 }
 
-/// Owned form of a SAILAR identifier string.
+/// Owned form of a IL4IL identifier string.
 ///
 /// For more information, see the documentation for [`Id`].
 #[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
