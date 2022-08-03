@@ -1,4 +1,4 @@
-//! Contains types for reading and writing IL4IL modules.
+//! Provides a reader, writer, and validator for IL4IL modules.
 
 #![deny(unsafe_op_in_unsafe_fn, clippy::missing_safety_doc)]
 
