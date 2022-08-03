@@ -2,15 +2,15 @@
 //!
 //! # Variable Length Encoding
 //!
-//! The encoding of variable-width integers in is similar to the encoding used in UTF-8 codepoints. The high bits indicate the
+//! The encoding of variable-width integers is similar to the encoding used in UTF-8 codepoints. The lowest bits indicate the
 //! number of bytes needed to contain the integer value.
 //!
 //! | Actual Value                          |Integer Length (bytes)|Integer Size (bits)|
 //! |---------------------------------------|----------------------|-------------------|
-//! | `0XXXXXXX`                            | `1`                  | `7`               |
-//! | `10XXXXXX XXXXXXXX`                   | `2`                  | `14`              |
-//! | `110XXXXX XXXXXXXX XXXXXXXX`          | `3`                  | `21`              |
-//! | `1110XXXX XXXXXXXX XXXXXXXX XXXXXXXX` | `4`                  | `32`              |
+//! | `XXXXXXX0`                            | `1`                  | `7`               |
+//! | `XXXXXX01 XXXXXXXX`                   | `2`                  | `14`              |
+//! | `XXXXX011 XXXXXXXX XXXXXXXX`          | `3`                  | `21`              |
+//! | `XXXX0111 XXXXXXXX XXXXXXXX XXXXXXXX` | `4`                  | `28`              |
 //!
 //! For simplicity, the binary format currently only allows a maximum length of `4` for all integers.
 
@@ -18,7 +18,7 @@ use std::cmp::{Ord, PartialOrd};
 use std::fmt::{Debug, Display, Formatter};
 use std::num::{NonZeroU32, NonZeroU8};
 
-/// Error type when the indicated length of an integer is invalid.
+/// Error type used when the indicated length of an integer is invalid.
 #[derive(Clone, Debug, thiserror::Error, Eq, PartialEq)]
 #[error("integers of byte length {length} are not supported by SAILAR")]
 pub struct LengthError {
@@ -30,6 +30,8 @@ pub struct LengthError {
 #[error("integer too large to be encoded")]
 pub struct EncodingError(());
 
+const UNUSED_BITS: u32 = 0xF000_0000u32;
+
 /// An unsigned integer that can be represented in 1, 2, 3, or 4 bytes.
 ///
 /// For more details, see the documentation for the [this module].
@@ -40,13 +42,14 @@ pub struct EncodingError(());
 pub struct VarU28(NonZeroU32); // Bit 0 permanently set, remaining bits contain value allowing null pointer optimization
 
 impl VarU28 {
-    /// Creates a new unsigned integer without checking that the value can fit in 28 bits.
+    /// Creates a new unsigned integer.
     ///
-    /// # Safety
+    /// # Panics
     ///
-    /// Callers should ensure that the value is small enough to fit in 28 bits.
+    /// Panics if the value cannot fit in 28 bits.
     #[must_use]
-    pub const unsafe fn new_unchecked(value: u32) -> Self {
+    pub const fn new(value: u32) -> Self {
+        assert!(value & UNUSED_BITS == 0u32);
         Self(unsafe {
             // Safety: Bit 0 is always set
             NonZeroU32::new_unchecked(1u32 | (value << 1))
@@ -61,10 +64,7 @@ impl VarU28 {
     /// # use il4il::integer::VarU28;
     /// assert_eq!(VarU28::MIN.get(), 0);
     /// ```
-    pub const MIN: Self = unsafe {
-        // Safety: 0 is a valid value
-        Self::new_unchecked(0)
-    };
+    pub const MIN: Self = Self::new(0);
 
     /// The largest value that is allowed to be encoded.
     ///
@@ -74,10 +74,7 @@ impl VarU28 {
     /// # use il4il::integer::VarU28;
     /// assert_eq!(VarU28::MAX.get() >> VarU28::BITS, 0);
     /// ```
-    pub const MAX: Self = unsafe {
-        // Safety: Maximum value is always valid
-        Self::new_unchecked(0x0FFF_FFFF)
-    };
+    pub const MAX: Self = Self::new(0x0FFF_FFFF);
 
     /// The number of bits that can encode a value.
     pub const BITS: u32 = 28u32;
@@ -101,38 +98,29 @@ impl VarU28 {
     ///
     /// ```
     /// # use il4il::integer::VarU28;
-    /// assert_eq!(VarU28::new(99), Some(VarU28::from_u16(99)));
-    /// assert_eq!(VarU28::new(0x1000_0000), None);
-    /// assert_eq!(VarU28::new(u32::MAX), None);
+    /// assert_eq!(VarU28::from_u32(99), Some(VarU28::from_u16(99)));
+    /// assert_eq!(VarU28::from_u32(0x1000_0000), None);
+    /// assert_eq!(VarU28::from_u32(u32::MAX), None);
     /// ```
     #[must_use]
-    pub const fn new(value: u32) -> Option<Self> {
-        if value & !Self::MAX.get() != 0 {
-            None
+    pub const fn from_u32(value: u32) -> Option<Self> {
+        if value & UNUSED_BITS == 0 {
+            Some(Self::new(value))
         } else {
-            unsafe {
-                // Safety: Validation above ensures value is valid
-                Some(Self::new_unchecked(value))
-            }
+            None
         }
     }
 
     /// Creates an unsigned integer from an unsigned byte value.
     #[must_use]
     pub const fn from_u8(value: u8) -> Self {
-        unsafe {
-            // Safety: Single byte can always be encoded
-            Self::new_unchecked(value as u32)
-        }
+        Self::new(value as u32)
     }
 
     /// Creates an unsigned integer from an unsigned 16-bit integer.
     #[must_use]
     pub const fn from_u16(value: u16) -> Self {
-        unsafe {
-            // Safety: 28-bit integer can contain 16-bit integer
-            Self::new_unchecked(value as u32)
-        }
+        Self::new(value as u32)
     }
 
     /// The maximum value that can be encoded in 1 byte.
@@ -153,7 +141,7 @@ impl VarU28 {
     /// # use il4il::integer::VarU28;
     /// assert!(VarU28::MAX_2 < VarU28::MAX_3);
     /// ```
-    pub const MAX_2: Self = Self::from_u16(0x3FF);
+    pub const MAX_2: Self = Self::from_u16(0x3FFF);
 
     /// The maximum value that can be encoded in 3 bytes.
     ///
@@ -163,10 +151,7 @@ impl VarU28 {
     /// # use il4il::integer::VarU28;
     /// assert!(VarU28::MAX_3 < VarU28::MAX_4);
     /// ```
-    pub const MAX_3: Self = unsafe {
-        // Safety: 28-bit integer can contain 24-bit integer
-        Self::new_unchecked(0x1FFFFF)
-    };
+    pub const MAX_3: Self = Self::new(0x001F_FFFF);
 
     /// The maximum value that can be encoded in 4 bytes.
     pub const MAX_4: Self = Self::MAX;
@@ -207,87 +192,72 @@ impl VarU28 {
     ///
     /// ```
     /// # use il4il::integer::VarU28;
-    /// assert!(matches!(VarU28::read_from([42u8].as_slice()), Ok(Ok(n)) if n.get() == 42));
-    /// assert!(matches!(VarU28::read_from([0x80u8].as_slice()), Err(_)));
+    /// assert!(matches!(VarU28::read_from([0b0110_1100u8].as_slice()), Ok(Ok(n)) if n.get() == 0b0011_0110));
+    /// assert!(matches!(VarU28::read_from([1u8].as_slice()), Err(_)));
     /// ```
     pub fn read_from<R: std::io::Read>(
         mut source: R,
     ) -> std::io::Result<Result<Self, LengthError>> {
-        let leading_byte = {
-            let mut buffer = [0u8];
-            source.read_exact(&mut buffer)?;
-            buffer[0]
-        };
+        let mut buffer = [0u8; 4];
+        source.read_exact(&mut buffer[0..1])?;
 
-        match leading_byte.leading_ones() {
-            0 => Ok(Ok(Self::from_u8(leading_byte))),
-            1 => {
-                let mut buffer = [0u8];
-                source.read_exact(&mut buffer)?;
-                let high_bits = (buffer[0] as u16) >> 2;
-                Ok(Ok(Self::from_u16(
-                    ((0x3Fu8 & leading_byte) as u16) | high_bits,
-                )))
-            }
-            2 => {
-                let mut buffer = [0u8; 2];
-                source.read_exact(&mut buffer)?;
-                let high_bits = (u16::from_le_bytes(buffer) as u32) >> 3;
-                Ok(Ok(unsafe {
-                    // Safety: All 24-bit integers are valid
-                    Self::new_unchecked(((0x1Fu8 & leading_byte) as u32) | high_bits)
+        match buffer[0].trailing_ones() {
+            0 => (),
+            1 => source.read_exact(&mut buffer[1..2])?,
+            2 => source.read_exact(&mut buffer[1..3])?,
+            3 => source.read_exact(&mut buffer[1..4])?,
+            byte_length => {
+                return Ok(Err(LengthError {
+                    length: byte_length as u8,
                 }))
             }
-            3 => {
-                let mut buffer = [0u8; 4];
-                source.read_exact(&mut buffer[1..])?;
-                Ok(Ok(unsafe {
-                    // Safety: All 28-bit integers are valid
-                    Self::new_unchecked(
-                        ((0xFu8 & leading_byte) as u32) | (u32::from_le_bytes(buffer) >> 4),
-                    )
-                }))
-            }
-            byte_length => Ok(Err(LengthError {
-                length: byte_length.try_into().unwrap(),
-            })),
         }
+
+        Ok(Ok(Self::new(u32::from_le_bytes(buffer) >> 1)))
     }
 
     /// Writes a variable-length integer value.
+    pub fn write_to<W: std::io::Write>(self, mut destination: W) -> std::io::Result<()> {
+        let bytes = self.get();
+        match self.byte_length().get() {
+            1 => destination.write_all(&[(bytes as u8) << 1]),
+            2 => {
+                let mut buffer: [u8; 2] = ((bytes as u16) << 2).to_le_bytes();
+                buffer[0] |= 0b01u8;
+                destination.write_all(&buffer)
+            }
+            3 => {
+                let mut buffer: [u8; 4] = (bytes << 3).to_le_bytes();
+                buffer[0] |= 0b011u8;
+                destination.write_all(&buffer[..3])
+            }
+            4 => {
+                let mut buffer: [u8; 4] = (bytes << 4).to_le_bytes();
+                buffer[0] |= 0b0111u8;
+                destination.write_all(&buffer)
+            }
+            _ => unreachable!("unsupported byte length"),
+        }
+    }
+
+    /// Allocates a [`Vec<u8>`] containing the representation of `self`.
     ///
     /// # Examples
     ///
     /// ```
     /// # use il4il::integer::VarU28;
-    /// let mut buffer = [0u8; 4];
-    /// VarU28::from_u8(86).write_to(buffer.as_mut_slice()).unwrap();
-    /// assert_eq!(buffer[0], 86);
-    /// VarU28::from_u8(128).write_to(buffer.as_mut_slice()).unwrap();
-    /// assert_eq!(&buffer[..2], &[0x80, 0x01]);
+    /// assert_eq!(VarU28::from_u8(0b0101_0110).into_vec(), &[0b1010_1100u8]);
+    /// assert_eq!(VarU28::from_u8(128).into_vec(), &[1u8, 2]);
+    /// assert_eq!(VarU28::from_u8(255).into_vec(), &[0b11111101u8, 0b11]);
+    /// assert_eq!(VarU28::MAX_1.into_vec(), &[0b1111_1110u8]);
+    /// assert_eq!(VarU28::MAX_2.into_vec(), &[0b1111_1101u8, 0xFF]);
+    /// assert_eq!(VarU28::MAX_3.into_vec(), &[0b1111_1011u8, 0xFF, 0xFF]);
+    /// assert_eq!(VarU28::MAX_4.into_vec(), &[0xF7u8, 0xFF, 0xFF, 0xFF]);
     /// ```
-    pub fn write_to<W: std::io::Write>(self, mut destination: W) -> std::io::Result<()> {
-        let value = self.get();
-        match self.byte_length().get() {
-            1 => destination.write_all(&[value as u8]),
-            2 => {
-                let value = value as u16;
-                let mut buffer = (value << 1).to_le_bytes();
-                buffer[0] = (value.to_le_bytes()[0] & 0x3Fu8) | 0x80u8;
-                destination.write_all(&buffer)
-            }
-            3 => {
-                let mut buffer = (value << 2).to_le_bytes();
-                buffer[0] = (value.to_le_bytes()[0] & 0x1Fu8) | 0b1100_0000u8;
-                destination.write_all(&buffer[..3])
-            }
-            4 => {
-                let mut buffer = (value << 3).to_le_bytes();
-                buffer[0] = (value.to_le_bytes()[0] & 0xFu8) | 0b1110_0000u8;
-                destination.write_all(&buffer)
-            }
-            _ => unreachable!("unsupported byte length"),
-        }
+    pub fn into_vec(self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(1);
+        self.write_to(&mut bytes).unwrap();
+        bytes
     }
 }
 
@@ -313,7 +283,7 @@ impl TryFrom<u32> for VarU28 {
     type Error = EncodingError;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
-        Self::new(value).ok_or(EncodingError(()))
+        Self::from_u32(value).ok_or(EncodingError(()))
     }
 }
 
@@ -349,10 +319,7 @@ impl std::ops::BitAnd for VarU28 {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        unsafe {
-            // Safety: No overflow can occur with a bitwise AND
-            Self::new_unchecked(self.get() & rhs.get())
-        }
+        Self::new(self.get() & rhs.get())
     }
 }
 
@@ -366,34 +333,24 @@ impl std::ops::BitAnd for VarU28 {
 pub struct VarI28(NonZeroU32);
 
 impl VarI28 {
-    const UNUSED_BITS: u32 = 0xF000_0000u32;
-
     const SIGN_BIT: u32 = 0x0800_0000u32;
 
-    /// Creates a new signed integer without checking that the value can fit in 28 bits.
+    /// Creates a new signed integer.
     ///
-    /// # Safety
+    /// # Panics
     ///
-    /// Callers should ensure that the value is small enough to fit in 28 bits.
+    /// Panics if the value cannot fit in 28 bits.
     #[must_use]
-    pub const unsafe fn new_unchecked(value: i32) -> Self {
-        Self(unsafe {
-            // Safety: Bit 0 is always set
-            NonZeroU32::new_unchecked(1u32 | ((value as u32) << 1))
-        })
+    pub const fn new(value: i32) -> Self {
+        Self(VarU28::new(value as u32).0)
     }
 
     /// Creates a new signed integer, returning `None` if the value cannot fit in 28 bits.
     #[must_use]
-    pub const fn new(value: i32) -> Option<Self> {
-        let bytes = value as u32;
-        if bytes & Self::UNUSED_BITS == 0 {
-            Some(unsafe {
-                // Safety: Validation is performed above
-                Self::new_unchecked(value)
-            })
-        } else {
-            None
+    pub const fn from_u32(value: i32) -> Option<Self> {
+        match VarU28::from_u32(value as u32) {
+            Some(v) => Some(Self(v.0)),
+            None => None,
         }
     }
 
@@ -409,10 +366,7 @@ impl VarI28 {
     /// ```
     #[must_use]
     pub const fn from_u8(value: u8) -> Self {
-        unsafe {
-            // Safety: Unsigned byte is always valid
-            Self::new_unchecked(value as i32)
-        }
+        Self::new(value as i32)
     }
 
     /// Creates a signed integer from an unsigned 16-bit integer.
@@ -427,10 +381,7 @@ impl VarI28 {
     /// ```
     #[must_use]
     pub const fn from_u16(value: u16) -> Self {
-        unsafe {
-            // Safety: Unsigned 16-bit integer is always valid
-            Self::new_unchecked(value as i32)
-        }
+        Self::new(value as i32)
     }
 
     /// Creates a signed integer from a signed byte value.
@@ -450,10 +401,7 @@ impl VarI28 {
         if b & 0x80u8 == 0 {
             Self::from_u8(b)
         } else {
-            unsafe {
-                // Safety: Value is ensured to fit in 28 bits
-                Self::new_unchecked((0x0FFF_FF00u32 | (b as u32)) as i32)
-            }
+            Self::new((0x0FFF_FF00u32 | (b as u32)) as i32)
         }
     }
 
@@ -474,10 +422,7 @@ impl VarI28 {
         if b & 0x8000u16 == 0 {
             Self::from_u16(b)
         } else {
-            unsafe {
-                // Safety: Value is ensured to fit in 28 bits
-                Self::new_unchecked((0x0FFF_0000u32 | (b as u32)) as i32)
-            }
+            Self::new((0x0FFF_0000u32 | (b as u32)) as i32)
         }
     }
 
@@ -544,10 +489,7 @@ impl VarI28 {
     /// assert!(VarI28::MAX_2 < VarI28::MAX_3);
     /// assert_eq!(VarI28::MAX_3.get(), 2097151);
     /// ```
-    pub const MAX_3: Self = unsafe {
-        // Safety: This is guaranteed to be valid
-        Self::new_unchecked(0x001F_FFFFi32)
-    };
+    pub const MAX_3: Self = Self::new(0x001F_FFFFi32);
 
     /// The minimum negative value that can be encoded in three bytes.
     ///
@@ -558,10 +500,7 @@ impl VarI28 {
     /// assert!(VarI28::MIN_3 < VarI28::MIN_2);
     /// assert_eq!(VarI28::MIN_3.get(), -2097152);
     /// ```
-    pub const MIN_3: Self = unsafe {
-        // Safety: This is guaranteed to be valid
-        Self::new_unchecked(0x0FE0_0000u32 as i32)
-    };
+    pub const MIN_3: Self = Self::new(0x0FE0_0000u32 as i32);
 
     /// The maximum positive value that can be encoded in four bytes.
     ///
@@ -572,10 +511,7 @@ impl VarI28 {
     /// assert!(VarI28::MAX_3 < VarI28::MAX_4);
     /// assert_eq!(VarI28::MAX_4.get(), 134217727);
     /// ```
-    pub const MAX_4: Self = unsafe {
-        // Safety: This is guaranteed to be valid
-        Self::new_unchecked(0x07FF_FFFFi32)
-    };
+    pub const MAX_4: Self = Self::new(0x07FF_FFFFi32);
 
     /// The minimum negative value that can be encoded in four bytes.
     ///
@@ -586,10 +522,7 @@ impl VarI28 {
     /// assert!(VarI28::MIN_4 < VarI28::MIN_3);
     /// assert_eq!(VarI28::MIN_4.get(), -134217728);
     /// ```
-    pub const MIN_4: Self = unsafe {
-        // Safety: This is guaranteed to be valid
-        Self::new_unchecked(0x0800_0000u32 as i32)
-    };
+    pub const MIN_4: Self = Self::new(0x0800_0000u32 as i32);
 
     /// Gets the value of this signed integer.
     #[must_use]
@@ -597,7 +530,7 @@ impl VarI28 {
         let mut value = self.0.get() >> 1;
         if value & Self::SIGN_BIT != 0 {
             // Perform a sign extension
-            value |= Self::UNUSED_BITS;
+            value |= UNUSED_BITS;
         }
         value as i32
     }
@@ -644,6 +577,7 @@ impl VarI28 {
 
     pub fn write_to<W: std::io::Write>(self, mut destination: W) -> std::io::Result<()> {
         let value = self.get();
+        todo!("low bits should contain len");
         match self.byte_length().get() {
             1 if self.signum() != -1 => destination.write_all(&[value as u8]),
             1 => destination.write_all(&[(value as u8) & 0b0111_1111u8]),
