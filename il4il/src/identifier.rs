@@ -1,4 +1,7 @@
 //! Module for manipulating IL4IL identifier strings.
+//! 
+//! For more information, see the documentation for [`Id`].
+
 use std::borrow::{Borrow, ToOwned};
 use std::convert::AsRef;
 ///
@@ -27,6 +30,12 @@ pub enum ParseError {
 }
 
 /// Represents a IL4IL identifier string, which is a valid UTF-8 string that cannot be empty or contain any `NUL` bytes.
+///
+/// The requirements placed on identifiers ensures conversions to other formats are easier. For example, LLVM uses null terminated
+/// strings which IL4IL strings would be compatible with.
+///
+/// Additionally, [`Id`] does not provide methods to mutate or manipulate identifier strings, in order to ensure that its
+/// invariants hold.
 #[derive(Eq, Hash, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Id(str);
@@ -73,7 +82,7 @@ impl Id {
     /// assert_eq!(Id::new(""), Err(InvalidError::Empty));
     /// assert_eq!(Id::new("\0"), Err(InvalidError::ContainsNull));
     /// ```
-    pub fn new(identifier: &str) -> Result<&Id, InvalidError> {
+    pub fn new(identifier: &str) -> Result<&Self, InvalidError> {
         if identifier.is_empty() {
             Err(InvalidError::Empty)
         } else if identifier.bytes().any(|b| b == 0) {
@@ -218,6 +227,15 @@ impl Identifier {
     /// See [`Id::from_str_unchecked`] for more information.
     pub unsafe fn from_string_unchecked(identifier: String) -> Self {
         Self(identifier)
+    }
+
+    /// Creates an owned identifier string.
+    ///
+    /// # Errors
+    ///
+    /// If the string is empty or contains a `NUL` character, then an error is returned.
+    pub fn from_str(identifier: &str) -> Result<Self, InvalidError> {
+        <Self as std::str::FromStr>::from_str(identifier)
     }
 
     /// Converts a boxed string into an identifier.

@@ -20,7 +20,7 @@ use std::num::{NonZeroU32, NonZeroU8};
 
 /// Error type used when the indicated length of an integer is invalid.
 #[derive(Clone, Debug, thiserror::Error, Eq, PartialEq)]
-#[error("integers of byte length {length} are not supported by SAILAR")]
+#[error("integers of byte length {length} are not supported by IL4IL")]
 pub struct LengthError {
     length: u8,
 }
@@ -341,7 +341,7 @@ impl VarI28 {
 
     /// Creates a new signed integer, returning `None` if the value cannot fit in 28 bits.
     #[must_use]
-    pub const fn from_u32(value: i32) -> Option<Self> {
+    pub const fn from_i32(value: i32) -> Option<Self> {
         match VarU28::from_u32(value as u32) {
             Some(v) => Some(Self(v.0)),
             None => None,
