@@ -2,5 +2,6 @@
 
 #![deny(unsafe_op_in_unsafe_fn, clippy::missing_safety_doc)]
 
+pub mod binary;
 pub mod identifier;
 pub mod integer;
