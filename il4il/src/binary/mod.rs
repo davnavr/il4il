@@ -7,3 +7,7 @@ mod module;
 pub use module::Module;
 
 pub mod section;
+pub mod writer;
+
+/// The magic number that is the start of all IL4IL module files.
+pub const MAGIC: &[u8; 6] = b"IL4IL\0";
