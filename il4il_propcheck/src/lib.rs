@@ -6,10 +6,6 @@ pub mod generator;
 pub mod setup;
 
 pub fn run_property_test<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> assertion::Assertion>(test: F) {
-    let mut setup = S::default();
-    let mut test_count = setup.test_count();
-    let mut generator = setup.generator();
-
     enum Failure {
         Panic(Box<dyn std::any::Any + Send + 'static>),
         Message(&'static str),
@@ -24,13 +20,11 @@ pub fn run_property_test<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> asserti
         }
     }
 
-    fn run_test<I, F, R>(gen: &mut generator::Gen<'_, R>, test: &F) -> Result<(), (I, Failure)>
+    fn run_test<I, F>(value: I, test: &F) -> Result<(), (I, Failure)>
     where
         I: arbitrary::Arb,
         F: Fn(I) -> assertion::Assertion,
-        R: rand::Rng + ?Sized,
     {
-        let value = I::arbitrary(gen);
         let assertion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| test(value.clone())));
 
         match assertion {
@@ -40,12 +34,16 @@ pub fn run_property_test<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> asserti
         }
     }
 
+    let mut setup = S::default();
+    let mut test_count = setup.test_count();
+    let mut generator = setup.generator();
+
     let failure = loop {
         if test_count == 0 {
             break Ok(());
         }
 
-        match run_test(&mut generator, &test) {
+        match run_test(I::arbitrary(&mut generator), &test) {
             Ok(()) => test_count -= 1,
             Err(error) => break Err(error),
         }
@@ -53,7 +51,36 @@ pub fn run_property_test<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> asserti
 
     if let Err(error) = failure {
         eprintln!("test failed with {:?}, {:?}", error.0, error.1.message());
-        todo!("handle test shrinking")
+
+        let mut smallest = None;
+        let mut shrunk_count = 0usize;
+        for shrunk in error.0.shrink() {
+            shrunk_count += 1;
+
+            match run_test(shrunk, &test) {
+                Err(f)
+                    if match smallest {
+                        None => true,
+                        Some((ref small, _)) => arbitrary::Comparable::is_smaller_than(small, &f.0),
+                    } =>
+                {
+                    smallest = Some(f)
+                }
+                _ => (),
+            }
+        }
+
+        let message = if let Some((shrunk, f)) = smallest {
+            eprintln!("shrunk {} times down to {:?}", shrunk_count, shrunk);
+            f
+        } else {
+            error.1
+        };
+
+        match message {
+            Failure::Message(msg) => panic!("{}", msg),
+            Failure::Panic(panic) => std::panic::resume_unwind(panic),
+        }
     }
 }
 

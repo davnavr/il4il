@@ -2,13 +2,23 @@
 
 use crate::generator::{Gen, Rng};
 
+pub trait Comparable {
+    fn is_smaller_than(&self, other: &Self) -> bool;
+}
+
+impl<T: ?Sized + PartialOrd> Comparable for T {
+    fn is_smaller_than(&self, other: &Self) -> bool {
+        self < other
+    }
+}
+
 /// Trait used to generate random values.
-pub trait Arb: std::fmt::Debug + Clone {
+pub trait Arb: std::fmt::Debug + Clone + Comparable {
     type Shrinker: Iterator<Item = Self>;
 
     fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self;
 
-    fn shrink(&self) -> Self::Shrinker;
+    fn shrink(self) -> Self::Shrinker;
 }
 
 impl Arb for () {
@@ -16,7 +26,7 @@ impl Arb for () {
 
     fn arbitrary<R: Rng + ?Sized>(_: &mut Gen<'_, R>) -> Self {}
 
-    fn shrink(&self) -> Self::Shrinker {
+    fn shrink(self) -> Self::Shrinker {
         std::iter::empty()
     }
 }
@@ -60,8 +70,8 @@ macro_rules! unsigned_integer_arb {
                     gen.source().gen()
                 }
 
-                fn shrink(&self) -> Self::Shrinker {
-                    Self::Shrinker::new(*self)
+                fn shrink(self) -> Self::Shrinker {
+                    Self::Shrinker::new(self)
                 }
             }
         )*
