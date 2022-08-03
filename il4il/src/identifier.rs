@@ -68,7 +68,7 @@ impl Id {
 
     /// Attempts to create a reference to an identifier string.
     ///
-    /// If an owned [`Identifier`] is needed, use [`Identifier::from_string`] or [`Identifier::from_str`] instead.
+    /// If an owned [`Identifier`] is needed, use [`Identifier::from_string`] or [`std::str::FromStr`] instead.
     ///
     /// # Errors
     ///
@@ -227,15 +227,6 @@ impl Identifier {
     /// See [`Id::from_str_unchecked`] for more information.
     pub unsafe fn from_string_unchecked(identifier: String) -> Self {
         Self(identifier)
-    }
-
-    /// Creates an owned identifier string.
-    ///
-    /// # Errors
-    ///
-    /// If the string is empty or contains a `NUL` character, then an error is returned.
-    pub fn from_str(identifier: &str) -> Result<Self, InvalidError> {
-        <Self as std::str::FromStr>::from_str(identifier)
     }
 
     /// Converts a boxed string into an identifier.
