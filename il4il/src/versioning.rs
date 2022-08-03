@@ -60,7 +60,7 @@ impl Display for UnsupportedFormatError {
         write!(
             f,
             "format version {} is not supported, minimum supported is {}",
-            self,
+            self.version,
             SupportedFormat::MINIMUM
         )
     }
@@ -93,7 +93,7 @@ impl SupportedFormat {
     /// assert!(SupportedFormat::new(Format::new(0, 0)).is_err());
     /// ```
     #[must_use]
-    pub const fn new(version: Format) -> Result<Self, UnsupportedFormatError> {
+    pub fn new(version: Format) -> Result<Self, UnsupportedFormatError> {
         if version >= Self::MINIMUM.0 && version <= Self::CURRENT.0 {
             Ok(Self(version))
         } else {
