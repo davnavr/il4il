@@ -80,7 +80,7 @@ impl SupportedFormat {
 
     /// Gets the underlying format version.
     #[must_use]
-    pub const fn format(self) -> Format {
+    pub const fn version(self) -> Format {
         self.0
     }
 

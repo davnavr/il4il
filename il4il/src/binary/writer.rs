@@ -51,13 +51,23 @@ impl WriteTo for &crate::identifier::Id {
 #[derive(Clone, Debug)]
 pub struct LengthPrefixed<T>(T);
 
-impl<T> From<T> for LengthPrefixed<T> where T: IntoIterator, T::IntoIter: ExactSizeIterator, T::Item: WriteTo {
+impl<T> From<T> for LengthPrefixed<T>
+where
+    T: IntoIterator,
+    T::IntoIter: ExactSizeIterator,
+    T::Item: WriteTo,
+{
     fn from(items: T) -> Self {
         Self(items)
     }
 }
 
-impl<T> WriteTo for LengthPrefixed<T> where T: IntoIterator, T::IntoIter: ExactSizeIterator, T::Item: WriteTo {
+impl<T> WriteTo for LengthPrefixed<T>
+where
+    T: IntoIterator,
+    T::IntoIter: ExactSizeIterator,
+    T::Item: WriteTo,
+{
     fn write_to<W: Write>(self, out: &mut W) -> Result {
         let iter = self.0.into_iter();
         write_length(iter.len(), out)?;
@@ -74,5 +84,28 @@ impl WriteTo for &crate::binary::section::Metadata<'_> {
         match self {
             crate::binary::section::Metadata::Name(name) => name.write_to(out),
         }
+    }
+}
+
+impl WriteTo for &crate::binary::section::Section<'_> {
+    fn write_to<W: Write>(self, out: &mut W) -> Result {
+        u8::from(self.kind()).write_to(out)?;
+        match self {
+            crate::binary::section::Section::Metadata(metadata) => LengthPrefixed::from(metadata).write_to(out),
+        }
+    }
+}
+
+impl WriteTo for crate::versioning::Format {
+    fn write_to<W: Write>(self, out: &mut W) -> Result {
+        out.write_all(&[self.major, self.minor])
+    }
+}
+
+impl WriteTo for &crate::binary::Module<'_> {
+    fn write_to<W: Write>(self, out: &mut W) -> Result {
+        out.write_all(crate::binary::MAGIC.as_slice())?;
+        self.format_version().version().write_to(out)?;
+        LengthPrefixed::from(self.sections()).write_to(out)
     }
 }

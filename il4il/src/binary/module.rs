@@ -1,4 +1,5 @@
 use crate::binary::section::Section;
+use crate::binary::writer;
 use crate::versioning::SupportedFormat;
 
 // An in-memory representation of an IL4IL module.
@@ -48,6 +49,11 @@ impl<'data> Module<'data> {
             format_version: self.format_version,
             sections: self.sections.into_iter().map(Section::into_owned).collect(),
         }
+    }
+
+    /// Writes the binary contents of the SAILAR module to the specified destination.
+    pub fn write_to<W: std::io::Write>(&self, mut destination: W) -> std::io::Result<()> {
+        writer::WriteTo::write_to(self, &mut destination)
     }
 }
 
