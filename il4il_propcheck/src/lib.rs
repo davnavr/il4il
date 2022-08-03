@@ -24,11 +24,14 @@ pub fn run_property_test<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> asserti
         }
     }
 
-    fn run_test<I, F, R>(gen: &mut generator::Gen<'_, R>, test: &F) -> Result<(), (I, Failure)> where I: arbitrary::Arb, F: Fn(I) -> assertion::Assertion, R: rand::Rng + ?Sized {
+    fn run_test<I, F, R>(gen: &mut generator::Gen<'_, R>, test: &F) -> Result<(), (I, Failure)>
+    where
+        I: arbitrary::Arb,
+        F: Fn(I) -> assertion::Assertion,
+        R: rand::Rng + ?Sized,
+    {
         let value = I::arbitrary(gen);
-        let assertion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            test(value.clone())
-        }));
+        let assertion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| test(value.clone())));
 
         match assertion {
             Ok(assertion::Assertion::Success) => Ok(()),
@@ -61,9 +64,7 @@ macro_rules! property {
     }) => {
         #[test]
         fn $test_name() {
-            crate::run_property_test::<$setup_type, $input_type, _>(|$input_name| {
-                $test
-            });
+            $crate::run_property_test::<$setup_type, $input_type, _>(|$input_name| $test);
         }
     };
 
@@ -71,11 +72,11 @@ macro_rules! property {
         $test:expr
     }) => {
         property! {
-            fn $test_name<crate::setup::DefaultSetup>($input_name: $input_type) {
+            fn $test_name<$crate::setup::DefaultSetup>($input_name: $input_type) {
                 $test
             }
         }
-    }
+    };
 }
 
 #[cfg(test)]

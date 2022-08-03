@@ -9,9 +9,9 @@ pub enum Assertion {
 macro_rules! assertion {
     ($e:expr) => {
         if $e {
-            Assertion::Success
+            $crate::assertion::Assertion::Success
         } else {
-            Assertion::Failure(concat!("assertion failed: ", stringify!($e)))
+            $crate::assertion::Assertion::Failure(concat!("assertion failed: ", stringify!($e)))
         }
     };
 }

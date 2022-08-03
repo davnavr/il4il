@@ -20,3 +20,48 @@ impl Arb for () {
         std::iter::empty()
     }
 }
+
+macro_rules! unsigned_integer_arb {
+    ($($ty:tt with $shrinker_name:ident),*) => {
+        $(
+            #[derive(Clone, Debug)]
+            pub struct $shrinker_name {
+                current: $ty,
+                halved: $ty,
+            }
+
+            impl Iterator for $shrinker_name {
+                type Item = $ty;
+
+                fn next(&mut self) -> Option<$ty> {
+                    let shrunk = self.current - self.halved;
+                    if shrunk < self.current {
+                        self.halved /= 2;
+                        Some(shrunk)
+                    } else {
+                        None
+                    }
+                }
+            }
+
+            impl Arb for $ty {
+                type Shrinker = $shrinker_name;
+
+                fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self {
+                    gen.source().gen()
+                }
+
+                fn shrink(&self) -> Self::Shrinker {
+                    Self::Shrinker {
+                        current: *self,
+                        halved: *self / 2,
+                    }
+                }
+            }
+        )*
+    };
+}
+
+unsigned_integer_arb! {
+    u32 with U32Shrinker
+}
