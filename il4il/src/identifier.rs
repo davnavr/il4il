@@ -69,9 +69,9 @@ impl Id {
     ///
     /// ```
     /// # use il4il::identifier::*;
-    /// assert_eq!(Id::from_str("very_very_long_function_name").map(Id::as_str), Ok("very_very_long_function_name"));
-    /// assert_eq!(Id::from_str(""), Err(InvalidError::Empty));
-    /// assert_eq!(Id::from_str("\0"), Err(InvalidError::ContainsNull));
+    /// assert_eq!(Id::new("very_very_long_function_name").map(Id::as_str), Ok("very_very_long_function_name"));
+    /// assert_eq!(Id::new(""), Err(InvalidError::Empty));
+    /// assert_eq!(Id::new("\0"), Err(InvalidError::ContainsNull));
     /// ```
     pub fn new(identifier: &str) -> Result<&Id, InvalidError> {
         if identifier.is_empty() {
@@ -235,8 +235,9 @@ impl Identifier {
     ///
     /// ```
     /// # use il4il::identifier::*;
+    /// # use std::str::FromStr;
     /// let mut id = Identifier::from_str("MyName").unwrap();
-    /// id.push_id(Id::from_str("IsValid").unwrap());
+    /// id.push_id(Id::new("IsValid").unwrap());
     /// assert_eq!(id.as_str(), "MyNameIsValid");
     /// ```
     pub fn push_id(&mut self, identifier: &Id) {
