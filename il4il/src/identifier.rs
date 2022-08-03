@@ -1,11 +1,11 @@
 //! Module for manipulating IL4IL identifier strings.
 //!
 //! For more information, see the documentation for [`Id`].
+//!
+//! [`Id`] is to [`Identifier`] as [`str`] is to [`String`].
 
 use std::borrow::{Borrow, ToOwned};
 use std::convert::AsRef;
-///
-/// [`Id`] is to [`Identifier`] as [`str`] is to [`String`].
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 
@@ -320,5 +320,27 @@ impl Debug for Identifier {
 impl Display for Identifier {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         Display::fmt(self.as_id(), f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use il4il_propcheck as propcheck;
+
+    impl propcheck::arbitrary::Arb for Identifier {
+        type Shrinker = std::iter::Empty<Self>;
+
+        fn arbitrary<R: propcheck::generator::Rng + ?Sized>(gen: &mut propcheck::generator::Gen<'_, R>) -> Self {
+            loop {
+                if let Ok(identifier) = Self::from_string(String::arbitrary(gen)) {
+                    return identifier;
+                }
+            }
+        }
+
+        fn shrink(self) -> Self::Shrinker {
+            std::iter::empty()
+        }
     }
 }

@@ -95,7 +95,7 @@ impl Iterator for CharShrinker {
     type Item = char;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(value) = self.0.next() {
+        for value in self.0.by_ref() {
             if let Some(c) = char::from_u32(value) {
                 return Some(c);
             }

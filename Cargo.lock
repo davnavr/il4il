@@ -23,6 +23,7 @@ dependencies = [
 name = "il4il"
 version = "0.1.0"
 dependencies = [
+ "il4il_propcheck",
  "rustc-hash",
  "thiserror",
 ]
