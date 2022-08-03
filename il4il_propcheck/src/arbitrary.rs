@@ -81,3 +81,38 @@ macro_rules! unsigned_integer_arb {
 unsigned_integer_arb! {
     u32 with U32Shrinker
 }
+
+#[derive(Clone, Debug)]
+pub struct CharShrinker(U32Shrinker);
+
+impl CharShrinker {
+    pub fn new(initial: char) -> Self {
+        Self(U32Shrinker::new(initial.into()))
+    }
+}
+
+impl Iterator for CharShrinker {
+    type Item = char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(value) = self.0.next() {
+            if let Some(c) = char::from_u32(value) {
+                return Some(c);
+            }
+        }
+
+        None
+    }
+}
+
+impl Arb for char {
+    type Shrinker = CharShrinker;
+
+    fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self {
+        gen.source().gen()
+    }
+
+    fn shrink(self) -> Self::Shrinker {
+        CharShrinker::new(self)
+    }
+}
