@@ -73,7 +73,7 @@ impl Id {
     /// assert_eq!(Id::from_str(""), Err(InvalidError::Empty));
     /// assert_eq!(Id::from_str("\0"), Err(InvalidError::ContainsNull));
     /// ```
-    pub fn from_str(identifier: &str) -> Result<&Id, InvalidError> {
+    pub fn new(identifier: &str) -> Result<&Id, InvalidError> {
         if identifier.is_empty() {
             Err(InvalidError::Empty)
         } else if identifier.bytes().any(|b| b == 0) {
@@ -94,7 +94,7 @@ impl Id {
     /// assert!(Id::from_utf8(&[0u8]).is_err());
     /// ```
     pub fn from_utf8(bytes: &[u8]) -> Result<&Id, ParseError> {
-        Ok(Self::from_str(std::str::from_utf8(bytes)?)?)
+        Ok(Self::new(std::str::from_utf8(bytes)?)?)
     }
 
     /// Converts a boxed identifier into a boxed string.
@@ -201,22 +201,13 @@ impl Identifier {
         Self(identifier.into_boxed_str().into())
     }
 
-    /// Attempts to convert a [`str`] into an owned identifier string.
-    ///
-    /// # Errors
-    ///
-    /// If the string is empty or contains a `NUL` character, then an error is returned.
-    pub fn from_str(identifier: &str) -> Result<Self, InvalidError> {
-        Id::from_str(identifier).map(Id::to_identifier)
-    }
-
     /// Attempts to convert a [`String`] into an identifier.
     ///
     /// # Errors
     ///
     /// If the string is empty or contains a `NUL` character, then an error is returned.
     pub fn from_string(identifier: String) -> Result<Self, InvalidError> {
-        Id::from_str(&identifier)?;
+        Id::new(&identifier)?;
         Ok(Self(identifier))
     }
 
@@ -299,6 +290,14 @@ impl Borrow<String> for Identifier {
 impl Borrow<Id> for Identifier {
     fn borrow(&self) -> &Id {
         self.as_id()
+    }
+}
+
+impl std::str::FromStr for Identifier {
+    type Err = InvalidError;
+
+    fn from_str(identifier: &str) -> Result<Self, Self::Err> {
+        Id::new(identifier).map(Id::to_identifier)
     }
 }
 
