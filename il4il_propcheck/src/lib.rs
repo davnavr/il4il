@@ -5,7 +5,7 @@ pub mod assertion;
 pub mod generator;
 pub mod setup;
 
-fn test_runner<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> assertion::Assertion>(test: F) {
+pub fn run_property_test<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> assertion::Assertion>(test: F) {
     let mut setup = S::default();
     let mut test_count = setup.test_count();
     let mut generator = setup.generator();
@@ -50,7 +50,7 @@ fn test_runner<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> assertion::Assert
 
     if let Err(error) = failure {
         eprintln!("test failed with {:?}, {:?}", error.0, error.1.message());
-        todo!("handle test failure")
+        todo!("handle test shrinking")
     }
 }
 
@@ -61,7 +61,9 @@ macro_rules! property {
     }) => {
         #[test]
         fn $test_name() {
-            todo!()
+            crate::run_property_test::<$setup_type, $input_type, _>(|$input_name| {
+                $test
+            });
         }
     };
 
@@ -69,7 +71,7 @@ macro_rules! property {
         $test:expr
     }) => {
         property! {
-            fn $test_name<setup::DefaultSetup>($input_name: $input_type) {
+            fn $test_name<crate::setup::DefaultSetup>($input_name: $input_type) {
                 $test
             }
         }
@@ -78,9 +80,11 @@ macro_rules! property {
 
 #[cfg(test)]
 mod tests {
+    use crate::assertion;
+
     property! {
         fn left_shift_equals_multiply_by_two(value: u32) {
-            assertion::assertion!(value << 1 == value.overflowing_mul(2).0)
+            assertion!(value << 1 == value.overflowing_mul(2).0)
         }
     }
 }
