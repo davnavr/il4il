@@ -6,6 +6,10 @@ pub trait Setup: Default {
     type Rng: Rng + ?Sized;
 
     fn generator(&mut self) -> Gen<'_, Self::Rng>;
+
+    fn test_count(&self) -> usize {
+        100
+    }
 }
 
 #[derive(Default)]

@@ -3,7 +3,7 @@
 use crate::generator::{Gen, Rng};
 
 /// Trait used to generate random values.
-pub trait Arb: std::fmt::Debug {
+pub trait Arb: std::fmt::Debug + Clone {
     type Shrinker: Iterator<Item = Self>;
 
     fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self;
