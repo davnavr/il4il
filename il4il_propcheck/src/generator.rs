@@ -2,6 +2,7 @@
 
 pub use rand::Rng;
 
+/// Generates random values.
 #[derive(Debug)]
 pub struct Gen<'a, R: ?Sized> {
     source: &'a mut R,
