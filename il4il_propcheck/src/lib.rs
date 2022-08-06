@@ -8,11 +8,11 @@ pub mod setup;
 pub fn run_property_test<S: setup::Setup, I: arbitrary::Arb, F: Fn(I) -> assertion::Assertion>(test: F) {
     enum Failure {
         Panic(Box<dyn std::any::Any + Send + 'static>),
-        Message(&'static str),
+        Message(std::borrow::Cow<'static, str>),
     }
 
     impl Failure {
-        fn message(&self) -> &'static str {
+        fn message(&self) -> &str {
             match self {
                 Self::Panic(_) => "panic occured",
                 Self::Message(message) => message,
