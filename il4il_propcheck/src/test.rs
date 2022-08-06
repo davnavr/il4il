@@ -1,10 +1,15 @@
 //! Contains the [`Run`] trait.
 
+use crate::assertion::Message;
 use crate::generator::{Gen, Rng};
 use crate::{Arb, Assertion};
 use std::fmt::Write;
 
-pub use crate::assertion::Failure;
+/// Indicates that a test failed.
+pub enum Failure {
+    Message(Message),
+    Panic(Box<dyn std::any::Any + Send + 'static>),
+}
 
 /// Indicates that a test did not fail.
 #[derive(Clone, Debug)]
@@ -33,19 +38,27 @@ pub trait PropertyTest: 'static {
     fn test<R: ?Sized + Rng>(self, inputs: &mut String, gen: &mut Gen<'_, R>) -> PropertyResult;
 }
 
-fn assertion_to_result(assertion: Option<Assertion>) -> Result<NonFailure, Failure> {
-    match assertion {
-        Some(Assertion::Success) => Ok(NonFailure::Success),
-        None => Ok(NonFailure::Skipped),
-        Some(Assertion::Failure(message)) => Err(message),
+fn shrunk_test<F: FnOnce(&mut String) -> Result<NonFailure, Failure> + 'static>(test: F) -> Box<dyn ShrunkTest> {
+    Box::new(test) as Box<dyn ShrunkTest>
+}
+
+fn wrap_shrunk_test<F: FnOnce() -> Option<Assertion>>(test: F) -> Result<NonFailure, Failure> {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(test));
+    match result {
+        Ok(Some(Assertion::Success)) => Ok(NonFailure::Success),
+        Ok(None) => Ok(NonFailure::Skipped),
+        Ok(Some(Assertion::Failure(message))) => Err(Failure::Message(message)),
+        Err(info) => Err(Failure::Panic(info)),
     }
 }
 
-fn handle_assertion(assertion: Option<Assertion>, shrinker: impl FnOnce() -> TestShrinker) -> PropertyResult {
-    match assertion {
-        Some(Assertion::Success) => Ok(NonFailure::Success),
-        None => Ok(NonFailure::Skipped),
-        Some(Assertion::Failure(message)) => Err((shrinker(), message)),
+fn wrap_property_test<F: FnOnce() -> Option<Assertion>>(test: F, shrinker: impl FnOnce() -> TestShrinker) -> PropertyResult {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(test));
+    match result {
+        Ok(Some(Assertion::Success)) => Ok(NonFailure::Success),
+        Ok(None) => Ok(NonFailure::Skipped),
+        Ok(Some(Assertion::Failure(message))) => Err((shrinker(), Failure::Message(message))),
+        Err(info) => Err((shrinker(), Failure::Panic(info)))
     }
 }
 
@@ -54,22 +67,31 @@ impl<A: Arb> PropertyTest for fn(A) -> Option<Assertion> {
         let a = A::arbitrary(gen);
         let shrinker = a.shrink();
         write!(inputs, "{:?}", a).unwrap();
-        handle_assertion(self(a), move || {
+        wrap_property_test(|| self(a), move || {
             Box::from(shrinker.map(move |item| {
-                Box::new(move |inputs: &mut String| {
+                shrunk_test(move |inputs: &mut String| {
                     write!(inputs, "{:?}", item).unwrap();
-                    assertion_to_result(self(item))
-                }) as Box<dyn ShrunkTest>
+                    wrap_shrunk_test(|| self(item))
+                })
             }))
         })
     }
 }
 
-// impl<A: Arb, B: Arb> Test for fn(A, B) -> Option<Assertion> {
-//     fn test<R: ?Sized + Rng>(&self, inputs: &mut String, gen: &mut Gen<'_, R>) -> Option<Assertion> {
-//         let a = A::arbitrary(gen);
-//         let b = B::arbitrary(gen);
-//         write!(inputs, "{:?}, {:?}", a, b).unwrap();
-//         self(a, b)
-//     }
-// }
+impl<A: Arb, B: Arb> PropertyTest for fn(A, B) -> Option<Assertion> {
+    fn test<R: ?Sized + Rng>(self, inputs: &mut String, gen: &mut Gen<'_, R>) -> PropertyResult {
+        let a = A::arbitrary(gen);
+        let b = B::arbitrary(gen);
+        let shrinker_a = a.shrink();
+        let shrinker_b = b.shrink();
+        write!(inputs, "{:?}, {:?}", a, b).unwrap();
+        wrap_property_test(|| self(a, b), move || {
+            Box::from(shrinker_a.zip(shrinker_b).map(move |(item_a, item_b)| {
+                shrunk_test(move |inputs: &mut String| {
+                    write!(inputs, "{:?}, {:?}", item_a, item_b).unwrap();
+                    wrap_shrunk_test(|| self(item_a, item_b))
+                })
+            }))
+        })
+    }
+}

@@ -2,11 +2,11 @@
 
 use std::fmt::{Debug, Write};
 
-pub type Failure = std::borrow::Cow<'static, str>;
+pub type Message = std::borrow::Cow<'static, str>;
 
 /// The result of a property test.
 pub enum Assertion {
-    Failure(Failure),
+    Failure(Message),
     Success,
 }
 
