@@ -70,11 +70,11 @@ macro_rules! property {
     (fn $test_name:ident<$setup_type:ty>($first_input_name:ident: $first_input_type:ty$(, $next_input_name:ident: $next_input_type:ty)*) $test:block) => {
         #[test]
         fn $test_name() {
-            fn inner($first_input_name: $first_input_type, $(, $next_input_name: $next_input_type)*) -> Option<$crate::Assertion> {
+            fn inner($first_input_name: $first_input_type$(,$next_input_name: $next_input_type)*) -> Option<$crate::Assertion> {
                 $test
             }
 
-            $crate::run_property_test::<$setup_type, _>(inner as fn($first_input_type, $($next_input_type)*) -> _);
+            $crate::run_property_test::<$setup_type, _>(inner as fn($first_input_type$(,$next_input_type)*) -> _);
         }
     };
 

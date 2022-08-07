@@ -339,13 +339,21 @@ mod tests {
             }
         }
 
-        fn shrink(self) -> Self::Shrinker {
+        fn shrink(&self) -> Self::Shrinker {
             std::iter::empty()
         }
     }
 
     propcheck::property! {
         fn all_identifiers_are_valid(identifier: Identifier) {
+            propcheck::assertion!(Id::new(identifier.as_str()).is_ok())
+        }
+    }
+
+    propcheck::property! {
+        fn two_appended_identifiers_are_valid(first: Identifier, second: Identifier) {
+            let mut identifier = first;
+            identifier.push_id(second.as_id());
             propcheck::assertion!(Id::new(identifier.as_str()).is_ok())
         }
     }
