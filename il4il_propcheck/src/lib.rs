@@ -34,8 +34,8 @@ pub fn run_property_test<S: setup::Setup, T: test::PropertyTest>(test: T) {
         eprintln!("Test failed with ({initial_inputs}), {bad}");
         let mut failure_count = 1;
 
-        for test in shrinker {
-            match test::ShrunkTest::run(test, &mut arguments_buffer) {
+        for shrunk_test in shrinker {
+            match test::ShrunkTest::run(shrunk_test, &mut arguments_buffer) {
                 Ok(_) => (),
                 Err(bad) => {
                     eprintln!("> Test failed with ({arguments_buffer}), {bad}");
@@ -58,72 +58,6 @@ pub fn run_property_test<S: setup::Setup, T: test::PropertyTest>(test: T) {
     }
 }
 
-// pub fn run_property_test<S: setup::Setup, T: test::Test>(test: T) {
-//     enum Failure {
-//         Panic(Box<dyn std::any::Any + Send + 'static>),
-//         Message(std::borrow::Cow<'static, str>),
-//     }
-
-//     impl Failure {
-//         fn message(&self) -> &str {
-//             match self {
-//                 Self::Panic(_) => "panic occured",
-//                 Self::Message(message) => message,
-//             }
-//         }
-//     }
-
-//     let mut setup = S::default();
-//     let mut test_count = setup.test_count();
-//     let mut arguments_buffer = String::new();
-//     let mut generator = setup.generator();
-
-//     let failure = loop {
-//         if test_count == 0 {
-//             break Ok(());
-//         }
-
-//         match test.run(&mut arguments_buffer, &mut generator) {
-//             Ok(()) => test_count -= 1,
-//             Err(error) => break Err(error),
-//         }
-//     };
-
-//     if let Err(error) = failure {
-//         eprintln!("test failed with {:?}, {:?}", error.0, error.1.message());
-
-//         let mut smallest = None;
-//         let mut shrunk_count = 0usize;
-//         for shrunk in error.0.shrink() {
-//             shrunk_count += 1;
-
-//             match run_test(shrunk, &test) {
-//                 Err(f)
-//                     if match smallest {
-//                         None => true,
-//                         Some((ref small, _)) => arbitrary::Comparable::is_smaller_than(small, &f.0),
-//                     } =>
-//                 {
-//                     smallest = Some(f)
-//                 }
-//                 _ => (),
-//             }
-//         }
-
-//         let message = if let Some((shrunk, f)) = smallest {
-//             eprintln!("shrunk {} times down to {:?}", shrunk_count, shrunk);
-//             f
-//         } else {
-//             error.1
-//         };
-
-//         match message {
-//             Failure::Message(msg) => panic!("{}", msg),
-//             Failure::Panic(panic) => std::panic::resume_unwind(panic),
-//         }
-//     }
-// }
-
 #[macro_export]
 macro_rules! skip {
     () => {
@@ -133,31 +67,26 @@ macro_rules! skip {
 
 #[macro_export]
 macro_rules! property {
-    (fn $test_name:ident<$setup_type:ty>($input_name:ident: $input_type:ty) {
-        $test:expr
-    }) => {
+    (fn $test_name:ident<$setup_type:ty>($first_input_name:ident: $first_input_type:ty$(, $next_input_name:ident: $next_input_type:ty)*) $test:block) => {
         #[test]
         fn $test_name() {
-            //$crate::run_property_test::<$setup_type, $input_type, _>(|$input_name| $test);
-            todo!()
+            fn inner($first_input_name: $first_input_type, $(, $next_input_name: $next_input_type)*) -> Option<$crate::Assertion> {
+                $test
+            }
+
+            $crate::run_property_test::<$setup_type, _>(inner as fn($first_input_type, $($next_input_type)*) -> _);
         }
     };
 
-    (fn $test_name:ident($input_name:ident: $input_type:ty) {
-        $test:expr
-    }) => {
-        $crate::property! {
-            fn $test_name<$crate::setup::DefaultSetup>($input_name: $input_type) {
-                $test
-            }
-        }
+    (fn $test_name:ident($first_input_name:ident: $first_input_type:ty$(, $next_input_name:ident: $next_input_type:ty)*) $test:block) => {
+        $crate::property!(fn $test_name<$crate::setup::DefaultSetup>($first_input_name: $first_input_type$(, $next_input_name: $next_input_type)*) $test);
     };
 }
 
 #[macro_export]
 macro_rules! assertion {
     ($e:expr) => {
-        Some(if $e {
+        Option::<$crate::Assertion>::from(if $e {
             $crate::Assertion::Success
         } else {
             $crate::Assertion::Failure(concat!("assertion failed: ", stringify!($e)).into())
@@ -168,7 +97,7 @@ macro_rules! assertion {
 #[macro_export]
 macro_rules! assertion_eq {
     ($expected:expr, $actual:expr) => {
-        Some($crate::Assertion::are_equal($expected, $actual))
+        Option::<$crate::Assertion>::from($crate::Assertion::are_equal($expected, $actual))
     };
 }
 
