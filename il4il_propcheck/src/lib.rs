@@ -9,6 +9,7 @@ pub mod test;
 
 pub use arbitrary::Arb;
 pub use assertion::Assertion;
+pub use generator::{Gen, Rng};
 
 pub fn run_property_test<S: setup::Setup, T: test::PropertyTest>(test: T) {
     let mut arguments_buffer = String::new();

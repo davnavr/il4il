@@ -681,6 +681,7 @@ impl Display for VarI28 {
 #[cfg(test)]
 mod tests {
     use crate::integer::VarU28;
+    use crate::propcheck;
 
     #[test]
     fn bitor() {

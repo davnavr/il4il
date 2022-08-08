@@ -326,9 +326,9 @@ impl Display for Identifier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use il4il_propcheck as propcheck;
+    use crate::propcheck;
 
-    impl propcheck::arbitrary::Arb for Identifier {
+    impl propcheck::Arb for Identifier {
         type Shrinker = std::iter::Empty<Self>;
 
         fn arbitrary<R: propcheck::generator::Rng + ?Sized>(gen: &mut propcheck::generator::Gen<'_, R>) -> Self {
