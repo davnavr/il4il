@@ -199,7 +199,8 @@ impl VarU28 {
         let mut buffer = [0u8; 4];
         source.read_exact(&mut buffer[0..1])?;
 
-        match buffer[0].trailing_ones() {
+        let trailing_one_count = buffer[0].trailing_ones();
+        match trailing_one_count {
             0 => (),
             1 => source.read_exact(&mut buffer[1..2])?,
             2 => source.read_exact(&mut buffer[1..3])?,
@@ -207,7 +208,7 @@ impl VarU28 {
             byte_length => return Ok(Err(LengthError { length: byte_length as u8 })),
         }
 
-        Ok(Ok(Self::new(u32::from_le_bytes(buffer) >> 1)))
+        Ok(Ok(Self::new(u32::from_le_bytes(buffer) >> (trailing_one_count + 1))))
     }
 
     /// Writes a variable-length integer value.
@@ -680,11 +681,11 @@ impl Display for VarI28 {
 
 #[cfg(test)]
 mod tests {
-    use crate::integer::{VarU28, VarI28};
+    use crate::integer::{VarI28, VarU28};
     use crate::propcheck;
 
     fn generate_u28(rng: &mut (impl propcheck::Rng + ?Sized)) -> u32 {
-        rng.gen_range(0..VarU28::MAX.get())
+        rng.gen_range(0..=VarU28::MAX.get())
     }
 
     impl propcheck::Arb for VarU28 {
@@ -712,14 +713,21 @@ mod tests {
     }
 
     propcheck::property! {
-        fn u28_bitwise_or_is_correct(left: VarU28, right: VarU28) {
+        fn u28_bitwise_or_matches(left: VarU28, right: VarU28) {
             propcheck::assertion_eq!((left | right).get(), left.get() | right.get())
         }
     }
 
     propcheck::property! {
-        fn u28_bitwise_and_is_correct(left: VarU28, right: VarU28) {
+        fn u28_bitwise_and_matches(left: VarU28, right: VarU28) {
             propcheck::assertion_eq!((left & right).get(), left.get() & right.get())
+        }
+    }
+
+    propcheck::property! {
+        fn written_u28_can_be_parsed(value: VarU28) {
+            let bytes = value.into_vec();
+            propcheck::assertion_eq!(VarU28::read_from(bytes.as_slice()).unwrap(), Ok(value))
         }
     }
 }
