@@ -680,19 +680,46 @@ impl Display for VarI28 {
 
 #[cfg(test)]
 mod tests {
-    use crate::integer::VarU28;
+    use crate::integer::{VarU28, VarI28};
     use crate::propcheck;
 
-    #[test]
-    fn bitor() {
-        assert_eq!(VarU28::from_u8(0b0110_1001) | VarU28::from_u8(0b0010), VarU28::from_u8(0b0110_1011));
-        assert_eq!(VarU28::from_u16(46) | VarU28::from_u8(92), VarU28::from_u16(46u16 | 92u16));
-        assert_eq!(VarU28::MAX | VarU28::MIN, VarU28::MAX);
+    fn generate_u28(rng: &mut (impl propcheck::Rng + ?Sized)) -> u32 {
+        rng.gen_range(0..VarU28::MAX.get())
     }
 
-    #[test]
-    fn bitand() {
-        assert_eq!(VarU28::from_u16(543) & VarU28::from_u16(63), VarU28::from_u16(543u16 & 63));
-        assert_eq!(VarU28::MAX & VarU28::MIN, VarU28::MIN);
+    impl propcheck::Arb for VarU28 {
+        type Shrinker = std::iter::Empty<Self>;
+
+        fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
+            Self::new(generate_u28(gen.source()))
+        }
+
+        fn shrink(&self) -> Self::Shrinker {
+            std::iter::empty()
+        }
+    }
+
+    impl propcheck::Arb for VarI28 {
+        type Shrinker = std::iter::Empty<Self>;
+
+        fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
+            Self::new(generate_u28(gen.source()) as i32)
+        }
+
+        fn shrink(&self) -> Self::Shrinker {
+            std::iter::empty()
+        }
+    }
+
+    propcheck::property! {
+        fn u28_bitwise_or_is_correct(left: VarU28, right: VarU28) {
+            propcheck::assertion_eq!((left | right).get(), left.get() | right.get())
+        }
+    }
+
+    propcheck::property! {
+        fn u28_bitwise_and_is_correct(left: VarU28, right: VarU28) {
+            propcheck::assertion_eq!((left & right).get(), left.get() & right.get())
+        }
     }
 }

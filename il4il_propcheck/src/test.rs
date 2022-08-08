@@ -1,4 +1,4 @@
-//! Contains the [`Run`] trait.
+//! Contains the [`PropertyTest`] trait.
 
 use crate::assertion::Message;
 use crate::generator::{Gen, Rng};

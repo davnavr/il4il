@@ -331,7 +331,7 @@ mod tests {
     impl propcheck::Arb for Identifier {
         type Shrinker = std::iter::Empty<Self>;
 
-        fn arbitrary<R: propcheck::generator::Rng + ?Sized>(gen: &mut propcheck::generator::Gen<'_, R>) -> Self {
+        fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
             loop {
                 if let Ok(identifier) = Self::from_string(String::arbitrary(gen)) {
                     return identifier;
