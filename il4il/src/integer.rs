@@ -337,7 +337,16 @@ impl VarI28 {
     /// Panics if the value cannot fit in 28 bits.
     #[must_use]
     pub const fn new(value: i32) -> Self {
-        Self(VarU28::new(value as u32).0)
+        let mut bytes = value as u32;
+        let leading_ones = bytes.leading_ones();
+        assert!((leading_ones == 0 && bytes.leading_zeros() >= 4) || leading_ones > 4);
+        if leading_ones != 0 {
+            bytes &= !UNUSED_BITS;
+        }
+        Self(unsafe {
+            // Safety: Bit 0 is always set
+            NonZeroU32::new_unchecked(1u32 | ((bytes as u32) << 1))
+        })
     }
 
     /// Creates a new signed integer, returning `None` if the value cannot fit in 28 bits.
@@ -684,15 +693,11 @@ mod tests {
     use crate::integer::{VarI28, VarU28};
     use crate::propcheck;
 
-    fn generate_u28(rng: &mut (impl propcheck::Rng + ?Sized)) -> u32 {
-        rng.gen_range(0..=VarU28::MAX.get())
-    }
-
     impl propcheck::Arb for VarU28 {
         type Shrinker = std::iter::Empty<Self>;
 
         fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
-            Self::new(generate_u28(gen.source()))
+            Self::new(gen.source().gen_range(0..=Self::MAX.get()))
         }
 
         fn shrink(&self) -> Self::Shrinker {
@@ -704,7 +709,7 @@ mod tests {
         type Shrinker = std::iter::Empty<Self>;
 
         fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
-            Self::new(generate_u28(gen.source()) as i32)
+            Self::new(gen.source().gen_range(Self::MIN_4.get()..=Self::MAX_4.get()))
         }
 
         fn shrink(&self) -> Self::Shrinker {
@@ -728,6 +733,13 @@ mod tests {
         fn written_u28_can_be_parsed(value: VarU28) {
             let bytes = value.into_vec();
             propcheck::assertion_eq!(VarU28::read_from(bytes.as_slice()).unwrap(), Ok(value))
+        }
+    }
+
+    propcheck::property! {
+        fn written_i28_can_be_parsed(value: VarI28) {
+            let bytes = value.into_vec();
+            propcheck::assertion_eq!(VarI28::read_from(bytes.as_slice()).unwrap(), Ok(value))
         }
     }
 }
