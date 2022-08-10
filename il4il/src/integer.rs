@@ -199,7 +199,8 @@ impl VarU28 {
         let mut buffer = [0u8; 4];
         source.read_exact(&mut buffer[0..1])?;
 
-        match buffer[0].trailing_ones() {
+        let trailing_one_count = buffer[0].trailing_ones();
+        match trailing_one_count {
             0 => (),
             1 => source.read_exact(&mut buffer[1..2])?,
             2 => source.read_exact(&mut buffer[1..3])?,
@@ -207,7 +208,7 @@ impl VarU28 {
             byte_length => return Ok(Err(LengthError { length: byte_length as u8 })),
         }
 
-        Ok(Ok(Self::new(u32::from_le_bytes(buffer) >> 1)))
+        Ok(Ok(Self::new(u32::from_le_bytes(buffer) >> (trailing_one_count + 1))))
     }
 
     /// Writes a variable-length integer value.
@@ -336,7 +337,16 @@ impl VarI28 {
     /// Panics if the value cannot fit in 28 bits.
     #[must_use]
     pub const fn new(value: i32) -> Self {
-        Self(VarU28::new(value as u32).0)
+        let mut bytes = value as u32;
+        let leading_ones = bytes.leading_ones();
+        assert!((leading_ones == 0 && bytes.leading_zeros() >= 4) || leading_ones > 4);
+        if leading_ones != 0 {
+            bytes &= !UNUSED_BITS;
+        }
+        Self(unsafe {
+            // Safety: Bit 0 is always set
+            NonZeroU32::new_unchecked(1u32 | ((bytes as u32) << 1))
+        })
     }
 
     /// Creates a new signed integer, returning `None` if the value cannot fit in 28 bits.
@@ -680,18 +690,56 @@ impl Display for VarI28 {
 
 #[cfg(test)]
 mod tests {
-    use crate::integer::VarU28;
+    use crate::integer::{VarI28, VarU28};
+    use crate::propcheck;
 
-    #[test]
-    fn bitor() {
-        assert_eq!(VarU28::from_u8(0b0110_1001) | VarU28::from_u8(0b0010), VarU28::from_u8(0b0110_1011));
-        assert_eq!(VarU28::from_u16(46) | VarU28::from_u8(92), VarU28::from_u16(46u16 | 92u16));
-        assert_eq!(VarU28::MAX | VarU28::MIN, VarU28::MAX);
+    impl propcheck::Arb for VarU28 {
+        type Shrinker = std::iter::Empty<Self>;
+
+        fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
+            Self::new(gen.source().gen_range(0..=Self::MAX.get()))
+        }
+
+        fn shrink(&self) -> Self::Shrinker {
+            std::iter::empty()
+        }
     }
 
-    #[test]
-    fn bitand() {
-        assert_eq!(VarU28::from_u16(543) & VarU28::from_u16(63), VarU28::from_u16(543u16 & 63));
-        assert_eq!(VarU28::MAX & VarU28::MIN, VarU28::MIN);
+    impl propcheck::Arb for VarI28 {
+        type Shrinker = std::iter::Empty<Self>;
+
+        fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
+            Self::new(gen.source().gen_range(Self::MIN_4.get()..=Self::MAX_4.get()))
+        }
+
+        fn shrink(&self) -> Self::Shrinker {
+            std::iter::empty()
+        }
+    }
+
+    propcheck::property! {
+        fn u28_bitwise_or_matches(left: VarU28, right: VarU28) {
+            propcheck::assertion_eq!((left | right).get(), left.get() | right.get())
+        }
+    }
+
+    propcheck::property! {
+        fn u28_bitwise_and_matches(left: VarU28, right: VarU28) {
+            propcheck::assertion_eq!((left & right).get(), left.get() & right.get())
+        }
+    }
+
+    propcheck::property! {
+        fn written_u28_can_be_parsed(value: VarU28) {
+            let bytes = value.into_vec();
+            propcheck::assertion_eq!(VarU28::read_from(bytes.as_slice()).unwrap(), Ok(value))
+        }
+    }
+
+    propcheck::property! {
+        fn written_i28_can_be_parsed(value: VarI28) {
+            let bytes = value.into_vec();
+            propcheck::assertion_eq!(VarI28::read_from(bytes.as_slice()).unwrap(), Ok(value))
+        }
     }
 }

@@ -7,3 +7,6 @@ rust-version = "1.62"
 [dependencies]
 rustc-hash = "1.1.0"
 thiserror = "1.0.30"
+
+[dev-dependencies]
+il4il_propcheck = { path = "../il4il_propcheck" }

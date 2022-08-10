@@ -1,11 +1,11 @@
 //! Module for manipulating IL4IL identifier strings.
 //!
 //! For more information, see the documentation for [`Id`].
+//!
+//! [`Id`] is to [`Identifier`] as [`str`] is to [`String`].
 
 use std::borrow::{Borrow, ToOwned};
 use std::convert::AsRef;
-///
-/// [`Id`] is to [`Identifier`] as [`str`] is to [`String`].
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 
@@ -320,5 +320,41 @@ impl Debug for Identifier {
 impl Display for Identifier {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         Display::fmt(self.as_id(), f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::propcheck;
+
+    impl propcheck::Arb for Identifier {
+        type Shrinker = std::iter::Empty<Self>;
+
+        fn arbitrary<R: propcheck::Rng + ?Sized>(gen: &mut propcheck::Gen<'_, R>) -> Self {
+            loop {
+                if let Ok(identifier) = Self::from_string(String::arbitrary(gen)) {
+                    return identifier;
+                }
+            }
+        }
+
+        fn shrink(&self) -> Self::Shrinker {
+            std::iter::empty()
+        }
+    }
+
+    propcheck::property! {
+        fn all_identifiers_are_valid(identifier: Identifier) {
+            propcheck::assertion!(Id::new(identifier.as_str()).is_ok())
+        }
+    }
+
+    propcheck::property! {
+        fn two_appended_identifiers_are_valid(first: Identifier, second: Identifier) {
+            let mut identifier = first;
+            identifier.push_id(second.as_id());
+            propcheck::assertion!(Id::new(identifier.as_str()).is_ok())
+        }
     }
 }

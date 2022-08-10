@@ -6,3 +6,6 @@ pub mod binary;
 pub mod identifier;
 pub mod integer;
 pub mod versioning;
+
+#[cfg(test)]
+use il4il_propcheck as propcheck;
