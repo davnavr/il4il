@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "il4il_propcheck",
-    "il4il"
+    "il4il",
+    "il4il_c"
 ]

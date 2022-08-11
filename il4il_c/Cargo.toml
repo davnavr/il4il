@@ -1,0 +1,11 @@
+[package]
+name = "il4il_c"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+il4il = { path = "../il4il" }
+thiserror = "1.0.30"
+
+[lib]
+crate-type = ["staticlib", "cdylib"]

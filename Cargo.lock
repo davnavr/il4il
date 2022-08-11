@@ -29,6 +29,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "il4il_c"
+version = "0.1.0"
+dependencies = [
+ "il4il",
+ "thiserror",
+]
+
+[[package]]
 name = "il4il_propcheck"
 version = "0.1.0"
 dependencies = [
