@@ -59,3 +59,46 @@ pub unsafe extern "C" fn il4il_identifier_dispose(identifier: *mut Identifier) {
         pointer::into_boxed("identifier", identifier).unwrap();
     }
 }
+
+/// Returns a pointer to the UTF-8 byte contents of an identifier string, as well as the string's length in bytes. If the identifier is
+/// `null`, returns a `null` pointer and a length of `0`.
+///
+/// Any invalid pointer arguments create an error that can be disposed with [`il4il_error_dispose`].
+///
+/// # Safety
+///
+/// Callers must ensure that the identifier originates from an [`il4il_c`](crate) function and that it has not already been disposed.
+///
+/// # Panics
+///
+/// Panics if the [`error` pointer is not valid](#error::catch).
+///
+/// [`il4il_error_dispose`]: error::il4il_error_dispose
+#[no_mangle]
+pub unsafe extern "C" fn il4il_identifier_contents(identifier: *mut Identifier, length: *mut usize, error: *mut *mut Message) -> *const u8 {
+    let dereference = || -> Result<_, _> {
+        let length_mut = unsafe {
+            // Safety: length is assumed to be dereferenceable.
+            pointer::as_mut("length", length)?
+        };
+
+        *length_mut = 0;
+
+        if identifier.is_null() {
+            return Ok(std::ptr::null());
+        }
+
+        let bytes = unsafe {
+            // Safety: identifier is assumed to be dereferenceable.
+            pointer::as_mut("identifier", identifier)?.as_bytes()
+        };
+
+        *length_mut = bytes.len();
+        Ok(bytes.as_ptr())
+    };
+
+    unsafe {
+        // Safety: error is assumed to be dereferenceable.
+        error::catch_or_else(dereference, std::ptr::null, error)
+    }
+}
