@@ -51,12 +51,18 @@ pub unsafe extern "C" fn il4il_identifier_from_utf8(contents: *const u8, length:
 ///
 /// # Panics
 ///
-/// Panics if the identifier is not [a valid pointer](mod@pointer#safety).
+/// Panics if the [`error` pointer is not valid](#error::catch).
 #[no_mangle]
-pub unsafe extern "C" fn il4il_identifier_dispose(identifier: *mut Identifier) {
+pub unsafe extern "C" fn il4il_identifier_dispose(identifier: *mut Identifier, error: *mut *mut Message) {
     unsafe {
-        // Safety: Caller must ensure identifier is valid pointer.
-        pointer::into_boxed("identifier", identifier).unwrap();
+        // Safety: error is assumed to be dereferenceable.
+        error::catch(
+            || {
+                // Safety: Caller must ensure identifier is valid pointer.
+                Ok(pointer::into_boxed("identifier", identifier)?)
+            },
+            error,
+        );
     }
 }
 
