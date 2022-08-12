@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Il4ilSharp.Interop.Native\Il4ilSharp.Interop.Native.csproj" />
+  </ItemGroup>
+
 </Project>

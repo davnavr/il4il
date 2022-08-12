@@ -1,4 +1,4 @@
-namespace Il4ilSharp.Interop;
+namespace Il4ilSharp.Interop.Native;
 
 using System.Runtime.InteropServices;
 
@@ -7,6 +7,6 @@ public unsafe static class Error
 {
     public readonly ref struct Opaque { }
 
-    [DllImport(Native.LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_dispose", ExactSpelling = true)]
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_dispose", ExactSpelling = true)]
     public static extern void Dispose(Opaque* message);
 }
