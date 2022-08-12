@@ -7,4 +7,21 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- TODO: Figure out how to set this to false when packing -->
+    <il4il_CompileForHostOnly>true</il4il_CompileForHostOnly>
+    <il4il_Configuration>debug</il4il_Configuration>
+    <!-- TODO: Figure out file extensions for other platforms -->
+    <il4il_HostNativeLibraryExtension>dll</il4il_HostNativeLibraryExtension>
+    <il4il_HostNativeLibraryPath>$(RepositoryRootDirectory)\target\$(il4il_Configuration)\il4il_c.$(il4il_HostNativeLibraryExtension)</il4il_HostNativeLibraryPath>
+  </PropertyGroup>
+
+  <Target Condition="'$(il4il_CompileForHostOnly)'=='true'" Name="il4il_CompileHostNativeLibrary" BeforeTargets="Build" Outputs="$(il4il_HostNativeLibraryPath)">
+    <Exec Command="cargo build" WorkingDirectory="$(RepositoryRootDirectory)\il4il_c" />
+  </Target>
+
+  <!-- <ItemGroup Condition="'$(il4il_CompileForHostOnly)'=='true'">
+    <NativeReference Include="$(il4il_HostNativeLibraryPath)" Name="il4il_c" HintPath="$(il4il_HostNativeLibraryPath)"/>
+  </ItemGroup> -->
+
 </Project>
