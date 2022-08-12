@@ -8,11 +8,11 @@ public unsafe static class Identifier
     public readonly ref struct Opaque { }
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_identifier_from_utf8", ExactSpelling = true)]
-    public static extern Opaque* FromUtf8(byte* contents, nuint length, Error.Opaque* error);
+    public static extern Opaque* FromUtf8(byte* contents, nuint length, out Error.Opaque* error);
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_identifier_contents", ExactSpelling = true)]
-    public static extern byte* Contents(Opaque* identifier, nuint* length, Error.Opaque* error);
+    public static extern byte* Contents(Opaque* identifier, out nuint length, out Error.Opaque* error);
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_identifier_dispose", ExactSpelling = true)]
-    public static extern void Dispose(Opaque* identifier, Error.Opaque* error);
+    public static extern void Dispose(Opaque* identifier, out Error.Opaque* error);
 }
