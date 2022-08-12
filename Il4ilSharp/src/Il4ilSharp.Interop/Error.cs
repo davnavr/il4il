@@ -8,5 +8,5 @@ public unsafe static class Error
     public readonly ref struct Opaque { }
 
     [DllImport(Native.LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_dispose", ExactSpelling = true)]
-    public static void Dispose(Opaque* message);
+    public static extern void Dispose(Opaque* message);
 }
