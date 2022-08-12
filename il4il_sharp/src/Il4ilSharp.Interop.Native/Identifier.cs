@@ -3,8 +3,7 @@
 using System.Runtime.InteropServices;
 
 /// <summary>Methods for manipulating IL4IL identifier strings.</summary>
-public unsafe static class Identifier
-{
+public unsafe static class Identifier {
     public readonly struct Opaque { }
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_identifier_from_utf8", ExactSpelling = true)]

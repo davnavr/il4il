@@ -1,0 +1,11 @@
+[*.cs]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+charset = utf-8-bom
+max_line_width = 140
+dotnet_sort_system_directives_first = true
+csharp_new_line_before_open_brace = false
+csharp_new_line_before_else = false
+csharp_new_line_before_catch = false
+csharp_new_line_before_finally = false
