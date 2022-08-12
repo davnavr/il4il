@@ -1,3 +1,4 @@
+use crate::binary::parser;
 use crate::binary::section::Section;
 use crate::binary::writer;
 use crate::versioning::SupportedFormat;
@@ -54,6 +55,12 @@ impl<'data> Module<'data> {
     /// Writes the binary contents of the SAILAR module to the specified destination.
     pub fn write_to<W: std::io::Write>(&self, mut destination: W) -> std::io::Result<()> {
         writer::WriteTo::write_to(self, &mut destination)
+    }
+
+    /// Reads the binary contents of a SAILAR module from the specified source.
+    pub fn read_from<R: std::io::Read>(&self, source: R) -> parser::Result<Self> {
+        let mut reader = parser::Source::new(source);
+        <Self as parser::ReadFrom>::read_from(&mut reader)
     }
 }
 

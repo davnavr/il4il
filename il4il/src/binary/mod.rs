@@ -6,6 +6,7 @@ mod module;
 
 pub use module::Module;
 
+pub mod parser;
 pub mod section;
 pub mod writer;
 
