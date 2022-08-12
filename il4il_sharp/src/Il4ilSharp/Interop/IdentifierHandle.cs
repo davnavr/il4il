@@ -2,7 +2,6 @@
 
 using System;
 using System.Text;
-using System.Threading;
 using Il4ilSharp.Interop.Native;
 
 /// <summary>
@@ -19,7 +18,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
         nuint length;
         Error.Opaque* error;
         byte* contents = Identifier.Contents(identifier, out length, out error);
-        // TODO: Throw error
+        ErrorHandling.Throw(error);
         return new ReadOnlySpan<byte>(contents, (int)length);
     }
 
@@ -56,5 +55,6 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
     private protected override unsafe void Cleanup(Identifier.Opaque* pointer) {
         Error.Opaque* error;
         Identifier.Dispose(pointer, out error);
+        ErrorHandling.Throw(error);
     }
 }

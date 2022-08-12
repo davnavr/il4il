@@ -19,6 +19,7 @@ public sealed class IdentifierString {
             throw new ArgumentException(nameof(handle), "Handle was already disposed");
         }
 
+        cached = handle.ToString();
         Handle = handle;
     }
 }
