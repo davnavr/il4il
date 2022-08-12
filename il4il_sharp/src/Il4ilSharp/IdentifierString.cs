@@ -12,14 +12,28 @@ public sealed class IdentifierString {
     /// <summary>Gets a wrapper for the underlying identifier string.</summary>
     public IdentifierHandle Handle { get; }
 
+    /// <summary>Initializes a <see cref="IdentifierString"/> with the given <paramref name="handle"/>.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="handle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Throw when the <paramref name="handle"/> was already disposed.</exception>
     public IdentifierString(IdentifierHandle handle) {
         ArgumentNullException.ThrowIfNull(handle);
 
-        if (handle.IsDisposed) {
-            throw new ArgumentException(nameof(handle), "Handle was already disposed");
-        }
+        try {
+            unsafe {
+                handle.Enter(); // Prevent handle from being disposed early.
+            }
 
-        cached = handle.ToString();
-        Handle = handle;
+            if (handle.IsDisposed) {
+                throw new ArgumentException(nameof(handle), "Handle was already disposed");
+            }
+
+            cached = handle.ToString();
+            Handle = handle;
+        } finally {
+            handle.Exit();
+        }
     }
+
+    /// <summary>Returns the contents of the identifier string.</summary>
+    public override string ToString() => cached;
 }

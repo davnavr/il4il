@@ -20,12 +20,12 @@ public unsafe abstract class SyncHandle<T> : IDisposable where T : unmanaged {
     /// <summary>Indicates whether the underlying object was already disposed.</summary>
     public bool IsDisposed => pointer == null;
 
-    private protected T* Enter() {
+    internal T* Enter() {
         Monitor.Enter(sync);
         return pointer;
     }
 
-    private protected void Exit() => Monitor.Exit(sync);
+    internal void Exit() => Monitor.Exit(sync);
 
     private protected abstract void Cleanup(T* pointer);
 
