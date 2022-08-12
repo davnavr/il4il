@@ -9,22 +9,13 @@ using Il4ilSharp.Interop.Native;
 /// Provides a thread-safe wrapper for an IL4IL identifier string.
 /// </summary>
 /// <seealso cref="IdentifierString"/>
-public unsafe sealed class IdentifierHandle : IDisposable {
-    private readonly object sync = new();
+public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
+    /// <summary>Gets a value indicating whether the underlying identifier string was disposed.</summary>
+    public new bool IsDisposed => base.IsDisposed;
 
-    private Identifier.Opaque* identifier;
+    internal IdentifierHandle(Identifier.Opaque* identifier) : base(identifier) { }
 
-    public bool IsDisposed => identifier == null;
-
-    private void EnterLock() => Monitor.Enter(sync);
-
-    private void ExitLock() => Monitor.Exit(sync);
-
-    private ReadOnlySpan<byte> AsReadOnlySpan() {
-        if (IsDisposed) {
-            return default;
-        }
-
+    private static ReadOnlySpan<byte> Contents(Identifier.Opaque* identifier) {
         nuint length;
         Error.Opaque* error;
         byte* contents = Identifier.Contents(identifier, out length, out error);
@@ -40,10 +31,10 @@ public unsafe sealed class IdentifierHandle : IDisposable {
         }
 
         try {
-            EnterLock();
-            return Encoding.UTF8.GetString(AsReadOnlySpan());
+            var identifier = Enter();
+            return Encoding.UTF8.GetString(Contents(identifier));
         } finally {
-            ExitLock();
+            Exit();
         }
     }
 
@@ -55,38 +46,15 @@ public unsafe sealed class IdentifierHandle : IDisposable {
         }
 
         try {
-            EnterLock();
-            return AsReadOnlySpan().ToArray();
+            var identifier = Enter();
+            return Contents(identifier).ToArray();
         } finally {
-            ExitLock();
+            Exit();
         }
     }
 
-    private void Dispose(bool disposing) {
-        try {
-            if (disposing) {
-                EnterLock();
-            }
-
-            if (!IsDisposed) {
-                Error.Opaque* error;
-                Identifier.Dispose(identifier, out error);
-                identifier = null;
-                // TODO: Throw error
-            }
-        } finally {
-            if (disposing) {
-                ExitLock();
-            }
-        }
+    private protected override unsafe void Cleanup(Identifier.Opaque* pointer) {
+        Error.Opaque* error;
+        Identifier.Dispose(pointer, out error);
     }
-
-    /// <inheritdoc/>
-    public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>Calls native code to disposing the underlying identifier string.</summary>
-    ~IdentifierHandle() => Dispose(false);
 }
