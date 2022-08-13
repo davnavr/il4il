@@ -17,4 +17,5 @@
 
 pub mod error;
 pub mod identifier;
+pub mod module;
 pub mod pointer;
