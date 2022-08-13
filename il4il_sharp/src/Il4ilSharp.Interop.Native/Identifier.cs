@@ -9,6 +9,9 @@ public unsafe static class Identifier {
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_identifier_from_utf8", ExactSpelling = true)]
     public static extern Opaque* FromUtf8(byte* contents, nuint length, out Error.Opaque* error);
 
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_identifier_from_utf16", ExactSpelling = true)]
+    public static extern Opaque* FromUtf16(char* contents, nuint count, out Error.Opaque* error);
+
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_identifier_contents", ExactSpelling = true)]
     public static extern byte* Contents(Opaque* identifier, out nuint length, out Error.Opaque* error);
 

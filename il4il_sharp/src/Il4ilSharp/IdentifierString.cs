@@ -14,7 +14,7 @@ public sealed class IdentifierString {
 
     /// <summary>Initializes a <see cref="IdentifierString"/> with the given <paramref name="handle"/>.</summary>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="handle"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Throw when the <paramref name="handle"/> was already disposed.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="handle"/> was already disposed.</exception>
     public IdentifierString(IdentifierHandle handle) {
         ArgumentNullException.ThrowIfNull(handle);
 
@@ -32,6 +32,27 @@ public sealed class IdentifierString {
         } finally {
             handle.Exit();
         }
+    }
+
+    /// <summary>Initializes a <see cref="IdentifierString"/> with the given UTF-16 code points.</summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the <paramref name="contents"/> are empty or contain <c>NUL</c> bytes.
+    /// </exception>
+    public IdentifierString(ReadOnlySpan<char> contents) {
+        Handle = new IdentifierHandle(contents);
+        cached = new string(contents);
+    }
+
+    /// <summary>Initializes a <see cref="IdentifierString"/> from a UTF-16 string.</summary>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when the <paramref name="contents"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the <paramref name="contents"/> are empty or contains the null character <c>'\0'.</c>.
+    /// </exception>
+    public IdentifierString(string contents) {
+        Handle = new IdentifierHandle(contents);
+        cached = contents;
     }
 
     /// <summary>Returns the contents of the identifier string.</summary>

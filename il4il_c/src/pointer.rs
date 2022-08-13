@@ -27,12 +27,14 @@ pub(crate) struct InvalidPointerError {
     kind: InvalidPointerKind,
 }
 
+pub(crate) type Result<T> = std::result::Result<T, Box<InvalidPointerError>>;
+
 /// Attempts to convert a raw pointer to a mutable reference.
 ///
 /// # Safety
 ///
 /// See the [module documentation](pointer).
-pub(crate) unsafe fn as_mut<'a, T>(name: &'static str, pointer: *mut T) -> Result<&'a mut T, Box<InvalidPointerError>> {
+pub(crate) unsafe fn as_mut<'a, T>(name: &'static str, pointer: *mut T) -> Result<&'a mut T> {
     let r: Option<&'a mut T> = unsafe {
         // Safety: pointer is assumed to be "dereferenceable"
         pointer.as_mut::<'a>()
@@ -55,6 +57,24 @@ pub(crate) unsafe fn as_mut<'a, T>(name: &'static str, pointer: *mut T) -> Resul
     }
 }
 
+/// Attempts to convert a raw pointer to a mutable reference to a slice.
+///
+/// # Safety
+///
+/// See [`as_mut`] for more information.
+pub(crate) unsafe fn as_mut_slice<'a, T>(name: &'static str, pointer: *mut T, count: usize) -> Result<&'a mut [T]> {
+    if count == 0 {
+        Ok(Default::default())
+    } else {
+        unsafe {
+            // Safety: pointer is assumed to meet all requirements
+            as_mut(name, pointer as *mut u8)?;
+            // Safety: pointer is assumed to be valid for count
+            Ok(std::slice::from_raw_parts_mut(pointer, count))
+        }
+    }
+}
+
 /// Attempts to create a [`Box`] from a raw pointer.
 ///
 /// # Safety
@@ -63,7 +83,7 @@ pub(crate) unsafe fn as_mut<'a, T>(name: &'static str, pointer: *mut T) -> Resul
 /// pointer to a particular allocation.
 ///
 /// Additionally, callers must meet the same pointer validity rules of [`as_mut`](as_mut#safety).
-pub(crate) unsafe fn into_boxed<T>(name: &'static str, pointer: *mut T) -> Result<Box<T>, Box<InvalidPointerError>> {
+pub(crate) unsafe fn into_boxed<T>(name: &'static str, pointer: *mut T) -> Result<Box<T>> {
     let result = unsafe {
         // Safety: Callers are responsible
         as_mut(name, pointer)

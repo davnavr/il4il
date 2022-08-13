@@ -23,20 +23,42 @@ pub use il4il::identifier::Identifier;
 #[no_mangle]
 pub unsafe extern "C" fn il4il_identifier_from_utf8(contents: *const u8, length: usize, error: *mut *mut Message) -> *mut Identifier {
     let create = || -> Result<_, Message> {
-        let code_points = if length == 0 {
-            Default::default()
-        } else {
-            unsafe {
-                // Safety: contents are assumed to meet other pointer requirements.
-                pointer::as_mut("contents", contents as *mut u8)?;
-                // Safety: contents are assumed to be valid for length
-                std::slice::from_raw_parts(contents, length)
-            }
+        let code_points = unsafe {
+            // Safety: contents is assumed to be valid for length bytes
+            pointer::as_mut_slice("contents", contents as *mut u8, length)? as &[u8]
         };
 
         Ok(Box::into_raw(Box::new(<Identifier as std::str::FromStr>::from_str(
             std::str::from_utf8(code_points)?,
         )?)))
+    };
+
+    unsafe {
+        // Safety: error is assumed to be dereferenceable.
+        error::catch_or_else(create, std::ptr::null_mut, error)
+    }
+}
+
+/// Creates an identifier string from a sequence of UTF-16 code points.
+///
+/// See [`il4il_identifier_from_utf8`] for more information.
+///
+/// # Safety
+///
+/// Callers must ensure that the `contents` point to a valid allocation containing at least `count` code points.
+///
+/// # Panics
+///
+/// Panics if the [`error` pointer is not valid](#error::catch).
+#[no_mangle]
+pub unsafe extern "C" fn il4il_identifier_from_utf16(contents: *const u16, count: usize, error: *mut *mut Message) -> *mut Identifier {
+    let create = || -> Result<_, Message> {
+        let code_points = unsafe {
+            // Safety: contents is assumed to be valid for length bytes
+            pointer::as_mut_slice("contents", contents as *mut u16, count)? as &[u16]
+        };
+
+        Ok(Box::into_raw(Box::new(Identifier::from_string(String::from_utf16(code_points)?)?)))
     };
 
     unsafe {

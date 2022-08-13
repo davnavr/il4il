@@ -14,6 +14,34 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
 
     internal IdentifierHandle(Identifier.Opaque* identifier) : base(identifier) { }
 
+    private static Identifier.Opaque* Allocate(ReadOnlySpan<char> characters) {
+        fixed (char* contents = characters) {
+            Error.Opaque* error;
+            var identifier = Identifier.FromUtf16(contents, (nuint)characters.Length, out error);
+
+            try {
+                ErrorHandling.Throw(error);
+            } catch (ErrorHandlingException e) {
+                throw new ArgumentException(nameof(characters), e);
+            }
+
+            return identifier;
+        }
+    }
+
+    /// <summary>
+    /// Initializes a new <see cref="IdentifierHandle"/>, allocating a new identifier string from a sequence of UTF-16 codepoints.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the <paramref name="contents"/> are empty or contain <c>NUL</c> bytes.
+    /// </exception>
+    public IdentifierHandle(ReadOnlySpan<char> contents) : this(Allocate(contents)) { }
+
+    /// <summary>
+    /// Initializes a new <see cref="IdentifierHandle"/>, copying the contents of the specified <see cref="String"/>.
+    /// </summary>
+    public IdentifierHandle(string contents) : this((ReadOnlySpan<char>)(contents ?? throw new ArgumentNullException(nameof(contents)))) { }
+
     private static ReadOnlySpan<byte> Contents(Identifier.Opaque* identifier) {
         nuint length;
         Error.Opaque* error;
