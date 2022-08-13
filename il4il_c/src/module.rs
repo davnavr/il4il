@@ -1,4 +1,4 @@
-//! Functions for manipulating SAILAR in-memory modules.
+//! Functions for manipulating IL4IL in-memory modules.
 
 use crate::error::{self, Message};
 use crate::pointer;
@@ -36,4 +36,22 @@ pub unsafe extern "C" fn il4il_module_dispose(module: *mut Instance, error: *mut
             error,
         );
     }
+}
+
+/// Appends a metadata section to a module.
+///
+/// # Safety
+///
+/// Callers must ensure that the metadata pointer is no longer used after this function is called.
+///
+/// # Panics
+///
+/// Panics if the [`error` pointer is not valid](#error::catch).
+#[no_mangle]
+pub unsafe extern "C" fn il4il_module_append_metadata(
+    module: *mut Instance,
+    metadata: *mut crate::metadata::Builder,
+    error: *mut *mut Message,
+) {
+    todo!()
 }

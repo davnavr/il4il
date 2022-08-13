@@ -2,8 +2,8 @@
 
 use crate::error::{self, Message};
 use crate::pointer;
-use il4il::identifier::Identifier;
-use std::str::FromStr;
+
+pub use il4il::identifier::Identifier;
 
 /// Creates an identifier string by copying from a sequence of bytes with the specified byte `length`. If the bytes are not valid UTF-8 or
 /// any argument pointers are invalid, returns `null` and an error that can be disposed with [`il4il_error_dispose`].
@@ -34,7 +34,9 @@ pub unsafe extern "C" fn il4il_identifier_from_utf8(contents: *const u8, length:
             }
         };
 
-        Ok(Box::into_raw(Box::new(Identifier::from_str(std::str::from_utf8(code_points)?)?)))
+        Ok(Box::into_raw(Box::new(<Identifier as std::str::FromStr>::from_str(
+            std::str::from_utf8(code_points)?,
+        )?)))
     };
 
     unsafe {
