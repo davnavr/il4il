@@ -1,6 +1,6 @@
 //! Module for parsing the contents of an IL4IL module.
 
-use crate::binary::section::{self, Section, SectionKind};
+use crate::binary::section::{self, Section};
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Read;
 
@@ -110,6 +110,7 @@ pub struct InvalidMagicError;
 #[error("{0} is not a valid length value")]
 pub struct LengthIntegerError(crate::integer::VarU28);
 
+/// Trait implemented by types representing bit flags or tags.
 trait FlagsValue: Sized {
     type Value: std::fmt::UpperHex + Copy;
 
@@ -118,16 +119,25 @@ trait FlagsValue: Sized {
     fn from_value(value: Self::Value) -> Option<Self>;
 }
 
-impl FlagsValue for section::SectionKind {
-    type Value = u8;
+macro_rules! flags_values {
+    ($($implementor:ty : $integer:ty, name = $name:literal;)*) => {
+        $(impl FlagsValue for $implementor {
+            type Value = $integer;
 
-    fn name() -> &'static str {
-        "section kind"
-    }
+            fn name() -> &'static str {
+                $name
+            }
 
-    fn from_value(value: Self::Value) -> Option<Self> {
-        Self::new(value)
-    }
+            fn from_value(value: Self::Value) -> Option<Self> {
+                Self::new(value)
+            }
+        })*
+    };
+}
+
+flags_values! {
+    section::SectionKind : u8, name = "section kind";
+    section::MetadataKind : u8, name = "metadata kind";
 }
 
 /// Error type used when some combination of flags is invalid.
@@ -298,15 +308,23 @@ where
     T::from_value(flags).ok_or_else(|| src.create_error(InvalidFlagsError::new(T::name(), flags)))
 }
 
-fn parse_metadata_section<'data>(src: &mut Source<impl Read>) -> Result<Section<'data>> {
-    todo!()
+impl ReadFrom for section::Metadata<'_> {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        source.push_location("metadata");
+        let metadata = match parse_flags_value(source)? {
+            section::MetadataKind::Name => todo!("parse name"),
+        };
+        source.pop_location();
+        Ok(metadata)
+    }
 }
 
 impl ReadFrom for Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         source.push_location("section");
+        // TODO: Update reader and writer to parse the section byte length. Could leverage Source's location information to specify a "maximum" length for a given section
         let section = match parse_flags_value(source)? {
-            SectionKind::Metadata => parse_metadata_section(source)?,
+            section::SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
             #[allow(unreachable_patterns)] _ => todo!(),
         };
         source.pop_location();
