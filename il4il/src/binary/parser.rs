@@ -24,6 +24,7 @@ pub struct Source<R: Read> {
 }
 
 impl<R: Read> Source<R> {
+    /// Creates a [`Source<R>`](Source) from an [`io::Read`](std::io::Read) instance.
     pub fn new(source: R) -> Self {
         Self {
             source,
@@ -48,6 +49,7 @@ impl<R: Read> Source<R> {
         self.file_offset
     }
 
+    /// Saves the current file offset for use in error reporting.
     pub fn save_file_offset(&mut self) {
         let advanced_amount = self.file_offset - self.saved_file_offset;
         if advanced_amount > 0 {
@@ -58,7 +60,7 @@ impl<R: Read> Source<R> {
         }
     }
 
-    /// Pushes a named location onto the stack, using the file offset of the byte that will be read next.
+    /// Pushes a named location onto the location stack, using the file offset of the byte that will be read next.
     pub fn push_location(&mut self, name: &'static str) {
         self.locations.push(Location {
             name,
@@ -126,6 +128,7 @@ struct ErrorInner {
 pub struct Error(Box<ErrorInner>);
 
 impl Error {
+    /// The kind of error encountered during parsing.
     pub fn kind(&self) -> &ErrorKind {
         &self.0.kind
     }
@@ -135,6 +138,7 @@ impl Error {
         self.0.file_offset
     }
 
+    /// Locations of interest encountered during parsing.
     pub fn locations(&self) -> &[Location] {
         &self.0.locations
     }
@@ -160,8 +164,10 @@ impl Display for Error {
     }
 }
 
+/// A [`Result`] type used by parsers.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// A trait for parsing data from a stream of bytes.
 pub trait ReadFrom: Sized {
     /// Reads data from a source.
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self>;
