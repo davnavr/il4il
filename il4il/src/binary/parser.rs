@@ -1,6 +1,8 @@
 //! Module for parsing the contents of an IL4IL module.
 
 use crate::binary::section::{self, Section};
+use crate::identifier::Identifier;
+use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Read;
 
@@ -314,7 +316,7 @@ where
     T::from_value(flags).ok_or_else(|| src.create_error(InvalidFlagsError::new(T::name(), flags)))
 }
 
-impl ReadFrom for crate::identifier::Identifier {
+impl ReadFrom for Identifier {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         Self::from_utf8(parse_many_length_encoded::<u8, _>(source)?.into_vec()).map_err(|e| source.create_error(e))
     }
@@ -324,7 +326,7 @@ impl ReadFrom for section::Metadata<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         source.push_location("metadata");
         let metadata = match parse_flags_value(source)? {
-            section::MetadataKind::Name => todo!("parse name"),
+            section::MetadataKind::Name => section::Metadata::Name(Cow::Owned(Identifier::read_from(source)?)),
         };
         source.pop_location();
         Ok(metadata)
