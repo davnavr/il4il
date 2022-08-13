@@ -123,6 +123,8 @@ pub enum ErrorKind {
     UnsupportedIntegerLength(#[from] crate::integer::LengthError),
     #[error(transparent)]
     BadLengthInteger(#[from] LengthIntegerError),
+    #[error(transparent)]
+    InvalidSectionKind(#[from] crate::binary::section::SectionKindError),
 }
 
 #[derive(Debug)]
@@ -185,9 +187,33 @@ pub trait ReadFrom: Sized {
     fn read_many<R: Read>(source: &mut Source<R>, count: usize) -> Result<Box<[Self]>> {
         let mut data = Vec::with_capacity(count);
         for _ in 0..count {
+            source.save_file_offset();
             data.push(Self::read_from(source)?);
         }
+
         Ok(data.into_boxed_slice())
+    }
+}
+
+impl ReadFrom for u8 {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let mut value = 0u8;
+        source.save_file_offset();
+        source
+            .read_exact(std::slice::from_mut(&mut value))
+            .map_err(|e| source.create_error(e))?;
+        Ok(value)
+    }
+
+    fn read_many<R: Read>(source: &mut Source<R>, count: usize) -> Result<Box<[Self]>> {
+        if count == 0 {
+            return Ok(Default::default());
+        }
+
+        let mut data = vec![0u8; count].into_boxed_slice();
+        source.save_file_offset();
+        source.read_exact(&mut data).map_err(|e| source.create_error(e))?;
+        Ok(data)
     }
 }
 
@@ -229,7 +255,9 @@ fn parse_many_length_encoded<T: ReadFrom, R: Read>(src: &mut Source<R>) -> Resul
 
 impl ReadFrom for crate::binary::section::Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
-        todo!()
+        match crate::binary::section::SectionKind::try_from(u8::read_from(source)?).map_err(|e| source.create_error(e))? {
+            _ => todo!(),
+        }
     }
 }
 
