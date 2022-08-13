@@ -118,6 +118,8 @@ pub enum ErrorKind {
     #[error(transparent)]
     IO(#[from] std::io::Error),
     #[error(transparent)]
+    UnsupportedFormat(#[from] crate::versioning::UnsupportedFormatError),
+    #[error(transparent)]
     UnsupportedIntegerLength(#[from] crate::integer::LengthError),
     #[error(transparent)]
     BadLengthInteger(#[from] LengthIntegerError),
@@ -189,6 +191,21 @@ pub trait ReadFrom: Sized {
     }
 }
 
+impl ReadFrom for crate::versioning::Format {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        source.save_file_offset();
+        let mut bytes = [0u8; 2];
+        source.read_exact(&mut bytes).map_err(|e| source.create_error(e))?;
+        Ok(Self::new(bytes[0], bytes[1]))
+    }
+}
+
+impl ReadFrom for crate::versioning::SupportedFormat {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        Self::try_from(crate::versioning::Format::read_from(source)?).map_err(|e| source.create_error(e))
+    }
+}
+
 impl ReadFrom for crate::integer::VarU28 {
     fn read_from<R: Read>(mut source: &mut Source<R>) -> Result<Self> {
         match Self::read_from(&mut source) {
@@ -205,7 +222,18 @@ fn parse_length(src: &mut Source<impl Read>) -> Result<usize> {
     usize::try_from(value).map_err(|_| src.create_error(LengthIntegerError(value)))
 }
 
-impl ReadFrom for crate::binary::Module<'_> {
+fn parse_many_length_encoded<T: ReadFrom, R: Read>(src: &mut Source<R>) -> Result<Box<[T]>> {
+    let count = parse_length(src)?;
+    T::read_many(src, count)
+}
+
+impl ReadFrom for crate::binary::section::Section<'_> {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        todo!()
+    }
+}
+
+impl<'data> ReadFrom for crate::binary::Module<'data> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         {
             source.save_file_offset();
@@ -217,7 +245,14 @@ impl ReadFrom for crate::binary::Module<'_> {
             }
         }
 
+        source.push_location("format version");
+        let format_version = crate::versioning::SupportedFormat::read_from(source)?;
+        source.pop_location();
 
-        todo!()
+        source.push_location("sections");
+        let sections = parse_many_length_encoded::<crate::binary::section::Section<'data>, _>(source)?;
+        source.pop_location();
+
+        Ok(Self::with_format_version_and_sections(format_version, sections.into_vec()))
     }
 }
