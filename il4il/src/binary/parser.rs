@@ -1,6 +1,6 @@
 //! Module for parsing the contents of an IL4IL module.
 
-use crate::binary::section::{Section, SectionKind};
+use crate::binary::section::{self, Section, SectionKind};
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Read;
 
@@ -110,6 +110,40 @@ pub struct InvalidMagicError;
 #[error("{0} is not a valid length value")]
 pub struct LengthIntegerError(crate::integer::VarU28);
 
+trait FlagsValue: Sized {
+    type Value: std::fmt::UpperHex + Copy;
+
+    fn name() -> &'static str;
+
+    fn from_value(value: Self::Value) -> Option<Self>;
+}
+
+impl FlagsValue for section::SectionKind {
+    type Value = u8;
+
+    fn name() -> &'static str {
+        "section kind"
+    }
+
+    fn from_value(value: Self::Value) -> Option<Self> {
+        Self::new(value)
+    }
+}
+
+/// Error type used when some combination of flags is invalid.
+#[derive(Debug, thiserror::Error)]
+#[error("{value} is not a valid {name}")]
+pub struct InvalidFlagsError {
+    name: &'static str,
+    value: String,
+}
+
+impl InvalidFlagsError {
+    fn new<T: std::fmt::UpperHex>(name: &'static str, value: T) -> Self {
+        Self { name, value: format!("{value:#02X}") }
+    }
+}
+
 /// Error type indicating why parsing failed. Used with the [`Error`] type.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -125,7 +159,7 @@ pub enum ErrorKind {
     #[error(transparent)]
     BadLengthInteger(#[from] LengthIntegerError),
     #[error(transparent)]
-    InvalidSectionKind(#[from] crate::binary::section::SectionKindError),
+    InvalidFlags(#[from] InvalidFlagsError),
 }
 
 #[derive(Debug)]
@@ -254,6 +288,16 @@ fn parse_many_length_encoded<T: ReadFrom, R: Read>(src: &mut Source<R>) -> Resul
     T::read_many(src, count)
 }
 
+fn parse_flags_value<T, R>(src: &mut Source<R>) -> Result<T>
+where
+    T: FlagsValue,
+    T::Value: ReadFrom,
+    R: Read
+{
+    let flags = <T::Value>::read_from(src)?;
+    T::from_value(flags).ok_or_else(|| src.create_error(InvalidFlagsError::new(T::name(), flags)))
+}
+
 fn parse_metadata_section<'data>(src: &mut Source<impl Read>) -> Result<Section<'data>> {
     todo!()
 }
@@ -261,7 +305,7 @@ fn parse_metadata_section<'data>(src: &mut Source<impl Read>) -> Result<Section<
 impl ReadFrom for Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         source.push_location("section");
-        let section = match SectionKind::try_from(u8::read_from(source)?).map_err(|e| source.create_error(e))? {
+        let section = match parse_flags_value(source)? {
             SectionKind::Metadata => parse_metadata_section(source)?,
             #[allow(unreachable_patterns)] _ => todo!(),
         };

@@ -72,18 +72,6 @@ kind_enum! {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-#[error("{0:#02X} is not a valid section kind")]
-pub struct SectionKindError(u8);
-
-impl TryFrom<u8> for SectionKind {
-    type Error = SectionKindError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Self::new(value).ok_or(SectionKindError(value))
-    }
-}
-
 /// Represents an IL4IL module section.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
