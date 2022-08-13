@@ -18,9 +18,8 @@ pub struct Location {
 #[derive(Debug)]
 pub struct Source<R: Read> {
     source: R,
-    /// The file offset used when reporting an error.
-    previous_file_offset: usize,
-    next_file_offset: usize,
+    saved_file_offset: usize,
+    file_offset: usize,
     locations: Vec<Location>,
 }
 
@@ -28,8 +27,8 @@ impl<R: Read> Source<R> {
     pub fn new(source: R) -> Self {
         Self {
             source,
-            previous_file_offset: 0,
-            next_file_offset: 0,
+            saved_file_offset: 0,
+            file_offset: 0,
             locations: Vec::new(),
         }
     }
@@ -39,22 +38,23 @@ impl<R: Read> Source<R> {
     pub fn create_error<E: Into<ErrorKind>>(&self, kind: E) -> Error {
         Error(Box::new(ErrorInner {
             kind: kind.into(),
-            file_offset: self.previous_file_offset,
+            file_offset: self.saved_file_offset,
             locations: self.locations.clone().into_boxed_slice(),
         }))
     }
 
     /// The file offset of next byte that will be read next.
-    pub fn next_file_offset(&self) -> usize {
-        self.next_file_offset
+    pub fn file_offset(&self) -> usize {
+        self.file_offset
     }
 
-    /// Ensures that the current value of [`next_file_offset`](Source::next_file_offset) is used in error reporting.
     pub fn save_file_offset(&mut self) {
-        let advanced_amount = self.next_file_offset - self.previous_file_offset;
-        self.previous_file_offset = self.next_file_offset;
-        for location in self.locations.iter_mut() {
-            location.offset += advanced_amount;
+        let advanced_amount = self.file_offset - self.saved_file_offset;
+        if advanced_amount > 0 {
+            self.saved_file_offset = self.file_offset;
+            for location in self.locations.iter_mut() {
+                location.offset += advanced_amount;
+            }
         }
     }
 
@@ -62,7 +62,7 @@ impl<R: Read> Source<R> {
     pub fn push_location(&mut self, name: &'static str) {
         self.locations.push(Location {
             name,
-            starting_file_offset: self.next_file_offset,
+            starting_file_offset: self.file_offset,
             offset: 0,
         })
     }
@@ -72,7 +72,7 @@ impl<R: Read> Source<R> {
     }
 
     fn advance_location(&mut self, amount: usize) {
-        self.next_file_offset += amount;
+        self.file_offset += amount;
     }
 }
 
@@ -90,15 +90,28 @@ impl<R: Read> Read for Source<R> {
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()> {
-        self.source.read_exact(buf)
+        self.source.read_exact(buf)?;
+        self.advance_location(buf.len());
+        Ok(())
     }
 }
 
+/// Error type used when a file does not start with the IL4IL [module magic value](crate::binary::MAGIC).
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("not a valid IL4IL module file")]
+#[non_exhaustive]
+pub struct InvalidMagicError;
+
+/// Error type indicating why parsing failed. Used with the [`Error`] type.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ErrorKind {
     #[error(transparent)]
+    InvalidMagic(#[from] InvalidMagicError),
+    #[error(transparent)]
     IO(#[from] std::io::Error),
+    #[error(transparent)]
+    IntegerLengthError(#[from] crate::integer::LengthError),
 }
 
 #[derive(Debug)]
@@ -108,6 +121,7 @@ struct ErrorInner {
     locations: Box<[Location]>,
 }
 
+/// Error type used when parsing fails.
 #[derive(thiserror::Error)]
 pub struct Error(Box<ErrorInner>);
 
@@ -153,8 +167,27 @@ pub trait ReadFrom: Sized {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self>;
 }
 
+impl ReadFrom for crate::integer::VarU28 {
+    fn read_from<R: Read>(mut source: &mut Source<R>) -> Result<Self> {
+        match Self::read_from(&mut source) {
+            Ok(Ok(value)) => Ok(value),
+            Ok(Err(error)) => Err(source.create_error(error)),
+            Err(error) => Err(source.create_error(error)),
+        }
+    }
+}
+
 impl ReadFrom for crate::binary::Module<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        {
+            source.save_file_offset();
+            let mut magic_buffer = [0u8; crate::binary::MAGIC.len()];
+            let count = source.read(&mut magic_buffer).map_err(|e| source.create_error(e))?;
+            let actual_magic = &magic_buffer[0..count];
+            if actual_magic != crate::binary::MAGIC.as_slice() {
+                return Err(source.create_error(InvalidMagicError));
+            }
+        }
         todo!()
     }
 }
