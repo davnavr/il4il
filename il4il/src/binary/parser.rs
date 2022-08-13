@@ -150,7 +150,10 @@ pub struct InvalidFlagsError {
 
 impl InvalidFlagsError {
     fn new<T: std::fmt::UpperHex>(name: &'static str, value: T) -> Self {
-        Self { name, value: format!("{value:#02X}") }
+        Self {
+            name,
+            value: format!("{value:#02X}"),
+        }
     }
 }
 
@@ -170,6 +173,8 @@ pub enum ErrorKind {
     BadLengthInteger(#[from] LengthIntegerError),
     #[error(transparent)]
     InvalidFlags(#[from] InvalidFlagsError),
+    #[error(transparent)]
+    InvalidIdentifier(#[from] crate::identifier::ParseError),
 }
 
 #[derive(Debug)]
@@ -302,10 +307,17 @@ fn parse_flags_value<T, R>(src: &mut Source<R>) -> Result<T>
 where
     T: FlagsValue,
     T::Value: ReadFrom,
-    R: Read
+    R: Read,
 {
+    src.save_file_offset();
     let flags = <T::Value>::read_from(src)?;
     T::from_value(flags).ok_or_else(|| src.create_error(InvalidFlagsError::new(T::name(), flags)))
+}
+
+impl ReadFrom for crate::identifier::Identifier {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        Self::from_utf8(parse_many_length_encoded::<u8, _>(source)?.into_vec()).map_err(|e| source.create_error(e))
+    }
 }
 
 impl ReadFrom for section::Metadata<'_> {
@@ -325,7 +337,8 @@ impl ReadFrom for Section<'_> {
         // TODO: Update reader and writer to parse the section byte length. Could leverage Source's location information to specify a "maximum" length for a given section
         let section = match parse_flags_value(source)? {
             section::SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
-            #[allow(unreachable_patterns)] _ => todo!(),
+            #[allow(unreachable_patterns)]
+            _ => todo!(),
         };
         source.pop_location();
         Ok(section)

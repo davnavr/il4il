@@ -238,6 +238,15 @@ impl Identifier {
         Self::from_string(identifier.into())
     }
 
+    /// Attempts to convert a sequence of UTF-8 bytes into an identifier string.
+    pub fn from_utf8(bytes: Vec<u8>) -> Result<Self, ParseError> {
+        Id::from_utf8(&bytes)?;
+        unsafe {
+            // Safety: Validation is performed above.
+            Ok(Self::from_string_unchecked(String::from_utf8_unchecked(bytes)))
+        }
+    }
+
     /// Appends an identifier string to the end of this identifier.
     ///
     /// # Examples
