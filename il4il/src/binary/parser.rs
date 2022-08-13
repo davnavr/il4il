@@ -1,5 +1,6 @@
 //! Module for parsing the contents of an IL4IL module.
 
+use crate::binary::section::{Section, SectionKind};
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Read;
 
@@ -253,11 +254,19 @@ fn parse_many_length_encoded<T: ReadFrom, R: Read>(src: &mut Source<R>) -> Resul
     T::read_many(src, count)
 }
 
-impl ReadFrom for crate::binary::section::Section<'_> {
+fn parse_metadata_section<'data>(src: &mut Source<impl Read>) -> Result<Section<'data>> {
+    todo!()
+}
+
+impl ReadFrom for Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
-        match crate::binary::section::SectionKind::try_from(u8::read_from(source)?).map_err(|e| source.create_error(e))? {
-            _ => todo!(),
-        }
+        source.push_location("section");
+        let section = match SectionKind::try_from(u8::read_from(source)?).map_err(|e| source.create_error(e))? {
+            SectionKind::Metadata => parse_metadata_section(source)?,
+            #[allow(unreachable_patterns)] _ => todo!(),
+        };
+        source.pop_location();
+        Ok(section)
     }
 }
 
@@ -278,7 +287,7 @@ impl<'data> ReadFrom for crate::binary::Module<'data> {
         source.pop_location();
 
         source.push_location("sections");
-        let sections = parse_many_length_encoded::<crate::binary::section::Section<'data>, _>(source)?;
+        let sections = parse_many_length_encoded::<Section<'data>, _>(source)?;
         source.pop_location();
 
         Ok(Self::with_format_version_and_sections(format_version, sections.into_vec()))
