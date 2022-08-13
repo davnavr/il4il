@@ -11,13 +11,15 @@ pub struct Module<'data> {
 }
 
 impl<'data> Module<'data> {
+    #[must_use]
+    pub(crate) fn with_format_version_and_sections(format_version: SupportedFormat, sections: Vec<Section<'data>>) -> Self {
+        Self { format_version, sections }
+    }
+
     /// Creates an empty module with the current format version.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            format_version: SupportedFormat::CURRENT,
-            sections: Vec::new(),
-        }
+        Self::with_format_version_and_sections(SupportedFormat::CURRENT, Vec::new())
     }
 
     /// Returns the format version of the module.

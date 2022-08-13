@@ -104,6 +104,11 @@ impl<R: Read> Read for Source<R> {
 #[non_exhaustive]
 pub struct InvalidMagicError;
 
+/// Error type used when an unsigned integer length cannot be used.
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("{0} is not a valid length value")]
+pub struct LengthIntegerError(crate::integer::VarU28);
+
 /// Error type indicating why parsing failed. Used with the [`Error`] type.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -113,7 +118,9 @@ pub enum ErrorKind {
     #[error(transparent)]
     IO(#[from] std::io::Error),
     #[error(transparent)]
-    IntegerLengthError(#[from] crate::integer::LengthError),
+    UnsupportedIntegerLength(#[from] crate::integer::LengthError),
+    #[error(transparent)]
+    BadLengthInteger(#[from] LengthIntegerError),
 }
 
 #[derive(Debug)]
@@ -171,6 +178,15 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub trait ReadFrom: Sized {
     /// Reads data from a source.
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self>;
+
+    /// Reads a contiguous sequence of data from a source.
+    fn read_many<R: Read>(source: &mut Source<R>, count: usize) -> Result<Box<[Self]>> {
+        let mut data = Vec::with_capacity(count);
+        for _ in 0..count {
+            data.push(Self::read_from(source)?);
+        }
+        Ok(data.into_boxed_slice())
+    }
 }
 
 impl ReadFrom for crate::integer::VarU28 {
@@ -181,6 +197,12 @@ impl ReadFrom for crate::integer::VarU28 {
             Err(error) => Err(source.create_error(error)),
         }
     }
+}
+
+fn parse_length(src: &mut Source<impl Read>) -> Result<usize> {
+    src.save_file_offset();
+    let value = <crate::integer::VarU28 as ReadFrom>::read_from(src)?;
+    usize::try_from(value).map_err(|_| src.create_error(LengthIntegerError(value)))
 }
 
 impl ReadFrom for crate::binary::Module<'_> {
@@ -194,6 +216,8 @@ impl ReadFrom for crate::binary::Module<'_> {
                 return Err(source.create_error(InvalidMagicError));
             }
         }
+
+
         todo!()
     }
 }

@@ -290,6 +290,14 @@ impl TryFrom<usize> for VarU28 {
     }
 }
 
+impl TryFrom<VarU28> for usize {
+    type Error = std::num::TryFromIntError;
+
+    fn try_from(value: VarU28) -> Result<usize, Self::Error> {
+        usize::try_from(value.get())
+    }
+}
+
 impl Debug for VarU28 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         Debug::fmt(&self.get(), f)
