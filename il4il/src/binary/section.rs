@@ -12,6 +12,15 @@ macro_rules! kind_enum {
             $($(#[$case_meta])* $case_name = $case_number,)*
         }
 
+        impl $name {
+            pub fn new(value: $inty) -> Option<Self> {
+                match value {
+                    $(_ if value == $case_number => Some(Self::$case_name),)*
+                    _ => None
+                }
+            }
+        }
+
         impl From<$name> for $inty {
             fn from(kind: $name) -> Self {
                 match kind {

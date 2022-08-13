@@ -1,3 +1,4 @@
+use crate::binary::parser;
 use crate::binary::section::Section;
 use crate::binary::writer;
 use crate::versioning::SupportedFormat;
@@ -10,13 +11,15 @@ pub struct Module<'data> {
 }
 
 impl<'data> Module<'data> {
+    #[must_use]
+    pub(crate) fn with_format_version_and_sections(format_version: SupportedFormat, sections: Vec<Section<'data>>) -> Self {
+        Self { format_version, sections }
+    }
+
     /// Creates an empty module with the current format version.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            format_version: SupportedFormat::CURRENT,
-            sections: Vec::new(),
-        }
+        Self::with_format_version_and_sections(SupportedFormat::CURRENT, Vec::new())
     }
 
     /// Returns the format version of the module.
@@ -54,6 +57,19 @@ impl<'data> Module<'data> {
     /// Writes the binary contents of the SAILAR module to the specified destination.
     pub fn write_to<W: std::io::Write>(&self, mut destination: W) -> std::io::Result<()> {
         writer::WriteTo::write_to(self, &mut destination)
+    }
+
+    /// Reads the binary contents of a SAILAR module from the specified source.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::binary::*;
+    /// assert!(matches!(Module::read_from([ 1u8, 2, 3, 4 ].as_slice()), Err(e) if e.file_offset() == 0));
+    /// ```
+    pub fn read_from<R: std::io::Read>(source: R) -> parser::Result<Self> {
+        let mut reader = parser::Source::new(source);
+        <Self as parser::ReadFrom>::read_from(&mut reader)
     }
 }
 
