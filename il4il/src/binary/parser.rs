@@ -64,7 +64,7 @@ impl<R: Read> Source<R> {
     }
 
     /// Pushes a named location onto the location stack, using the file offset of the byte that will be read next.
-    pub fn push_location(&mut self, name: &'static str) {
+    fn push_location(&mut self, name: &'static str) {
         self.locations.push(Location {
             name,
             starting_file_offset: self.file_offset,
@@ -72,8 +72,10 @@ impl<R: Read> Source<R> {
         })
     }
 
-    pub fn pop_location(&mut self) {
-        self.locations.pop();
+    /// Pops a location from the top of the location stack, returning a file offset to the start of the location.
+    fn pop_location(&mut self) -> usize {
+        let location = self.locations.pop().unwrap();
+        self.file_offset - location.starting_file_offset
     }
 
     fn advance_location(&mut self, amount: usize) {
@@ -143,7 +145,7 @@ flags_values! {
 }
 
 /// Error type used when some combination of flags is invalid.
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error)]
 #[error("{value} is not a valid {name}")]
 pub struct InvalidFlagsError {
     name: &'static str,
@@ -157,6 +159,14 @@ impl InvalidFlagsError {
             value: format!("{value:#02X}"),
         }
     }
+}
+
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("expected {:?} section to have a length of {expected} bytes, but {actual} bytes were parsed")]
+pub struct SectionLengthError {
+    section: section::SectionKind,
+    expected: usize,
+    actual: usize,
 }
 
 /// Error type indicating why parsing failed. Used with the [`Error`] type.
@@ -177,6 +187,8 @@ pub enum ErrorKind {
     InvalidFlags(#[from] InvalidFlagsError),
     #[error(transparent)]
     InvalidIdentifier(#[from] crate::identifier::ParseError),
+    #[error(transparent)]
+    SectionLengthMismatch(#[from] SectionLengthError),
 }
 
 #[derive(Debug)]
@@ -336,13 +348,27 @@ impl ReadFrom for section::Metadata<'_> {
 impl ReadFrom for Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         source.push_location("section");
-        // TODO: Update reader and writer to parse the section byte length. Could leverage Source's location information to specify a "maximum" length for a given section
-        let section = match parse_flags_value(source)? {
+        let expected_length = parse_length(source)?;
+        let start_offset = source.file_offset();
+
+        let kind = parse_flags_value(source)?;
+        let section = match kind {
             section::SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
             #[allow(unreachable_patterns)]
             _ => todo!(),
         };
-        source.pop_location();
+
+        let end_offset = source.pop_location();
+        let actual_length = end_offset - start_offset;
+
+        if actual_length != expected_length {
+            return Err(source.create_error(SectionLengthError {
+                section: kind,
+                expected: expected_length,
+                actual: actual_length,
+            }));
+        }
+
         Ok(section)
     }
 }

@@ -90,6 +90,7 @@ impl WriteTo for &crate::binary::section::Metadata<'_> {
 impl WriteTo for &crate::binary::section::Section<'_> {
     fn write_to<W: Write>(self, out: &mut W) -> Result {
         u8::from(self.kind()).write_to(out)?;
+        // TODO: Include byte length of section content
         match self {
             crate::binary::section::Section::Metadata(metadata) => LengthPrefixed::from(metadata).write_to(out),
         }
