@@ -8,6 +8,11 @@ use std::borrow::Cow;
 
 pub type Builder = Vec<Metadata<'static>>;
 
+#[no_mangle]
+pub unsafe extern "C" fn il4il_metadata_section_create() -> *mut Builder {
+    Box::into_raw(Box::new(Vec::new()))
+}
+
 /// Adds a module name to this metadata section, copying the contents of an identifier string.
 ///
 /// # Safety

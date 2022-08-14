@@ -53,5 +53,21 @@ pub unsafe extern "C" fn il4il_module_append_metadata(
     metadata: *mut crate::metadata::Builder,
     error: *mut *mut Message,
 ) {
-    todo!()
+    let append = || -> Result<_, _> {
+        let module_builder: &mut Instance;
+        let metadata_builder: Box<_>;
+
+        unsafe {
+            metadata_builder = pointer::into_boxed("metadata", metadata)?;
+            module_builder = pointer::as_mut("module", module)?;
+        }
+
+        module_builder.sections_mut().push(il4il::binary::section::Section::Metadata(*metadata_builder));
+        Ok(())
+    };
+
+    unsafe {
+        // Safety: error is assumed to be dereferenceable.
+        error::catch(append, error);
+    }
 }
