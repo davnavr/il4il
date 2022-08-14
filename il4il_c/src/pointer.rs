@@ -87,6 +87,29 @@ impl<'a, T> Pointer<'a> for Option<NonNull<T>> {
     }
 }
 
+impl<'a, T> Pointer<'a> for Option<&'a T> {
+    type Raw = *const T;
+
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError> {
+        let non_null = unsafe {
+            // Safety: value is assumed to meet other pointer requirements
+            <Option<NonNull<T>> as Pointer<'a>>::from_raw(value as *mut T)?
+        };
+
+        match non_null {
+            Some(pointer) => unsafe {
+                // Safety: callers uphold other pointer rules
+                Ok(Some(pointer.as_ref()))
+            },
+            None => Ok(None),
+        }
+    }
+
+    fn into_raw(self) -> Self::Raw {
+        self.map(NonNull::from).into_raw() as *const T
+    }
+}
+
 impl<'a, T> Pointer<'a> for Option<&'a mut T> {
     type Raw = *mut T;
 
@@ -124,6 +147,23 @@ impl<'a, T> Pointer<'a> for &'a mut T {
 
     fn into_raw(self) -> Self::Raw {
         self as *mut T
+    }
+}
+
+impl<'a, T> Pointer<'a> for &'a T {
+    type Raw = *const T;
+
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError> {
+        let pointer = unsafe {
+            // Safety: callers uphold other pointer rules
+            <Option<&'a T> as Pointer<'a>>::from_raw(value)?
+        };
+
+        pointer.ok_or_else(|| InvalidPointerError::new(value, InvalidPointerKind::Null))
+    }
+
+    fn into_raw(self) -> Self::Raw {
+        self as *const T
     }
 }
 

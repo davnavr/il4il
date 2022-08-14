@@ -94,11 +94,46 @@ pub unsafe extern "C" fn il4il_identifier_from_utf16<'a>(
 #[no_mangle]
 pub unsafe extern "C" fn il4il_identifier_dispose(identifier: Exposed<'static, Box<Identifier>>) {
     unsafe {
-        // Safety: Caller must ensure identifier is a valid pointer
+        // Safety: caller must ensure identifier is a valid pointer
         identifier.unwrap().expect("identifier");
     }
 }
 
-//il4il_identifier_length
+/// Gets the length, in bytes, of an identifier string.
+/// 
+/// # Safety
+///
+/// Callers must ensure that the identifier has not already been disposed.
+///
+/// # Panics
+///
+/// Panics if the [`identifier` pointer is not valid](crate::pointer#safety).
+pub unsafe extern "C" fn il4il_identifier_byte_length<'a>(identifier: Exposed<'a, &'a Identifier>) -> usize {
+    unsafe {
+        // Safety: caller is assumed to pass a valid pointer
+        identifier.unwrap().expect("identifier").len()
+    }
+}
 
-//il4il_identifier_copy_contents
+/// Copies the UTF-8 contents of an identifier string into a buffer.
+/// 
+/// # Safety
+///
+/// Callers must ensure that the identifier has not already been disposed, and that the buffer points to a valid allocation of the length
+/// returned by [`il4il_identifier_byte_length`].
+///
+/// # Panics
+///
+/// Panics if any [pointer is not valid](crate::pointer#safety).
+pub unsafe extern "C" fn il4il_identifier_copy_bytes_to<'a>(identifier: Exposed<'a, &'a Identifier>, buffer: *mut u8) {
+    let id = unsafe {
+        // Safety: identifier is assumed to be valid
+        identifier.unwrap().expect("identifier") };
+
+    let bytes: &'a mut [u8] = unsafe {
+        // Buffer is assumed to be valid for the specified length.
+        pointer::as_mut_slice(buffer, id.len()).expect("buffer")
+    };
+
+    bytes.copy_from_slice(id.as_bytes());
+}

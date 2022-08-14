@@ -1,6 +1,7 @@
 ﻿namespace Il4ilSharp.Interop;
 
 using System;
+using System.Buffers;
 using System.Text;
 using Il4ilSharp.Interop.Native;
 
@@ -16,11 +17,10 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
 
     private static Identifier.Opaque* Allocate(ReadOnlySpan<char> characters) {
         fixed (char* contents = characters) {
-            Error.Opaque* error;
-            var identifier = Identifier.FromUtf16(contents, (nuint)characters.Length, out error);
+            Identifier.Opaque* identifier;
 
             try {
-                ErrorHandling.Throw(error);
+                ErrorHandling.Throw(Identifier.FromUtf16(contents, (nuint)characters.Length, out identifier));
             } catch (ErrorHandlingException e) {
                 throw new ArgumentException(nameof(characters), e);
             }
@@ -42,29 +42,6 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
     /// </summary>
     public IdentifierHandle(string contents) : this((ReadOnlySpan<char>)(contents ?? throw new ArgumentNullException(nameof(contents)))) { }
 
-    private static ReadOnlySpan<byte> Contents(Identifier.Opaque* identifier) {
-        nuint length;
-        Error.Opaque* error;
-        byte* contents = Identifier.Contents(identifier, out length, out error);
-        ErrorHandling.Throw(error);
-        return new ReadOnlySpan<byte>(contents, (int)length);
-    }
-
-    /// <summary>Attempts to convert the identifier string to a .NET <see cref="String"/>.</summary>
-    /// <returns>The contents of the identifier string, or <see cref="String.Empty"/> if the identifier was disposed.</returns>
-    public override string ToString() {
-        if (IsDisposed) {
-            return String.Empty;
-        }
-
-        try {
-            var identifier = Enter();
-            return Encoding.UTF8.GetString(Contents(identifier));
-        } finally {
-            Exit();
-        }
-    }
-
     /// <summary>Attempts to copy the UTF-8 contents of the identifier string into a newly allocated byte array.</summary>
     /// <returns>An array containing the UTF-8 string, or an empty array if the identifier was disposed.</returns>
     public byte[] ToArray() {
@@ -74,15 +51,43 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
 
         try {
             var identifier = Enter();
-            return Contents(identifier).ToArray();
+            byte[] buffer = new byte[(int)Identifier.ByteLength(identifier)];
+            fixed (byte* bytes = buffer) {
+                Identifier.CopyBytesTo(identifier, bytes);
+            }
+
+            return buffer;
         } finally {
             Exit();
         }
     }
 
-    private protected override unsafe void Cleanup(Identifier.Opaque* pointer) {
-        Error.Opaque* error;
-        Identifier.Dispose(pointer, out error);
-        ErrorHandling.Throw(error);
+    /// <summary>Attempts to convert the identifier string to a .NET <see cref="String"/>.</summary>
+    /// <returns>The contents of the identifier string, or <see cref="String.Empty"/> if the identifier was disposed.</returns>
+    public override string ToString() {
+        if (IsDisposed) {
+            return String.Empty;
+        }
+
+        byte[]? rented = null;
+
+        try {
+            var identifier = Enter();
+            int length = (int)Identifier.ByteLength(identifier);
+            Span<byte> buffer = length > 256 ? stackalloc byte[length] : rented = ArrayPool<byte>.Shared.Rent(length);
+            fixed (byte* bytes = buffer) {
+                Identifier.CopyBytesTo(identifier, bytes);
+            }
+
+            return Encoding.UTF8.GetString(buffer);
+        } finally {
+            Exit();
+
+            if (rented != null) {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
     }
+
+    private protected override unsafe void Cleanup(Identifier.Opaque* pointer) => Identifier.Dispose(pointer);
 }
