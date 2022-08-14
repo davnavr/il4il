@@ -62,7 +62,9 @@ pub unsafe extern "C" fn il4il_module_append_metadata(
             module_builder = pointer::as_mut("module", module)?;
         }
 
-        module_builder.sections_mut().push(il4il::binary::section::Section::Metadata(*metadata_builder));
+        module_builder
+            .sections_mut()
+            .push(il4il::binary::section::Section::Metadata(*metadata_builder));
         Ok(())
     };
 

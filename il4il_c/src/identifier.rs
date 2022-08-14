@@ -1,42 +1,49 @@
 //! Functions for manipulating SAILAR identifier strings.
 
-use crate::error::{self, Message};
-use crate::pointer;
+use crate::error::{self, Error, Message};
+use crate::pointer::{self, Exposed};
 
 pub use il4il::identifier::Identifier;
 
 /// Creates an identifier string by copying from a sequence of bytes with the specified byte `length`. If the bytes are not valid UTF-8 or
-/// any argument pointers are invalid, returns `null` and an error that can be disposed with [`il4il_error_dispose`].
+/// any argument pointers are invalid, returns an error that can be disposed with [`il4il_error_dispose`].
 ///
 /// The identifier can be disposed later with [`il4il_identifier_dispose`].
 ///
 /// # Safety
 ///
-/// Callers must ensure that the `contents` and `error` [pointers are valid](mod@pointer#safety), and that `contents` points to an
-/// allocation of at least `length` bytes.
+/// Callers must ensure that the `contents` point to an allocation of at least `length` bytes.
 ///
 /// # Panics
 ///
-/// Panics if the [`error` pointer is not valid](#error::catch).
+/// Panics if any [pointers are not valid](crate::pointer).
 ///
 /// [`il4il_error_dispose`]: error::il4il_error_dispose
 #[no_mangle]
-pub unsafe extern "C" fn il4il_identifier_from_utf8(contents: *const u8, length: usize, error: *mut *mut Message) -> *mut Identifier {
+pub unsafe extern "C" fn il4il_identifier_from_utf8<'a>(
+    contents: *const u8,
+    length: usize,
+    identifier: Exposed<'a, &'a mut Box<Identifier>>,
+) -> Error {
     let create = || -> Result<_, Message> {
         let code_points = unsafe {
             // Safety: contents is assumed to be valid for length bytes
-            pointer::as_mut_slice("contents", contents as *mut u8, length)? as &[u8]
+            pointer::as_slice(contents, length).expect("contents")
         };
 
-        Ok(Box::into_raw(Box::new(<Identifier as std::str::FromStr>::from_str(
-            std::str::from_utf8(code_points)?,
-        )?)))
+        Ok(Box::new(<Identifier as std::str::FromStr>::from_str(std::str::from_utf8(
+            code_points,
+        )?)?))
     };
 
-    unsafe {
-        // Safety: error is assumed to be dereferenceable.
-        error::catch_or_else(create, std::ptr::null_mut, error)
-    }
+    error::wrap_with_result(
+        create,
+        unsafe {
+            // Safety: Caller is assumed to pass a valid pointer
+            identifier.unwrap()
+        }
+        .expect("identifier"),
+    )
 }
 
 /// Creates an identifier string from a sequence of UTF-16 code points.
@@ -49,86 +56,49 @@ pub unsafe extern "C" fn il4il_identifier_from_utf8(contents: *const u8, length:
 ///
 /// # Panics
 ///
-/// Panics if the [`error` pointer is not valid](#error::catch).
+/// Panics if any [pointers are not valid](crate::pointer).
 #[no_mangle]
-pub unsafe extern "C" fn il4il_identifier_from_utf16(contents: *const u16, count: usize, error: *mut *mut Message) -> *mut Identifier {
+pub unsafe extern "C" fn il4il_identifier_from_utf16<'a>(
+    contents: *const u16,
+    count: usize,
+    identifier: Exposed<'a, &'a mut Box<Identifier>>,
+) -> Error {
     let create = || -> Result<_, Message> {
         let code_points = unsafe {
             // Safety: contents is assumed to be valid for length bytes
-            pointer::as_mut_slice("contents", contents as *mut u16, count)? as &[u16]
+            pointer::as_slice(contents, count).expect("contents")
         };
 
-        Ok(Box::into_raw(Box::new(Identifier::from_string(String::from_utf16(code_points)?)?)))
+        Ok(Box::new(Identifier::from_string(String::from_utf16(code_points)?)?))
     };
 
-    unsafe {
-        // Safety: error is assumed to be dereferenceable.
-        error::catch_or_else(create, std::ptr::null_mut, error)
-    }
+    error::wrap_with_result(
+        create,
+        unsafe {
+            // Safety: Caller is assumed to pass a valid pointer
+            identifier.unwrap()
+        }
+        .expect("identifier"),
+    )
 }
 
 /// Disposes an identifier string.
-///
+/// 
 /// # Safety
 ///
 /// Callers must ensure that the identifier has not already been disposed.
 ///
 /// # Panics
 ///
-/// Panics if the [`error` pointer is not valid](#error::catch).
+/// Panics if the [`identifier` pointer is not valid](crate::pointer#safety).
 #[no_mangle]
-pub unsafe extern "C" fn il4il_identifier_dispose(identifier: *mut Identifier, error: *mut *mut Message) {
+pub unsafe extern "C" fn il4il_identifier_dispose(identifier: Exposed<'static, Box<Identifier>>) {
     unsafe {
-        // Safety: error is assumed to be dereferenceable.
-        error::catch(
-            || {
-                // Safety: Caller must ensure identifier is valid pointer.
-                Ok(pointer::into_boxed("identifier", identifier)?)
-            },
-            error,
-        );
+        // Safety: Caller must ensure identifier is a valid pointer
+        identifier.unwrap().expect("identifier");
     }
 }
 
-/// Returns a pointer to the UTF-8 byte contents of an identifier string, as well as the string's length in bytes. If the identifier is
-/// `null`, returns a `null` pointer and a length of `0`.
-///
-/// Any invalid pointer arguments create an error that can be disposed with [`il4il_error_dispose`].
-///
-/// # Safety
-///
-/// Callers must ensure that the identifier originates from an [`il4il_c`](crate) function and that it has not already been disposed.
-///
-/// # Panics
-///
-/// Panics if the [`error` pointer is not valid](#error::catch).
-///
-/// [`il4il_error_dispose`]: error::il4il_error_dispose
-#[no_mangle]
-pub unsafe extern "C" fn il4il_identifier_contents(identifier: *mut Identifier, length: *mut usize, error: *mut *mut Message) -> *const u8 {
-    let dereference = || -> Result<_, _> {
-        let length_mut = unsafe {
-            // Safety: length is assumed to be dereferenceable.
-            pointer::as_mut("length", length)?
-        };
+//il4il_identifier_length
 
-        *length_mut = 0;
-
-        if identifier.is_null() {
-            return Ok(std::ptr::null());
-        }
-
-        let bytes = unsafe {
-            // Safety: identifier is assumed to be dereferenceable.
-            pointer::as_mut("identifier", identifier)?.as_bytes()
-        };
-
-        *length_mut = bytes.len();
-        Ok(bytes.as_ptr())
-    };
-
-    unsafe {
-        // Safety: error is assumed to be dereferenceable.
-        error::catch_or_else(dereference, std::ptr::null, error)
-    }
-}
+//il4il_identifier_copy_contents

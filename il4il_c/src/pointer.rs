@@ -11,8 +11,12 @@
 //!
 //! For additional information, see [the crate documentation](crate#safety).
 
+use std::ptr::NonNull;
+
+/// Error type used to indicate why a pointer is invalid.
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum InvalidPointerKind {
+#[non_exhaustive]
+pub enum InvalidPointerKind {
     #[error("null")]
     Null,
     #[error("unaligned, expected alignment of {0}")]
@@ -20,77 +24,197 @@ pub(crate) enum InvalidPointerKind {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("{name} ({address:p}) was {kind}")]
-pub(crate) struct InvalidPointerError {
-    name: &'static str,
-    address: usize,
+#[error("{pointer:p} was {kind}")]
+pub struct InvalidPointerError {
+    pointer: *const u8,
     kind: InvalidPointerKind,
 }
 
-pub(crate) type Result<T> = std::result::Result<T, Box<InvalidPointerError>>;
-
-/// Attempts to convert a raw pointer to a mutable reference.
-///
-/// # Safety
-///
-/// See the [module documentation](pointer).
-pub(crate) unsafe fn as_mut<'a, T>(name: &'static str, pointer: *mut T) -> Result<&'a mut T> {
-    let r: Option<&'a mut T> = unsafe {
-        // Safety: pointer is assumed to be "dereferenceable"
-        pointer.as_mut::<'a>()
-    };
-
-    let expected_alignment = std::mem::align_of::<T>();
-
-    match r {
-        Some(m) if pointer.align_offset(expected_alignment) == 0 => Ok(m),
-        Some(_) => Err(Box::new(InvalidPointerError {
-            name,
-            address: pointer as usize,
-            kind: InvalidPointerKind::Unaligned(expected_alignment),
-        })),
-        None => Err(Box::new(InvalidPointerError {
-            name,
-            address: pointer as usize,
-            kind: InvalidPointerKind::Null,
-        })),
-    }
-}
-
-/// Attempts to convert a raw pointer to a mutable reference to a slice.
-///
-/// # Safety
-///
-/// See [`as_mut`] for more information.
-pub(crate) unsafe fn as_mut_slice<'a, T>(name: &'static str, pointer: *mut T, count: usize) -> Result<&'a mut [T]> {
-    if count == 0 {
-        Ok(Default::default())
-    } else {
-        unsafe {
-            // Safety: pointer is assumed to meet all requirements
-            as_mut(name, pointer as *mut u8)?;
-            // Safety: pointer is assumed to be valid for count
-            Ok(std::slice::from_raw_parts_mut(pointer, count))
+impl InvalidPointerError {
+    fn new<T>(pointer: *const T, kind: InvalidPointerKind) -> Self {
+        Self {
+            pointer: pointer as *const u8,
+            kind,
         }
     }
 }
 
-/// Attempts to create a [`Box`] from a raw pointer.
-///
-/// # Safety
-///
-/// Callers should ensure that the `pointer` was returned by a call to [`Box::into_raw`], and that this function is only called once for a
-/// pointer to a particular allocation.
-///
-/// Additionally, callers must meet the same pointer validity rules of [`as_mut`](as_mut#safety).
-pub(crate) unsafe fn into_boxed<T>(name: &'static str, pointer: *mut T) -> Result<Box<T>> {
-    let result = unsafe {
-        // Safety: Callers are responsible
-        as_mut(name, pointer)
-    };
+/// Trait for converting between pointers and references.
+pub trait Pointer<'a>: Sized {
+    type Raw;
 
-    result.map(|_| unsafe {
-        // Safety: Assumed to point to a box's contents
-        Box::from_raw(pointer)
-    })
+    /// Converts a raw pointer into `Self`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a pointer is invalid.
+    ///
+    /// # Safety
+    ///
+    /// Callers must uphold [all rules regarding pointer validity](crate#safety).
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError>;
+
+    /// Converts `self` into a raw pointer.
+    fn into_raw(self) -> Self::Raw;
+}
+
+impl<'a, T> Pointer<'a> for Option<NonNull<T>> {
+    type Raw = *mut T;
+
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError> {
+        if let Some(pointer) = NonNull::new(value) {
+            let expected_alignment = std::mem::align_of::<T>();
+
+            if pointer.as_ptr().align_offset(expected_alignment) != 0 {
+                return Err(InvalidPointerError::new(
+                    pointer.as_ptr(),
+                    InvalidPointerKind::Unaligned(expected_alignment),
+                ));
+            }
+
+            Ok(Some(pointer))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn into_raw(self) -> Self::Raw {
+        if let Some(pointer) = self {
+            pointer.as_ptr()
+        } else {
+            std::ptr::null_mut()
+        }
+    }
+}
+
+impl<'a, T> Pointer<'a> for Option<&'a mut T> {
+    type Raw = *mut T;
+
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError> {
+        let non_null = unsafe {
+            // Safety: value is assumed to meet other pointer requirements
+            <Option<NonNull<T>> as Pointer<'a>>::from_raw(value)?
+        };
+
+        match non_null {
+            Some(mut pointer) => unsafe {
+                // Safety: callers uphold other pointer rules
+                Ok(Some(pointer.as_mut()))
+            },
+            None => Ok(None),
+        }
+    }
+
+    fn into_raw(self) -> Self::Raw {
+        self.map(NonNull::from).into_raw()
+    }
+}
+
+impl<'a, T> Pointer<'a> for &'a mut T {
+    type Raw = *mut T;
+
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError> {
+        let pointer = unsafe {
+            // Safety: callers uphold other pointer rules
+            <Option<&'a mut T> as Pointer<'a>>::from_raw(value)?
+        };
+
+        pointer.ok_or_else(|| InvalidPointerError::new(value, InvalidPointerKind::Null))
+    }
+
+    fn into_raw(self) -> Self::Raw {
+        self as *mut T
+    }
+}
+
+impl<T> Pointer<'static> for Box<T> {
+    type Raw = *mut T;
+
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError> {
+        unsafe {
+            // Safety: value is assumed to result in a valid pointer
+            <&mut T as Pointer>::from_raw(value)?;
+        }
+
+        unsafe {
+            // Safety: Any validation checks are performed above
+            Ok(Box::from_raw(value))
+        }
+    }
+
+    fn into_raw(self) -> Self::Raw {
+        Box::into_raw(self)
+    }
+}
+
+impl<T> Pointer<'static> for Option<Box<T>> {
+    type Raw = *mut T;
+
+    unsafe fn from_raw(value: Self::Raw) -> Result<Self, InvalidPointerError> {
+        let non_null = unsafe {
+            // Safety: other pointer rules are assumed to be met.
+            <Option<NonNull<T>> as Pointer>::from_raw(value)?
+        };
+
+        Ok(non_null.map(|pointer| unsafe {
+            // Safety: Any validation checks are performed above
+            Box::from_raw(pointer.as_ptr())
+        }))
+    }
+
+    fn into_raw(self) -> Self::Raw {
+        match self {
+            None => std::ptr::null_mut(),
+            Some(b) => Box::into_raw(b),
+        }
+    }
+}
+
+/// Wrapper type for pointers used in `extern` functions.
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct Exposed<'a, P: Pointer<'a>>(P::Raw);
+
+impl<'a, P: Pointer<'a>> Exposed<'a, P> {
+    /// Attempts to convert from a raw pointer.
+    ///
+    /// See [`Pointer::from_raw`] for more information.
+    pub(crate) unsafe fn unwrap(self) -> Result<P, InvalidPointerError> {
+        unsafe {
+            // Safety: Caller is responsible
+            P::from_raw(self.0)
+        }
+    }
+
+    /// Wraps a type that can be represented by a raw pointer.
+    pub fn wrap(value: P) -> Self {
+        Self(P::into_raw(value))
+    }
+}
+
+impl<'a, P: Pointer<'a>> From<P> for Exposed<'a, P> {
+    fn from(value: P) -> Self {
+        Self::wrap(value)
+    }
+}
+
+pub(crate) unsafe fn as_mut_slice<'a, T>(pointer: *mut T, length: usize) -> Result<&'a mut [T], InvalidPointerError> {
+    if length == 0 {
+        Ok(Default::default())
+    } else {
+        unsafe {
+            // Safety: caller is responsible
+            <&'a mut T as Pointer<'a>>::from_raw(pointer)?;
+
+            // Safety: validation is performed above
+            Ok(std::slice::from_raw_parts_mut(pointer, length))
+        }
+    }
+}
+
+pub(crate) unsafe fn as_slice<'a, T>(pointer: *const T, length: usize) -> Result<&'a [T], InvalidPointerError> {
+    unsafe {
+        // Safety: caller is responsible
+        as_mut_slice(pointer as *mut T, length).map(|slice| slice as &'a [T])
+    }
 }
