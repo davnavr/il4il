@@ -41,7 +41,9 @@ public unsafe abstract class SyncHandle<T> : IDisposable where T : unmanaged {
                 Cleanup(t);
             }
         } finally {
-            Exit();
+            if (disposing) {
+                Exit();
+            }
         }
     }
 
