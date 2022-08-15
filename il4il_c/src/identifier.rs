@@ -23,7 +23,7 @@ pub use il4il::identifier::Identifier;
 pub unsafe extern "C" fn il4il_identifier_from_utf8<'a>(
     contents: *const u8,
     length: usize,
-    identifier: Exposed<'a, &'a mut Box<Identifier>>,
+    identifier: Exposed<'a, &'a mut *mut Identifier>,
 ) -> Error {
     let create = || -> Result<_, Message> {
         let code_points = unsafe {
@@ -31,9 +31,9 @@ pub unsafe extern "C" fn il4il_identifier_from_utf8<'a>(
             pointer::as_slice(contents, length).expect("contents")
         };
 
-        Ok(Box::new(<Identifier as std::str::FromStr>::from_str(std::str::from_utf8(
-            code_points,
-        )?)?))
+        Ok(Box::into_raw(Box::new(<Identifier as std::str::FromStr>::from_str(
+            std::str::from_utf8(code_points)?,
+        )?)))
     };
 
     error::wrap_with_result(
@@ -61,7 +61,7 @@ pub unsafe extern "C" fn il4il_identifier_from_utf8<'a>(
 pub unsafe extern "C" fn il4il_identifier_from_utf16<'a>(
     contents: *const u16,
     count: usize,
-    identifier: Exposed<'a, &'a mut Box<Identifier>>,
+    identifier: Exposed<'a, &'a mut *mut Identifier>,
 ) -> Error {
     let create = || -> Result<_, Message> {
         let code_points = unsafe {
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn il4il_identifier_from_utf16<'a>(
             pointer::as_slice(contents, count).expect("contents")
         };
 
-        Ok(Box::new(Identifier::from_string(String::from_utf16(code_points)?)?))
+        Ok(Box::into_raw(Box::new(Identifier::from_string(String::from_utf16(code_points)?)?)))
     };
 
     error::wrap_with_result(
@@ -83,7 +83,7 @@ pub unsafe extern "C" fn il4il_identifier_from_utf16<'a>(
 }
 
 /// Disposes an identifier string.
-/// 
+///
 /// # Safety
 ///
 /// Callers must ensure that the identifier has not already been disposed.
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn il4il_identifier_dispose(identifier: Exposed<'static, B
 }
 
 /// Gets the length, in bytes, of an identifier string.
-/// 
+///
 /// # Safety
 ///
 /// Callers must ensure that the identifier has not already been disposed.
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn il4il_identifier_byte_length<'a>(identifier: Exposed<'a
 }
 
 /// Copies the UTF-8 contents of an identifier string into a buffer.
-/// 
+///
 /// # Safety
 ///
 /// Callers must ensure that the identifier has not already been disposed, and that the buffer points to a valid allocation of the length
@@ -128,7 +128,8 @@ pub unsafe extern "C" fn il4il_identifier_byte_length<'a>(identifier: Exposed<'a
 pub unsafe extern "C" fn il4il_identifier_copy_bytes_to<'a>(identifier: Exposed<'a, &'a Identifier>, buffer: *mut u8) {
     let id = unsafe {
         // Safety: identifier is assumed to be valid
-        identifier.unwrap().expect("identifier") };
+        identifier.unwrap().expect("identifier")
+    };
 
     let bytes: &'a mut [u8] = unsafe {
         // Buffer is assumed to be valid for the specified length.

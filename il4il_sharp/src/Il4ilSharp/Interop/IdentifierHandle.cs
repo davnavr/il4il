@@ -17,7 +17,9 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
 
     private static Identifier.Opaque* Allocate(ReadOnlySpan<char> characters) {
         fixed (char* contents = characters) {
-            Identifier.Opaque* identifier;
+            Identifier.Opaque* identifier = null;
+            Console.WriteLine("contents = {0:X} ({1} Length = {2}), identifier = {3:X}", (nint)contents, characters.ToString(), characters.Length, (nint)(&identifier));
+            Console.WriteLine("HEY {0}", contents[0]);
 
             try {
                 ErrorHandling.Throw(Identifier.FromUtf16(contents, (nuint)characters.Length, out identifier));
@@ -40,7 +42,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
     /// <summary>
     /// Initializes a new <see cref="IdentifierHandle"/>, copying the contents of the specified <see cref="String"/>.
     /// </summary>
-    public IdentifierHandle(string contents) : this((ReadOnlySpan<char>)(contents ?? throw new ArgumentNullException(nameof(contents)))) { }
+    public IdentifierHandle(string contents) : this((ReadOnlySpan<char>)(contents ?? String.Empty)) { }
 
     /// <summary>Attempts to copy the UTF-8 contents of the identifier string into a newly allocated byte array.</summary>
     /// <returns>An array containing the UTF-8 string, or an empty array if the identifier was disposed.</returns>
