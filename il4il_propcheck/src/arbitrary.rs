@@ -69,7 +69,8 @@ macro_rules! unsigned_integer_arb {
 }
 
 unsigned_integer_arb! {
-    u32 with U32Shrinker
+    u32 with U32Shrinker,
+    usize with UsizeShrinker
 }
 
 #[derive(Clone, Debug)]
@@ -122,5 +123,46 @@ impl Arb for String {
 
     fn shrink(&self) -> Self::Shrinker {
         std::iter::empty()
+    }
+}
+
+#[derive(Debug)]
+pub struct VecShrinker<T: Arb + Clone> {
+    initial: Vec<T>,
+    length_shrinker: UsizeShrinker,
+}
+
+impl<T: Arb + Clone> VecShrinker<T> {
+    pub fn new(initial: Vec<T>) -> Self {
+        Self {
+            length_shrinker: UsizeShrinker::new(initial.len()),
+            initial,
+        }
+    }
+}
+
+impl<T: Arb + Clone> Iterator for VecShrinker<T> {
+    type Item = Vec<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let length = self.length_shrinker.next()?;
+        Some(self.initial[0..length].to_vec())
+    }
+}
+
+impl<T: Arb + Clone> Arb for Vec<T> {
+    type Shrinker = VecShrinker<T>;
+
+    fn arbitrary<R: Rng + ?Sized>(gen: &mut Gen<'_, R>) -> Self {
+        let length = gen.size();
+        let mut items = Vec::with_capacity(length);
+        for _ in 0..length {
+            items.push(T::arbitrary(gen));
+        }
+        items
+    }
+
+    fn shrink(&self) -> Self::Shrinker {
+        VecShrinker::new(self.clone())
     }
 }
