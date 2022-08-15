@@ -10,6 +10,7 @@
     <PackageReference Include="Expecto" Version="9.0.4" />
     <PackageReference Include="Expecto.FsCheck" Version="9.0.4" />
     <Compile Include="Identifier.fs" />
+    <Compile Include="ModuleHandle.fs" />
     <Compile Include="Runner.fs" />
   </ItemGroup>
 
