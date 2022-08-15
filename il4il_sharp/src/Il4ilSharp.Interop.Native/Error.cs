@@ -8,4 +8,10 @@ public unsafe static class Error {
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_dispose", ExactSpelling = true)]
     public static extern void Dispose(Opaque* message);
+
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_message_length", ExactSpelling = true)]
+    public static extern nuint MessageLength(Opaque* message);
+
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_message_copy_to", ExactSpelling = true)]
+    public static extern void MessageCopyTo(Opaque* message, byte* buffer);
 }

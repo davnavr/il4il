@@ -74,7 +74,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
         try {
             var identifier = Enter();
             int length = (int)Identifier.ByteLength(identifier);
-            Span<byte> buffer = length > 256 ? stackalloc byte[length] : new Span<byte>(rented = ArrayPool<byte>.Shared.Rent(length), 0, length);
+            Span<byte> buffer = length <= 256 ? stackalloc byte[length] : new Span<byte>(rented = ArrayPool<byte>.Shared.Rent(length), 0, length);
             fixed (byte* bytes = buffer) {
                 Identifier.CopyBytesTo(identifier, bytes);
             }
