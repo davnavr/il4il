@@ -6,8 +6,10 @@
 #![deny(unsafe_code)]
 
 mod contents;
+mod error;
 
 pub use contents::ModuleContents;
+pub use error::*;
 
 /// Represents a validated SAILAR module.
 #[derive(Clone, Default)]
@@ -35,5 +37,15 @@ impl<'data> ValidModule<'data> {
 
     pub fn into_contents(self) -> ModuleContents<'data> {
         self.contents
+    }
+
+    /// Validates the given module contents.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the module contents are invalid.
+    pub fn from_module_contents(contents: ModuleContents<'data>) -> Result<Self, Error> {
+        // TODO: Add validation
+        Ok(Self { contents })
     }
 }
