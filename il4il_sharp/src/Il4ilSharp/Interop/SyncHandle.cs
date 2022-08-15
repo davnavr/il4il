@@ -23,6 +23,7 @@ public unsafe abstract class SyncHandle<T> : IDisposable where T : unmanaged {
     /// <summary>
     /// Acquires an exclusive lock for the handle, ensuring only the current thread has access to the underlying pointer.
     /// </summary>
+    /// <remarks>To release the lock, callers of this method must then call <see cref="Exit"/>.</remarks>
     /// <exception cref="ObjectDisposedException">Thrown if the handle was already disposed.</exception>
     internal T* Enter() {
         Monitor.Enter(sync);
@@ -34,6 +35,21 @@ public unsafe abstract class SyncHandle<T> : IDisposable where T : unmanaged {
         return pointer;
     }
 
+    /// <summary>Takes ownership of the underlying pointer, leaving this handle unusable.</summary>
+    /// <remarks>Callers are responsible for disposing the underlying resource and ensuring thread safety.</remarks>
+    /// <exception cref="ObjectDisposedException">Thrown if the handle was already disposed.</exception>
+    internal T* Take() {
+        T* pointer = Enter();
+        this.pointer = null;
+        Exit();
+        GC.SuppressFinalize(this);
+        return pointer;
+    }
+
+    /// <summary>
+    /// <p>Releases an exclusive lock for the handle.</p>
+    /// <p>Callers should ensure that the underlying pointer is not used until another call to <see cref="Enter"/>.</p>
+    /// </summary>
     internal void Exit() => Monitor.Exit(sync);
 
     private protected abstract void Cleanup(T* pointer);
