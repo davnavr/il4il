@@ -1,5 +1,6 @@
 ﻿namespace Il4ilSharp.Interop;
 
+using System;
 using Il4ilSharp.Interop.Native;
 
 /// <summary>
@@ -15,6 +16,25 @@ public unsafe sealed class ModuleHandle : SyncHandle<Module.Opaque> {
     /// Initializes a new <see cref="ModuleHandle"/>, allocating a new module.
     /// </summary>
     public ModuleHandle() : this(Module.Create()) { }
+
+    /// <summary>Adds a module name to a metadata section within the module.</summary>
+    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the <paramref name="name"/> or module was already disposed.</exception>
+    public void AddMetadataName(IdentifierHandle name) {
+        ArgumentNullException.ThrowIfNull(name);
+
+        try {
+            var module = Enter();
+            try {
+                var moduleNamePointer = name.Enter();
+                Module.AddMetadataName(module, moduleNamePointer);
+            } finally {
+                name.Exit();
+            }
+        } finally {
+            Exit();
+        }
+    }
 
     private protected override unsafe void Cleanup(Module.Opaque* pointer) {
         Error.Opaque* error;

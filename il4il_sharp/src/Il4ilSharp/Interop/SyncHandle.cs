@@ -20,8 +20,17 @@ public unsafe abstract class SyncHandle<T> : IDisposable where T : unmanaged {
     /// <summary>Indicates whether the underlying object was already disposed.</summary>
     public bool IsDisposed => pointer == null;
 
+    /// <summary>
+    /// Acquires an exclusive lock for the handle, ensuring only the current thread has access to the underlying pointer.
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">Thrown if the handle was already disposed.</exception>
     internal T* Enter() {
         Monitor.Enter(sync);
+
+        if (IsDisposed) {
+            throw new ObjectDisposedException(GetType().FullName);
+        }
+
         return pointer;
     }
 

@@ -1,7 +1,9 @@
 //! Functions for manipulating IL4IL in-memory modules.
 
-use crate::error::{self, Message};
-use crate::pointer;
+use crate::identifier::Identifier;
+use crate::pointer::Exposed;
+use il4il::binary::section::{self, Section};
+use std::borrow::Cow;
 
 pub type Instance = il4il::binary::Module<'static>;
 
@@ -9,7 +11,7 @@ pub type Instance = il4il::binary::Module<'static>;
 ///
 /// # Safety
 ///
-/// Callers must ensure that the module is late disposed with [`il4il_module_dispose`].
+/// Callers must ensure that the module is later disposed with [`il4il_module_dispose`].
 #[no_mangle]
 pub unsafe extern "C" fn il4il_module_create() -> *mut Instance {
     Box::into_raw(Box::new(Instance::new()))
@@ -23,53 +25,48 @@ pub unsafe extern "C" fn il4il_module_create() -> *mut Instance {
 ///
 /// # Panics
 ///
-/// Panics if the [`error` pointer is not valid](#error::catch).
+/// Panics if the [`module` pointer is not valid](crate::pointer#safety).
 #[no_mangle]
-pub unsafe extern "C" fn il4il_module_dispose(module: *mut Instance, error: *mut *mut Message) {
+pub unsafe extern "C" fn il4il_module_dispose(module: Exposed<'static, Box<Instance>>) {
     unsafe {
-        // Safety: error is assumed to be dereferenceable.
-        error::catch(
-            || {
-                // Safety: Caller must ensure module is valid pointer.
-                Ok(pointer::into_boxed("module", module)?)
-            },
-            error,
-        );
+        // Safety: module is assumed to be dereferenceable
+        module.unwrap().expect("module");
     }
 }
 
-/// Appends a metadata section to a module.
+/// Appends a module name to a metadata section within the module, copying from an identifier string.
 ///
 /// # Safety
 ///
-/// Callers must ensure that the metadata pointer is no longer used after this function is called.
+/// Callers must ensure that the module and name have not been disposed.
 ///
 /// # Panics
 ///
-/// Panics if the [`error` pointer is not valid](#error::catch).
+/// Panics if the [a pointer is not valid](crate::pointer#safety).
 #[no_mangle]
-pub unsafe extern "C" fn il4il_module_append_metadata(
-    module: *mut Instance,
-    metadata: *mut crate::metadata::Builder,
-    error: *mut *mut Message,
-) {
-    let append = || -> Result<_, _> {
-        let module_builder: &mut Instance;
-        let metadata_builder: Box<_>;
-
-        unsafe {
-            metadata_builder = pointer::into_boxed("metadata", metadata)?;
-            module_builder = pointer::as_mut("module", module)?;
-        }
-
-        module_builder
-            .sections_mut()
-            .push(il4il::binary::section::Section::Metadata(*metadata_builder));
-        Ok(())
+pub unsafe extern "C" fn il4il_module_add_metadata_name<'a>(module: Exposed<'a, &'a mut Instance>, name: Exposed<'a, &'a Identifier>) {
+    let builder = unsafe {
+        // Safety: module is assumed to be dereferenceable
+        module.unwrap().expect("module")
     };
 
-    unsafe {
-        // Safety: error is assumed to be dereferenceable.
-        error::catch(append, error);
-    }
+    let id = unsafe {
+        // Safety: name is assumed to be dereferenceable
+        name.unwrap().expect("name")
+    };
+
+    let sections = builder.sections_mut();
+    let metadata = match sections.last_mut() {
+        Some(Section::Metadata(md)) => md,
+        _ => {
+            sections.push(Section::Metadata(Vec::new()));
+            if let Section::Metadata(md) = sections.last_mut().unwrap() {
+                md
+            } else {
+                unreachable!()
+            }
+        }
+    };
+
+    metadata.push(section::Metadata::Name(Cow::Owned(id.clone())))
 }

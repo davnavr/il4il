@@ -11,4 +11,7 @@ public unsafe static class Module {
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_module_dispose", ExactSpelling = true)]
     public static extern void Dispose(Opaque* module, out Error.Opaque* error);
+
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_module_add_metadata_name", ExactSpelling = true)]
+    public static extern void AddMetadataName(Opaque* module, Identifier.Opaque* name);
 }
