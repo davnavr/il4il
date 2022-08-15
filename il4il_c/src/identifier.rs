@@ -108,6 +108,7 @@ pub unsafe extern "C" fn il4il_identifier_dispose(identifier: Exposed<'static, B
 /// # Panics
 ///
 /// Panics if the [`identifier` pointer is not valid](crate::pointer#safety).
+#[no_mangle]
 pub unsafe extern "C" fn il4il_identifier_byte_length<'a>(identifier: Exposed<'a, &'a Identifier>) -> usize {
     unsafe {
         // Safety: caller is assumed to pass a valid pointer
@@ -125,6 +126,7 @@ pub unsafe extern "C" fn il4il_identifier_byte_length<'a>(identifier: Exposed<'a
 /// # Panics
 ///
 /// Panics if any [pointer is not valid](crate::pointer#safety).
+#[no_mangle]
 pub unsafe extern "C" fn il4il_identifier_copy_bytes_to<'a>(identifier: Exposed<'a, &'a Identifier>, buffer: *mut u8) {
     let id = unsafe {
         // Safety: identifier is assumed to be valid
