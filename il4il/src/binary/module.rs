@@ -55,8 +55,8 @@ impl<'data> Module<'data> {
     }
 
     /// Writes the binary contents of the SAILAR module to the specified destination.
-    pub fn write_to<W: std::io::Write>(&self, mut destination: W) -> std::io::Result<()> {
-        writer::WriteTo::write_to(self, &mut destination)
+    pub fn write_to<W: std::io::Write>(&self, destination: W) -> std::io::Result<()> {
+        writer::WriteTo::write_to(self, &mut writer::Destination::new(destination))
     }
 
     /// Reads the binary contents of a SAILAR module from the specified source.
