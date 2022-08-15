@@ -1,4 +1,4 @@
-namespace Il4ilSharp.Interop;
+﻿namespace Il4ilSharp.Interop;
 
 using System;
 
@@ -6,8 +6,7 @@ using System;
 public unsafe abstract class DerivedHandle<P, O, C>
     where P : SharedHandle<O>
     where O : unmanaged
-    where C : unmanaged
-{
+    where C : unmanaged {
     private readonly C* derived;
 
     /// <summary>

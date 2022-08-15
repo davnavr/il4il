@@ -1,4 +1,4 @@
-namespace Il4ilSharp.Interop;
+﻿namespace Il4ilSharp.Interop;
 
 using System;
 using Il4ilSharp.Interop.Native;
