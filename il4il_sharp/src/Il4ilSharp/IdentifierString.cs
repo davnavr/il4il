@@ -14,17 +14,13 @@ public sealed class IdentifierString {
 
     /// <summary>Initializes a <see cref="IdentifierString"/> with the given <paramref name="handle"/>.</summary>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="handle"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="handle"/> was already disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the <paramref name="handle"/> was already disposed.</exception>
     public IdentifierString(IdentifierHandle handle) {
         ArgumentNullException.ThrowIfNull(handle);
 
         try {
             unsafe {
                 handle.Enter(); // Prevent handle from being disposed early.
-            }
-
-            if (handle.IsDisposed) {
-                throw new ArgumentException(nameof(handle), "Handle was already disposed");
             }
 
             cached = handle.ToString();

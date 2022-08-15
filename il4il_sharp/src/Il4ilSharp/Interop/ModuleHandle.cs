@@ -36,6 +36,14 @@ public unsafe sealed class ModuleHandle : SyncHandle<Module.Opaque> {
         }
     }
 
+    /// <summary>Performs validation on the module, and disposes this handle.</summary>
+    /// <exception cref="ObjectDisposedException">Thrown if the module was already disposed.</exception>
+    public BrowserHandle ValidateAndDispose() {
+        Browser.Opaque* browser;
+        Module.ValidateAndDispose(Take(), out browser);
+        return new BrowserHandle(browser);
+    }
+
     private protected override unsafe void Cleanup(Module.Opaque* pointer) {
         Error.Opaque* error;
         Module.Dispose(pointer, out error);

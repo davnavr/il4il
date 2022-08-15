@@ -37,6 +37,8 @@ pub unsafe extern "C" fn il4il_module_dispose(module: Exposed<'static, Box<Insta
 
 /// Performs validation on a module, and disposes the module. If an error occured, returns an [`Error`]; otherwise, returns `null`.
 ///
+/// Callers should dispose the returned browser later by calling [`il4il_browser_dispose`](crate::browser::il4il_browser_dispose).
+///
 /// Note that validation techncally takes "ownership" of the underlying module, essentially meaning that the original `module`
 /// pointer must no longer be used.
 ///
