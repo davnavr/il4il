@@ -5,9 +5,7 @@
 /// Usually used with the [`Error`] type.
 #[derive(Clone, Debug, Eq, thiserror::Error, PartialEq)]
 #[non_exhaustive]
-pub enum ErrorKind {
-
-}
+pub enum ErrorKind {}
 
 /// Represents an error that occured during the validation of an IL4IL module.
 #[derive(Clone, Debug, Eq, thiserror::Error, PartialEq)]

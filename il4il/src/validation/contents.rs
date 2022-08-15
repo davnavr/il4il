@@ -18,7 +18,7 @@ impl<'data> ModuleContents<'data> {
 
     pub fn from_sections_fallible<S, E>(sections: S) -> Result<Self, E>
     where
-        S: IntoIterator<Item = Result<Section<'data>, E>>
+        S: IntoIterator<Item = Result<Section<'data>, E>>,
     {
         let mut contents = ModuleContents::default();
 
