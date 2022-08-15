@@ -9,7 +9,7 @@ using Il4ilSharp.Interop.Native;
 /// Provides a thread-safe wrapper for an IL4IL identifier string.
 /// </summary>
 /// <seealso cref="IdentifierString"/>
-public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
+public unsafe sealed class IdentifierHandle : SynchronizedHandle<Identifier.Opaque> {
     /// <summary>Gets a value indicating whether the underlying identifier string was disposed.</summary>
     public new bool IsDisposed => base.IsDisposed;
 
@@ -50,7 +50,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
         }
 
         try {
-            var identifier = Enter();
+            var identifier = Lock();
             byte[] buffer = new byte[(int)Identifier.ByteLength(identifier)];
             fixed (byte* bytes = buffer) {
                 Identifier.CopyBytesTo(identifier, bytes);
@@ -58,7 +58,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
 
             return buffer;
         } finally {
-            Exit();
+            Unlock();
         }
     }
 
@@ -72,7 +72,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
         byte[]? rented = null;
 
         try {
-            var identifier = Enter();
+            var identifier = Lock();
             int length = (int)Identifier.ByteLength(identifier);
             Span<byte> buffer = length <= 256 ? stackalloc byte[length] : new Span<byte>(rented = ArrayPool<byte>.Shared.Rent(length), 0, length);
             fixed (byte* bytes = buffer) {
@@ -81,7 +81,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
 
             return Encoding.UTF8.GetString(buffer);
         } finally {
-            Exit();
+            Unlock();
 
             if (rented != null) {
                 ArrayPool<byte>.Shared.Return(rented);

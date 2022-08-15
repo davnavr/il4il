@@ -7,23 +7,19 @@ using Il4ilSharp.Interop.Native;
 /// Provides a thread-safe wrapper for an IL4IL module browser.
 /// </summary>
 /// <seealso cref="ModuleHandle.ValidateAndDispose"/>
-public unsafe sealed class BrowserHandle : SyncHandle<Browser.Opaque> {
-    // TODO: If having a Dispose method is bad design, then make a class Inner : SyncHandle
-    // For now, objects that contain pointers derived from a browser pointer will simply keep a reference to a BrowserHandle, and
-    // periodically check if the BrowserHandle has been disposed.
-
+public unsafe sealed class BrowserHandle : SharedHandle<Browser.Opaque> {
     internal BrowserHandle(Browser.Opaque* browser) : base(browser) { }
 
     public MetadataReference[] GetMetadata() {
         try {
-            Browser.Opaque* browser = Enter();
+            Browser.Opaque* browser = Lock();
             var metadata = new MetadataReference[Browser.MetadataCount(browser)];
             Metadata.Opaque** references = stackalloc Metadata.Opaque*[metadata.Length];
 
             throw new System.NotImplementedException();
             return metadata;
         } finally {
-            Exit();
+            Unlock();
         }
     }
 

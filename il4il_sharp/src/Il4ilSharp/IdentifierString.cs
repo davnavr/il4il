@@ -20,13 +20,13 @@ public sealed class IdentifierString {
 
         try {
             unsafe {
-                handle.Enter(); // Prevent handle from being disposed early.
+                handle.Lock(); // Prevent handle from being disposed early.
             }
 
             cached = handle.ToString();
             Handle = handle;
         } finally {
-            handle.Exit();
+            handle.Unlock();
         }
     }
 

@@ -6,7 +6,7 @@ using Il4ilSharp.Interop.Native;
 /// <summary>
 /// Provides a thread-safe wrapper for an in-memory representation of an IL4IL module.
 /// </summary>
-public unsafe sealed class ModuleHandle : SyncHandle<Module.Opaque> {
+public unsafe sealed class ModuleHandle : SynchronizedHandle<Module.Opaque> {
     /// <summary>Gets a value indicating whether the module was already disposed.</summary>
     public new bool IsDisposed => base.IsDisposed;
 
@@ -24,15 +24,15 @@ public unsafe sealed class ModuleHandle : SyncHandle<Module.Opaque> {
         ArgumentNullException.ThrowIfNull(name);
 
         try {
-            var module = Enter();
+            var module = Lock();
             try {
-                var moduleNamePointer = name.Enter();
+                var moduleNamePointer = name.Lock();
                 Module.AddMetadataName(module, moduleNamePointer);
             } finally {
-                name.Exit();
+                name.Unlock();
             }
         } finally {
-            Exit();
+            Unlock();
         }
     }
 
