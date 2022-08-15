@@ -18,8 +18,6 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
     private static Identifier.Opaque* Allocate(ReadOnlySpan<char> characters) {
         fixed (char* contents = characters) {
             Identifier.Opaque* identifier = null;
-            Console.WriteLine("contents = {0:X} ({1} Length = {2}), identifier = {3:X}", (nint)contents, characters.ToString(), characters.Length, (nint)(&identifier));
-            Console.WriteLine("HEY {0}", contents[0]);
 
             try {
                 ErrorHandling.Throw(Identifier.FromUtf16(contents, (nuint)characters.Length, out identifier));
@@ -76,7 +74,7 @@ public unsafe sealed class IdentifierHandle : SyncHandle<Identifier.Opaque> {
         try {
             var identifier = Enter();
             int length = (int)Identifier.ByteLength(identifier);
-            Span<byte> buffer = length > 256 ? stackalloc byte[length] : rented = ArrayPool<byte>.Shared.Rent(length);
+            Span<byte> buffer = length > 256 ? stackalloc byte[length] : new Span<byte>(rented = ArrayPool<byte>.Shared.Rent(length), 0, length);
             fixed (byte* bytes = buffer) {
                 Identifier.CopyBytesTo(identifier, bytes);
             }
