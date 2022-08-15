@@ -16,4 +16,19 @@ public unsafe sealed class MetadataHandle : DerivedHandle<BrowserHandle, Browser
             Unlock();
         }
     }
+
+    /// <summary>Attempts to retrieve a module name.</summary>
+    public IdentifierHandle? GetModuleName() {
+        try {
+            var metadata = Lock();
+            Identifier.Opaque* name = Metadata.ModuleName(metadata);
+            if (name == null) {
+                return null;
+            }
+
+            return new IdentifierHandle(name);
+        } finally {
+            Unlock();
+        }
+    }
 }

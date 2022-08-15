@@ -21,8 +21,8 @@ public abstract class ModuleMetadata {
         ArgumentNullException.ThrowIfNull(handle);
         MetadataKind kind = handle.GetKind();
         switch (kind) {
-            case MetadataKind.Name:
-                return new NameMetadata(handle);
+            case MetadataKind.ModuleName:
+                return new ModuleNameMetadata(handle);
             default:
                 throw new InvalidOperationException(kind + " is not a valid metadata kind");
         }
