@@ -15,7 +15,7 @@ pub type Instance = validation::ValidModule<'static>;
 ///
 /// Panics if the [`browser` pointer is not valid](crate::pointer#safety).
 #[no_mangle]
-pub fn il4il_browser_dispose(browser: Exposed<'static, Box<Instance>>) {
+pub unsafe fn il4il_browser_dispose(browser: Exposed<'static, Box<Instance>>) {
     unsafe {
         // Safety: Caller ensures browser is dereferenceable
         browser.unwrap().expect("browser");
@@ -32,17 +32,25 @@ pub fn il4il_browser_dispose(browser: Exposed<'static, Box<Instance>>) {
 ///
 /// Panics if any [pointers are not valid](crate::pointer).
 #[no_mangle]
-pub fn il4il_browser_metadata_count<'a>(browser: Exposed<'a, &'a Instance>) -> usize {
+pub unsafe fn il4il_browser_metadata_count<'a>(browser: Exposed<'a, &'a Instance>) -> usize {
     unsafe {
         // Safety: Caller ensures browser is dereferenceable
         browser.unwrap().expect("browser").contents().metadata.len()
     }
 }
 
-pub type Metadata = il4il::binary::section::Metadata<'static>;
-
+/// Copies the references to the module's metadata section contents to a buffer.
+///
+/// # Safety
+///
+/// Callers must ensure that the browser has not been disposed, and that the returned metadata references are only used for the lifetime of
+/// the browser.
+///
+/// # Panics
+///
+/// Panics if any [pointers are not valid](crate::pointer).
 #[no_mangle]
-pub fn il4il_browser_metadata_copy_to<'a>(browser: Exposed<'a, &'a Instance>, buffer: *mut &'a Metadata) {
+pub unsafe fn il4il_browser_metadata_copy_to<'a>(browser: Exposed<'a, &'a Instance>, buffer: *mut &'a crate::metadata::Metadata) {
     let metadata = unsafe {
         // Safety: Caller ensures browser is dereferenceable
         &browser.unwrap().expect("browser").contents().metadata
