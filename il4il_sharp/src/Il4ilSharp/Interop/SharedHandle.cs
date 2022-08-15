@@ -8,7 +8,8 @@ using System.Threading;
 /// </summary>
 /// <remarks>
 /// <p>
-/// This class does not implement <see cref="IDisposable"/>, as it is intended to allow shared ownership of an underlying resource.
+/// This class does not implement <see cref="IDisposable"/>, as it is intended to allow shared ownership of an underlying resource. As long
+/// as a reference to a <see cref="SharedHandle{T}"/> exists, accessing the underlying resource is still possible.
 /// </p>
 /// <p>
 /// For single ownership and explicit disposable of the underlying resource, use the <see cref="SynchronizedHandle{T}"/> class instead.
@@ -17,7 +18,7 @@ using System.Threading;
 public unsafe abstract class SharedHandle<T> where T : unmanaged {
     private readonly object sync = new();
 
-    private T* pointer;
+    private readonly T* pointer;
 
     /// <summary>Initializes a <see cref="SharedHandle{T}"/> for the specified <paramref name="pointer"/>.</summary>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="pointer"/> is <see langword="null"/>.</exception>
@@ -44,4 +45,7 @@ public unsafe abstract class SharedHandle<T> where T : unmanaged {
 
     /// <summary>Disposes the underlying resource.</summary>
     private protected abstract void Cleanup(T* pointer);
+
+    /// <inheritdoc/>
+    ~SharedHandle() => Cleanup(pointer);
 }

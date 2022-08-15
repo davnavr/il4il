@@ -16,12 +16,12 @@ public sealed class ValidModule {
 
         try {
             unsafe {
-                browser.Enter(); // Prevent handle from being disposed early
+                browser.Lock(); // Prevent handle from being disposed early
             }
 
             Browser = browser;
         } finally {
-            browser.Exit();
+            browser.Unlock();
         }
     }
 
