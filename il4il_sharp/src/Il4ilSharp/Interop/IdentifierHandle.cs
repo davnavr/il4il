@@ -72,7 +72,11 @@ public unsafe sealed class IdentifierHandle : SynchronizedHandle<Identifier.Opaq
         byte[]? rented = null;
 
         try {
-            var identifier = Lock();
+            Identifier.Opaque* identifier = LockOrNullIfDisposed();
+            if (identifier == null) {
+                return String.Empty;
+            }
+
             int length = (int)Identifier.ByteLength(identifier);
             Span<byte> buffer = length <= 256 ? stackalloc byte[length] : new Span<byte>(rented = ArrayPool<byte>.Shared.Rent(length), 0, length);
             fixed (byte* bytes = buffer) {

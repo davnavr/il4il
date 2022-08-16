@@ -22,6 +22,14 @@ public unsafe abstract class SynchronizedHandle<T> : IDisposable where T : unman
     public bool IsDisposed => pointer == null;
 
     /// <summary>
+    /// <see cref="Lock"/>, but it returns <see langword="null"/> if the handle was disposed.
+    /// </summary>
+    internal T* LockOrNullIfDisposed() {
+        Monitor.Enter(sync);
+        return pointer;
+    }
+
+    /// <summary>
     /// Acquires an exclusive lock for the handle, ensuring only the current thread has access to the underlying pointer.
     /// </summary>
     /// <remarks>To release the lock, callers of this method must then call <see cref="Unlock"/>.</remarks>
