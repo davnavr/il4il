@@ -20,4 +20,7 @@ public unsafe static class Module {
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_module_write_binary_to_path", ExactSpelling = true)]
     public static extern Error.Opaque* WriteBinaryToPath(Opaque* module, Identifier.Opaque* path);
+
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_module_write_binary", ExactSpelling = true)]
+    public static extern Error.Opaque* WriteBinary(Opaque* module, ByteWriter writer);
 }

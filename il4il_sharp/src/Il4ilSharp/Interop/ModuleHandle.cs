@@ -63,6 +63,46 @@ public unsafe sealed class ModuleHandle : SynchronizedHandle<Module.Opaque> {
         }
     }
 
+    /// <summary>Writes the binary contents of the module to the file using the specified <paramref name="writer"/>.</summary>
+    /// <remarks>
+    /// As any exceptions thrown by the <paramref name="writer"/> might result in undefined behavior, it is recommended to use
+    /// <see cref="IByteWriter"/> instead.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="writer"/> was <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the module was already disposed.</exception>
+    public void WriteBinary(Native.ByteWriter writer) {
+        ArgumentNullException.ThrowIfNull(writer);
+        try {
+            Module.Opaque* module = Lock();
+            Module.WriteBinary(module, writer);
+        } finally {
+            Unlock();
+        }
+    }
+
+    /// <summary>Writes the binary contents of the module to the file into the <paramref name="destination"/>.</summary>
+    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="destination"/> was <see langword="null"/>.</exception>
+    public void WriteBinary<W>(W destination) where W : IByteWriter {
+        ArgumentNullException.ThrowIfNull(destination);
+        CaughtException catcher;
+        Native.ByteWriter writer = destination.CreateNativeWriter(out catcher);
+
+        try {
+            WriteBinary(writer);
+        } catch (Exception e) {
+            if (catcher.Thrown != null) {
+                catcher.Catch(e);
+                catcher.ThrowAny();
+            } else {
+                // This is probably unreachable, but this rethrows the exception if one was somehow not caught by the catcher 
+                throw;
+            }
+        }
+
+        // Might not be necessary, but checks if (somehow) an exception was missed and we need to throw it
+        catcher.ThrowAny();
+    }
+
     private protected override unsafe void Cleanup(Module.Opaque* pointer) {
         Error.Opaque* error;
         Module.Dispose(pointer, out error);
