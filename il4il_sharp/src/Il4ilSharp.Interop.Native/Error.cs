@@ -14,4 +14,7 @@ public unsafe static class Error {
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_message_copy_to", ExactSpelling = true)]
     public static extern void MessageCopyTo(Opaque* message, byte* buffer);
+
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_error_message_from_utf16", ExactSpelling = true)]
+    public static extern Opaque* MessageFromUtf16(char* message, nuint length);
 }

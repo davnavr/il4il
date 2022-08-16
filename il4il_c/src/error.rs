@@ -74,7 +74,7 @@ pub unsafe extern "C" fn il4il_error_message_length<'a>(message: Exposed<'a, &'a
 ///
 /// # Panics
 ///
-/// Panics if an invalid pointer is detected.
+/// Panics if an [invalid pointer is detected](crate::pointer#safety).
 #[no_mangle]
 pub unsafe extern "C" fn il4il_error_message_copy_to<'a>(message: Exposed<'a, &'a Message>, buffer: *mut u8) {
     let msg = unsafe {
@@ -88,4 +88,27 @@ pub unsafe extern "C" fn il4il_error_message_copy_to<'a>(message: Exposed<'a, &'
     };
 
     bytes.copy_from_slice(msg.0.as_bytes());
+}
+
+/// Creates an error message from a sequence of UTF-16 code points. The message can be disposed later by calling [`il4il_error_dispose`].
+///
+/// This function is useful for allocating errors when the IL4IL C API needs to call a provided callback function that can fail.
+///
+/// # Safety
+///
+/// Callers must ensure that the contents is a valid pointer for `count` code points.
+///
+/// # Panics
+///
+/// Panics if an [invalid pointer is detected](crate::pointer#safety).
+#[no_mangle]
+pub unsafe extern "C" fn il4il_error_message_from_utf16(contents: *const u16, count: usize) -> Error {
+    wrap(|| {
+        let code_points = unsafe {
+            // Safety: contents is assumed to be valid for the specified number of code points
+            crate::pointer::as_slice(contents, count).expect("contents")
+        };
+
+        Err(Message(String::from_utf16_lossy(code_points)))
+    })
 }
