@@ -2,9 +2,9 @@
 
 use crate::identifier::Identifier;
 use crate::pointer::Exposed;
-use il4il::binary::section::MetadataKind;
+use il4il::module::section::MetadataKind;
 
-pub type Metadata = il4il::binary::section::Metadata<'static>;
+pub type Metadata = il4il::module::section::Metadata<'static>;
 
 /// Gets the number of entries in the module's metadata sections.
 ///

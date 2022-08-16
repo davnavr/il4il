@@ -58,10 +58,10 @@ impl<'data> TryFrom<ModuleContents<'data>> for ValidModule<'data> {
     }
 }
 
-impl<'data> TryFrom<crate::binary::Module<'data>> for ValidModule<'data> {
+impl<'data> TryFrom<crate::module::Module<'data>> for ValidModule<'data> {
     type Error = Error;
 
-    fn try_from(value: crate::binary::Module<'data>) -> Result<Self, Error> {
+    fn try_from(value: crate::module::Module<'data>) -> Result<Self, Error> {
         Self::from_module_contents(ModuleContents::from_module(value))
     }
 }

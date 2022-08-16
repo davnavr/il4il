@@ -1,4 +1,4 @@
-//! Module to manipulate IL4IL module sections.
+//! Contains types that model the sections of an IL4IL module.
 
 use crate::identifier::Id;
 use std::borrow::Cow;

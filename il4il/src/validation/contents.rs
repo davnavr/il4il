@@ -1,6 +1,6 @@
 //! Contains types that model the contents of a valid IL4IL module.
 
-use crate::binary::section::{self, Section};
+use crate::module::section::{self, Section};
 
 /// Represents the contents of a SAILAR module.
 #[derive(Clone, Debug, Default)]
@@ -35,7 +35,7 @@ impl<'data> ModuleContents<'data> {
         Self::from_sections_fallible(sections.into_iter().map(Result::<_, std::convert::Infallible>::Ok)).unwrap()
     }
 
-    pub fn from_module(module: crate::binary::Module<'data>) -> Self {
+    pub fn from_module(module: crate::module::Module<'data>) -> Self {
         Self::from_sections(module.into_sections())
     }
 }

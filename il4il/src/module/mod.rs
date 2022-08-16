@@ -1,11 +1,14 @@
-//! Contains the [`Module`] type.
+//! Contains types that model the structure of an IL4IL module.
 
 use crate::binary::parser;
-use crate::binary::section::Section;
 use crate::binary::writer;
 use crate::versioning::SupportedFormat;
 
-// An in-memory representation of an IL4IL module.
+pub mod section;
+
+use section::Section;
+
+/// An in-memory representation of an IL4IL module.
 #[derive(Clone, Debug)]
 pub struct Module<'data> {
     format_version: SupportedFormat,

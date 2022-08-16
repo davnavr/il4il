@@ -3,10 +3,10 @@
 use crate::error::{self, Error};
 use crate::identifier::Identifier;
 use crate::pointer::Exposed;
-use il4il::binary::section::{self, Section};
+use il4il::module::section::{self, Section};
 use std::borrow::Cow;
 
-pub type Instance = il4il::binary::Module<'static>;
+pub type Instance = il4il::module::Module<'static>;
 
 /// Creates a new module.
 ///

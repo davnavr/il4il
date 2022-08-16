@@ -1,5 +1,6 @@
 //! Low-level module for writing the contents of an IL4IL module.
 
+use crate::module::section::{self, Section};
 use std::io::{Error, ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
@@ -155,16 +156,16 @@ where
     }
 }
 
-impl WriteTo for &crate::binary::section::Metadata<'_> {
+impl WriteTo for &section::Metadata<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         u8::from(self.kind()).write_to(out)?;
         match self {
-            crate::binary::section::Metadata::Name(name) => name.write_to(out),
+            section::Metadata::Name(name) => name.write_to(out),
         }
     }
 }
 
-impl WriteTo for &crate::binary::section::Section<'_> {
+impl WriteTo for &Section<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         u8::from(self.kind()).write_to(out)?;
         let mut section_buffer = out.rent_buffer();
@@ -172,7 +173,7 @@ impl WriteTo for &crate::binary::section::Section<'_> {
         {
             let section_writer = &mut section_buffer;
             match self {
-                crate::binary::section::Section::Metadata(metadata) => LengthPrefixed::from(metadata).write_to(section_writer)?,
+                Section::Metadata(metadata) => LengthPrefixed::from(metadata).write_to(section_writer)?,
             }
         }
 
@@ -189,7 +190,7 @@ impl WriteTo for crate::versioning::Format {
     }
 }
 
-impl WriteTo for &crate::binary::Module<'_> {
+impl WriteTo for &crate::module::Module<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         out.write_all(crate::binary::MAGIC.as_slice())?;
         self.format_version().version().write_to(out)?;

@@ -1,7 +1,7 @@
 //! Module for parsing the contents of an IL4IL module.
 
-use crate::binary::section::{self, Section};
 use crate::identifier::Identifier;
+use crate::module::section::{self, Section};
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Read;
@@ -373,7 +373,7 @@ impl ReadFrom for Section<'_> {
     }
 }
 
-impl<'data> ReadFrom for crate::binary::Module<'data> {
+impl<'data> ReadFrom for crate::module::Module<'data> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         {
             source.save_file_offset();
