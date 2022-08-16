@@ -3,6 +3,7 @@
 use std::io::{Error, ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
+/// The result of writing to a stream of bytes.
 pub type Result = std::io::Result<()>;
 
 /// Provides a stream of bytes that can be written to.
@@ -192,6 +193,7 @@ impl WriteTo for &crate::binary::Module<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         out.write_all(crate::binary::MAGIC.as_slice())?;
         self.format_version().version().write_to(out)?;
-        LengthPrefixed::from(self.sections()).write_to(out)
+        LengthPrefixed::from(self.sections()).write_to(out)?;
+        out.flush()
     }
 }

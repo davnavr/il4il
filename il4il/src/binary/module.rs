@@ -1,3 +1,5 @@
+//! Contains the [`Module`] type.
+
 use crate::binary::parser;
 use crate::binary::section::Section;
 use crate::binary::writer;
@@ -54,12 +56,21 @@ impl<'data> Module<'data> {
         }
     }
 
-    /// Writes the binary contents of the SAILAR module to the specified destination.
-    pub fn write_to<W: std::io::Write>(&self, destination: W) -> std::io::Result<()> {
+    /// Writes the binary contents of the module to the specified destination.
+    pub fn write_to<W: std::io::Write>(&self, destination: W) -> writer::Result {
         writer::WriteTo::write_to(self, &mut writer::Destination::new(destination))
     }
 
-    /// Reads the binary contents of a SAILAR module from the specified source.
+    /// Writes the binary contents of a module to the specified [`Path`].
+    ///
+    /// [`Path`]: std::path::Path
+    pub fn write_to_path<P: AsRef<std::path::Path>>(&self, path: P) -> writer::Result {
+        self.write_to(std::io::BufWriter::new(
+            std::fs::OpenOptions::new().write(true).truncate(true).open(path)?,
+        ))
+    }
+
+    /// Reads the binary contents of a module from the specified source.
     ///
     /// # Examples
     ///
