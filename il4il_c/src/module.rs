@@ -78,7 +78,7 @@ pub unsafe extern "C" fn il4il_module_validate_and_dispose<'a>(
 ///
 /// # Panics
 ///
-/// Panics if the [a pointer is not valid](crate::pointer#safety).
+/// Panics if [a pointer is not valid](crate::pointer#safety).
 #[no_mangle]
 pub unsafe extern "C" fn il4il_module_add_metadata_name<'a>(module: Exposed<'a, &'a mut Instance>, name: Exposed<'a, &'a Identifier>) {
     let builder = unsafe {
@@ -105,4 +105,37 @@ pub unsafe extern "C" fn il4il_module_add_metadata_name<'a>(module: Exposed<'a, 
     };
 
     metadata.push(section::Metadata::Name(Cow::Owned(id.clone())))
+}
+
+/// Given an identifier string containing a path, writes the binary contents of the module to the file. Any IO error that occured can be
+/// disposed with [`il4il_error_dispose`].
+///
+/// # Safety
+///
+/// Callers must ensure that the module and path have not been disposed.
+///
+/// # Panics
+///
+/// Panics if [a pointer is not valid](crate::pointer#safety).
+///
+/// [`il4il_error_dispose`]: crate::error::il4il_error_dispose
+#[no_mangle]
+pub unsafe extern "C" fn il4il_module_write_binary_to_path<'a>(
+    module: Exposed<'a, &'a Instance>,
+    path: Exposed<'a, &'a Identifier>,
+) -> Error {
+    let mdle = unsafe {
+        // Safety: caller is assumed to have passed a valid pointer
+        module.unwrap().expect("module")
+    };
+
+    let identifier = unsafe {
+        // Safety: caller is assumed to have passed a valid pointer
+        path.unwrap().expect("path")
+    };
+
+    error::wrap(|| {
+        mdle.write_to_path(identifier)?;
+        Ok(())
+    })
 }

@@ -17,4 +17,7 @@ public unsafe static class Module {
 
     [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_module_add_metadata_name", ExactSpelling = true)]
     public static extern void AddMetadataName(Opaque* module, Identifier.Opaque* name);
+
+    [DllImport(Library.Name, CallingConvention = CallingConvention.Cdecl, EntryPoint = "il4il_module_write_binary_to_path", ExactSpelling = true)]
+    public static extern Error.Opaque* WriteBinaryToPath(Opaque* module, Identifier.Opaque* path);
 }

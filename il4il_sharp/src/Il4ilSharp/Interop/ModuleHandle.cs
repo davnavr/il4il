@@ -44,6 +44,25 @@ public unsafe sealed class ModuleHandle : SynchronizedHandle<Module.Opaque> {
         return new BrowserHandle(browser);
     }
 
+    /// <summary>Writes the binary contents of the module to the file at the specified <paramref name="path"/>.</summary>
+    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="path"/> was <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the module or <paramref name="path"/> was already disposed.</exception>
+    public void WriteBinaryToPath(IdentifierHandle path) {
+        ArgumentNullException.ThrowIfNull(path);
+
+        try {
+            var module = Lock();
+            try {
+                Identifier.Opaque* destination = path.Lock();
+                ErrorHandling.Throw(Module.WriteBinaryToPath(module, destination));
+            } finally {
+                path.Unlock();
+            }
+        } finally {
+            Unlock();
+        }
+    }
+
     private protected override unsafe void Cleanup(Module.Opaque* pointer) {
         Error.Opaque* error;
         Module.Dispose(pointer, out error);
