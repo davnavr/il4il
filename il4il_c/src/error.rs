@@ -5,6 +5,12 @@ use crate::pointer::Exposed;
 #[repr(transparent)]
 pub struct Message(String);
 
+impl Message {
+    pub(crate) fn into_string(self) -> String {
+        self.0
+    }
+}
+
 impl<E: std::error::Error + Send + Sync + 'static> From<E> for Message {
     fn from(error: E) -> Self {
         Self(error.to_string())

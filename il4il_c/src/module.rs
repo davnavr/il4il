@@ -139,3 +139,64 @@ pub unsafe extern "C" fn il4il_module_write_binary_to_path<'a>(
         Ok(())
     })
 }
+
+/// Writes the binary contents of a module using a given callback function.
+///
+/// The `write` function indicates success by returning `null`, and failure by returning an allocated error [`Message`]. Additionally,
+/// this function automatically provides buffering in order to ensure fewer calls to the callback function.
+///
+/// Any error that was returned by the callback function is returned by this function, and can be
+/// disposed with [`il4il_error_dispose`].
+///
+/// # Safety
+///
+/// Callers must ensure that the module has not been disposed, and that the `write` pointer is to a valid function using the current
+/// platform's C ABI.
+///
+/// # Panics
+///
+/// Panics if [the `module` pointer is not valid](crate::pointer#safety).
+///
+/// [`Message`]: error::Message
+/// [`il4il_error_dispose`]: error::il4il_error_dispose
+#[no_mangle]
+pub unsafe extern "C" fn il4il_module_write_binary<'a>(
+    module: Exposed<'a, &'a Instance>,
+    write: unsafe extern "C" fn(*const u8, usize) -> Error,
+) -> Error {
+    let mdle = unsafe {
+        // Safety: caller is assumed to have passed a valid pointer
+        module.unwrap().expect("module")
+    };
+
+    use std::io::{BufWriter, Result, Write};
+
+    struct NativeWriter {
+        writer: unsafe extern "C" fn(*const u8, usize) -> Error,
+    }
+
+    impl Write for NativeWriter {
+        fn write(&mut self, buf: &[u8]) -> Result<usize> {
+            let result = unsafe {
+                // Safety: writer function is assumed to be valid
+                (self.writer)(buf.as_ptr(), buf.len()).unwrap().expect("error")
+            };
+
+            match result {
+                None => Ok(buf.len()),
+                Some(error) => Err(std::io::Error::new(std::io::ErrorKind::Other, error.into_string())),
+            }
+        }
+
+        fn flush(&mut self) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    let destination = BufWriter::new(NativeWriter { writer: write });
+
+    error::wrap(|| {
+        mdle.write_to(destination)?;
+        Ok(())
+    })
+}
