@@ -6,6 +6,7 @@ pub mod binary;
 pub mod identifier;
 pub mod integer;
 pub mod module;
+pub mod type_system;
 pub mod validation;
 pub mod versioning;
 
