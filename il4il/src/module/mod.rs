@@ -78,7 +78,7 @@ impl<'data> Module<'data> {
     /// # Examples
     ///
     /// ```
-    /// # use il4il::binary::*;
+    /// # use il4il::module::*;
     /// assert!(matches!(Module::read_from([ 1u8, 2, 3, 4 ].as_slice()), Err(e) if e.file_offset() == 0));
     /// ```
     pub fn read_from<R: std::io::Read>(source: R) -> parser::Result<Self> {

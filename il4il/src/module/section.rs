@@ -69,6 +69,7 @@ kind_enum! {
     #[non_exhaustive]
     pub enum SectionKind : u8 {
         Metadata = 0,
+        Type = 3,
     }
 }
 
@@ -78,6 +79,8 @@ kind_enum! {
 pub enum Section<'data> {
     /// The metadata section contains information about the module.
     Metadata(Vec<Metadata<'data>>),
+    /// The type section stores commonly used types throughout the module.
+    Type(Vec<crate::type_system::Type>),
 }
 
 impl<'data> Section<'data> {
@@ -85,6 +88,7 @@ impl<'data> Section<'data> {
     pub fn into_owned<'owned>(self) -> Section<'owned> {
         match self {
             Self::Metadata(metadata) => Section::Metadata(metadata.into_iter().map(Metadata::into_owned).collect()),
+            Self::Type(types) => Section::Type(types),
         }
     }
 
@@ -92,6 +96,7 @@ impl<'data> Section<'data> {
     pub fn kind(&self) -> SectionKind {
         match self {
             Self::Metadata(_) => SectionKind::Metadata,
+            Self::Type(_) => SectionKind::Type,
         }
     }
 }
