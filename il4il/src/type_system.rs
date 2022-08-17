@@ -274,4 +274,82 @@ impl Display for Integer {
     }
 }
 
+/// Represents the floating-point types supported by IL4IL.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[repr(transparent)]
+pub struct Float(NonZeroU8);
+
+impl Float {
+    /// The 16-bit floating-point type, sometimes called `half`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::type_system::FloatSize;
+    /// assert_eq!(FloatSize::F16.bit_width().get(), 16);
+    /// assert_eq!(FloatSize::F16.byte_width().get(), 2);
+    /// ```
+    pub const F16: Self = Self(unsafe { NonZeroU8::new_unchecked(1) });
+
+    /// The 32-bit floating-point type, sometimes called `single`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::type_system::FloatSize;
+    /// assert_eq!(FloatSize::F32.bit_width().get(), 32);
+    /// assert_eq!(FloatSize::F32.byte_width().get(), 4);
+    /// ```
+    pub const F32: Self = Self(unsafe { NonZeroU8::new_unchecked(2) });
+
+    /// The 64-bit floating-point type, sometimes called `double`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::type_system::FloatSize;
+    /// assert_eq!(FloatSize::F64.bit_width().get(), 64);
+    /// assert_eq!(FloatSize::F64.byte_width().get(), 8);
+    /// ```
+    pub const F64: Self = Self(unsafe { NonZeroU8::new_unchecked(3) });
+
+    /// The 128-bit floating-point type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::type_system::FloatSize;
+    /// assert_eq!(FloatSize::F128.bit_width().get(), 128);
+    /// assert_eq!(FloatSize::F128.byte_width().get(), 16);
+    /// ```
+    pub const F128: Self = Self(unsafe { NonZeroU8::new_unchecked(4) });
+
+    /// The 256-bit floating-point type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::type_system::FloatSize;
+    /// assert_eq!(FloatSize::F256.bit_width().get(), 256);
+    /// assert_eq!(FloatSize::F256.byte_width().get(), 32);
+    /// ```
+    pub const F256: Self = Self(unsafe { NonZeroU8::new_unchecked(5) });
+
+    /// Gets the number of bits needed to contain floating-point values of this type.
+    pub const fn bit_width(self) -> NonZeroU16 {
+        unsafe {
+            // Safety: Shifting won't result in a zero value here
+            NonZeroU16::new_unchecked(2u16 << (self.0.get() + 2))
+        }
+    }
+
+    /// Gets the number of bytes needed to contain floating-point values of this type.
+    pub const fn byte_width(self) -> NonZeroU8 {
+        unsafe {
+            // Safety: Shifting won't result in a zero value here
+            NonZeroU8::new_unchecked(2u8 << (self.0.get() - 1))
+        }
+    }
+}
+
 //pub enum Signature
