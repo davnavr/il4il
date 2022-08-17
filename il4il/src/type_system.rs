@@ -352,4 +352,31 @@ impl Float {
     }
 }
 
-//pub enum Signature
+impl Display for Float {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "f{}", self.bit_width())
+    }
+}
+
+/// Represents the set of all types representable in IL4IL.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Type {
+    Integer(Integer),
+    Float(Float),
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Integer(i) => Display::fmt(i, f),
+            Self::Float(r) => Display::fmt(r, f),
+        }
+    }
+}
+
+impl From<SizedInteger> for Type {
+    fn from(ty: SizedInteger) -> Self {
+        Self::Integer(Integer::Sized(ty))
+    }
+}
