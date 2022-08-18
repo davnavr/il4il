@@ -3,9 +3,62 @@
 use std::fmt::{Debug, Display, Formatter, Write};
 use std::num::{NonZeroU16, NonZeroU8};
 
+macro_rules! type_tag {
+    ($($(#[$meta:meta])* $name:ident = $value:literal,)*) => {
+        /// Tag that reprsents a [`Type`]. Note that all type tags correspond to negative numbers in the IL4IL
+        /// [variable-length signed integer encoding](#crate::integer::VarI28), allowing positive values to represent indices into a
+        /// module's type section.
+        ///
+        /// Common types (bool, s32, u32, f32, s64, f64, etc.) are represented as special cases for efficiency.
+        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        #[repr(u8)]
+        #[non_exhaustive]
+        pub enum TypeTag {
+            $($(#[$meta])* $name = $value,)*
+        }
+
+        impl TypeTag {
+            pub const ALL: &'static [Self] = &[$(Self::$name,)*];
+        }
+
+        impl From<TypeTag> for u8 {
+            fn from(tag: TypeTag) -> u8 {
+                tag as u8
+            }
+        }
+    };
+}
+
+type_tag! {
+    Bool = 0x7F,
+    U8 = 0x7E,
+    S8 = 0x7D,
+    U16 = 0x7C,
+    S16 = 0x7B,
+    U32 = 0x7A,
+    S32 = 0x79,
+    U64 = 0x78,
+    S64 = 0x77,
+    U128 = 0x76,
+    S128 = 0x75,
+    U256 = 0x74,
+    S256 = 0x73,
+    UAddr = 0x72,
+    SAddr = 0x71,
+    /// An unsigned integer type with an arbitrary size.
+    UInt = 0x70,
+    /// A signed integer type with an arbitrary size.
+    SInt = 0x6F,
+    F16 = 0x6E,
+    F32 = 0x6D,
+    F64 = 0x6B,
+    F128 = 0x6C,
+    F256 = 0x6A,
+}
+
 /// Represents the integer sizes supported by IL4IL.
 ///
-/// Note that an integer size of 1 is not allowed, and is instead represented by [`SizedInteger::BOOLEAN`].
+/// Note that an integer size of 1 is not allowed, and is instead represented by [`SizedInteger::BOOL`].
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct IntegerSize(NonZeroU8);
@@ -151,14 +204,14 @@ impl Display for IntegerSign {
 
 /// Represents the set of integer types with a fixed bit width supported by IL4IL.
 ///
-/// This includes the 1-bit `boolean` type, and the signed (`s2`..`s256`) and unsigned (`u2`..`u256`) integer types.
+/// This includes the 1-bit `bool` type, and the signed (`s2`..`s256`) and unsigned (`u2`..`u256`) integer types.
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct SizedInteger(NonZeroU16); // Bits 8 to 15 store the size, bit 1 stores the sign, bit 0 always set.
 
 impl SizedInteger {
-    /// The 1-bit `boolean` type, where a value of `1` represents true, and `0` represents false.
-    pub const BOOLEAN: Self = Self(unsafe { NonZeroU16::new_unchecked(1) });
+    /// The 1-bit `bool` type, where a value of `1` represents true, and `0` represents false.
+    pub const BOOL: Self = Self(unsafe { NonZeroU16::new_unchecked(1) });
 
     /// Creates an integer type of a fixed size.
     pub const fn new(sign: IntegerSign, size: IntegerSize) -> Self {
@@ -168,7 +221,7 @@ impl SizedInteger {
         })
     }
 
-    /// Attempts to retrieve the size of this integer, returning `None` if this integer is a `boolean`.
+    /// Attempts to retrieve the size of this integer, returning `None` if this integer is a `bool`.
     pub const fn size(self) -> Option<IntegerSize> {
         if let Some(size_bits) = NonZeroU8::new((self.0.get() >> 8) as u8) {
             Some(IntegerSize(size_bits))
@@ -183,7 +236,7 @@ impl SizedInteger {
     ///
     /// ```
     /// # use il4il::type_system::{IntegerSign, IntegerSize, SizedInteger};
-    /// assert_eq!(SizedInteger::BOOLEAN.bit_width().get(), 1);
+    /// assert_eq!(SizedInteger::BOOL.bit_width().get(), 1);
     /// assert_eq!(SizedInteger::new(IntegerSign::UNSIGNED, IntegerSize::new(24).unwrap()).bit_width().get(), 24);
     /// ```
     pub const fn bit_width(self) -> NonZeroU16 {
@@ -194,26 +247,26 @@ impl SizedInteger {
         }
     }
 
-    /// Indicates whether this integer type is the `boolean` type.
+    /// Indicates whether this integer type is the `bool` type.
     ///
     /// # Examples
     ///
     /// ```
     /// # use il4il::type_system::{IntegerSign, IntegerSize, SizedInteger};
-    /// assert!(SizedInteger::BOOLEAN.is_boolean());
+    /// assert!(SizedInteger::BOOL.is_boolean());
     /// assert!(!SizedInteger::new(IntegerSign::UNSIGNED, IntegerSize::new(12).unwrap()).is_boolean());
     /// ```
     pub const fn is_boolean(self) -> bool {
         self.0.get() == 1
     }
 
-    /// Gets whether the integer type is signed or unsigned, or `None` if the integer type is a `boolean`.
+    /// Gets whether the integer type is signed or unsigned, or `None` if the integer type is a `bool`.
     ///
     /// # Examples
     ///
     /// ```
     /// # use il4il::type_system::{IntegerSign, IntegerSize, SizedInteger};
-    /// assert_eq!(SizedInteger::BOOLEAN.sign(), None);
+    /// assert_eq!(SizedInteger::BOOL.sign(), None);
     /// assert_eq!(SizedInteger::new(IntegerSign::SIGNED, IntegerSize::new(40).unwrap()).sign(), Some(IntegerSign::SIGNED));
     /// ```
     pub const fn sign(self) -> Option<IntegerSign> {
@@ -285,9 +338,9 @@ impl Float {
     /// # Examples
     ///
     /// ```
-    /// # use il4il::type_system::FloatSize;
-    /// assert_eq!(FloatSize::F16.bit_width().get(), 16);
-    /// assert_eq!(FloatSize::F16.byte_width().get(), 2);
+    /// # use il4il::type_system::Float;
+    /// assert_eq!(Float::F16.bit_width().get(), 16);
+    /// assert_eq!(Float::F16.byte_width().get(), 2);
     /// ```
     pub const F16: Self = Self(unsafe { NonZeroU8::new_unchecked(1) });
 
@@ -296,9 +349,9 @@ impl Float {
     /// # Examples
     ///
     /// ```
-    /// # use il4il::type_system::FloatSize;
-    /// assert_eq!(FloatSize::F32.bit_width().get(), 32);
-    /// assert_eq!(FloatSize::F32.byte_width().get(), 4);
+    /// # use il4il::type_system::Float;
+    /// assert_eq!(Float::F32.bit_width().get(), 32);
+    /// assert_eq!(Float::F32.byte_width().get(), 4);
     /// ```
     pub const F32: Self = Self(unsafe { NonZeroU8::new_unchecked(2) });
 
@@ -307,9 +360,9 @@ impl Float {
     /// # Examples
     ///
     /// ```
-    /// # use il4il::type_system::FloatSize;
-    /// assert_eq!(FloatSize::F64.bit_width().get(), 64);
-    /// assert_eq!(FloatSize::F64.byte_width().get(), 8);
+    /// # use il4il::type_system::Float;
+    /// assert_eq!(Float::F64.bit_width().get(), 64);
+    /// assert_eq!(Float::F64.byte_width().get(), 8);
     /// ```
     pub const F64: Self = Self(unsafe { NonZeroU8::new_unchecked(3) });
 
@@ -318,9 +371,9 @@ impl Float {
     /// # Examples
     ///
     /// ```
-    /// # use il4il::type_system::FloatSize;
-    /// assert_eq!(FloatSize::F128.bit_width().get(), 128);
-    /// assert_eq!(FloatSize::F128.byte_width().get(), 16);
+    /// # use il4il::type_system::Float;
+    /// assert_eq!(Float::F128.bit_width().get(), 128);
+    /// assert_eq!(Float::F128.byte_width().get(), 16);
     /// ```
     pub const F128: Self = Self(unsafe { NonZeroU8::new_unchecked(4) });
 
@@ -329,9 +382,9 @@ impl Float {
     /// # Examples
     ///
     /// ```
-    /// # use il4il::type_system::FloatSize;
-    /// assert_eq!(FloatSize::F256.bit_width().get(), 256);
-    /// assert_eq!(FloatSize::F256.byte_width().get(), 32);
+    /// # use il4il::type_system::Float;
+    /// assert_eq!(Float::F256.bit_width().get(), 256);
+    /// assert_eq!(Float::F256.byte_width().get(), 32);
     /// ```
     pub const F256: Self = Self(unsafe { NonZeroU8::new_unchecked(5) });
 
@@ -359,7 +412,7 @@ impl Display for Float {
 }
 
 /// Represents the set of all types representable in IL4IL.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Type {
     Integer(Integer),
@@ -378,5 +431,23 @@ impl Display for Type {
 impl From<SizedInteger> for Type {
     fn from(ty: SizedInteger) -> Self {
         Self::Integer(Integer::Sized(ty))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn type_tags_are_all_negative_variable_length_integers() {
+        let results = TypeTag::ALL
+            .iter()
+            .copied()
+            .map(|tag| crate::integer::VarI28::read_from([u8::from(tag)].as_slice()))
+            .collect::<Vec<_>>();
+
+        if results.iter().all(|result| matches!(result, Ok(Ok(value)) if value.get() < 0)) {
+            panic!("{:?}", results);
+        }
     }
 }

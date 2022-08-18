@@ -1,6 +1,8 @@
 //! Low-level module for writing the contents of an IL4IL module.
 
+use crate::integer::VarU28;
 use crate::module::section::{self, Section};
+use crate::type_system::{self, TypeTag};
 use std::io::{Error, ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
@@ -100,14 +102,14 @@ impl WriteTo for u8 {
     }
 }
 
-impl WriteTo for crate::integer::VarU28 {
+impl WriteTo for VarU28 {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
-        crate::integer::VarU28::write_to(self, out)
+        VarU28::write_to(self, out)
     }
 }
 
 fn write_length(length: usize, out: &mut impl Write) -> Result {
-    match crate::integer::VarU28::try_from(length) {
+    match VarU28::try_from(length) {
         Ok(value) => value.write_to(out),
         Err(e) => Err(Error::new(ErrorKind::InvalidInput, e)),
     }
@@ -165,6 +167,114 @@ impl WriteTo for &section::Metadata<'_> {
     }
 }
 
+impl WriteTo for TypeTag {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        u8::from(self).write_to(out)
+    }
+}
+
+impl WriteTo for type_system::SizedInteger {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        if let Some(size) = self.size() {
+            let signed = self.sign().unwrap().is_signed();
+            match size.bit_width().get() {
+                8 => {
+                    if signed {
+                        TypeTag::S8.write_to(out)
+                    } else {
+                        TypeTag::U8.write_to(out)
+                    }
+                }
+                16 => {
+                    if signed {
+                        TypeTag::S16.write_to(out)
+                    } else {
+                        TypeTag::U16.write_to(out)
+                    }
+                }
+                32 => {
+                    if signed {
+                        TypeTag::S32.write_to(out)
+                    } else {
+                        TypeTag::U32.write_to(out)
+                    }
+                }
+                64 => {
+                    if signed {
+                        TypeTag::S16.write_to(out)
+                    } else {
+                        TypeTag::U64.write_to(out)
+                    }
+                }
+                128 => {
+                    if signed {
+                        TypeTag::S16.write_to(out)
+                    } else {
+                        TypeTag::U128.write_to(out)
+                    }
+                }
+                256 => {
+                    if signed {
+                        TypeTag::S16.write_to(out)
+                    } else {
+                        TypeTag::U256.write_to(out)
+                    }
+                }
+                size => {
+                    if signed {
+                        TypeTag::SInt.write_to(out)?;
+                    } else {
+                        TypeTag::UInt.write_to(out)?;
+                    }
+
+                    VarU28::write_to(VarU28::from_u16(size), out)
+                }
+            }
+        } else {
+            TypeTag::Bool.write_to(out)
+        }
+    }
+}
+
+impl WriteTo for type_system::Integer {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        match self {
+            Self::Sized(sized) => sized.write_to(out),
+            Self::Address(sign) => {
+                if sign.is_signed() {
+                    TypeTag::SAddr.write_to(out)
+                } else {
+                    TypeTag::UAddr.write_to(out)
+                }
+            }
+        }
+    }
+}
+
+impl WriteTo for type_system::Float {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        let tag = match self.bit_width().get() {
+            16 => TypeTag::F16,
+            32 => TypeTag::F32,
+            64 => TypeTag::F64,
+            128 => TypeTag::F128,
+            256 => TypeTag::F256,
+            bad => unimplemented!("unsupported float bit width: {bad}"),
+        };
+
+        tag.write_to(out)
+    }
+}
+
+impl WriteTo for type_system::Type {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        match self {
+            Self::Integer(i) => i.write_to(out),
+            Self::Float(f) => f.write_to(out),
+        }
+    }
+}
+
 impl WriteTo for &Section<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         u8::from(self.kind()).write_to(out)?;
@@ -174,6 +284,7 @@ impl WriteTo for &Section<'_> {
             let section_writer = &mut section_buffer;
             match self {
                 Section::Metadata(metadata) => LengthPrefixed::from(metadata).write_to(section_writer)?,
+                Section::Type(types) => LengthPrefixed::from(types.iter()).write_to(section_writer)?,
             }
         }
 

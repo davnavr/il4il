@@ -1,12 +1,14 @@
 //! Contains types that model the contents of a valid IL4IL module.
 
 use crate::module::section::{self, Section};
+use crate::type_system;
 
 /// Represents the contents of a SAILAR module.
 #[derive(Clone, Debug, Default)]
 #[non_exhaustive]
 pub struct ModuleContents<'data> {
     pub metadata: Vec<section::Metadata<'data>>,
+    pub types: Vec<type_system::Type>,
 }
 
 impl<'data> ModuleContents<'data> {
@@ -25,6 +27,7 @@ impl<'data> ModuleContents<'data> {
         for sect in sections.into_iter() {
             match sect? {
                 Section::Metadata(mut metadata) => contents.metadata.append(&mut metadata),
+                Section::Type(mut types) => contents.types.append(&mut types),
             }
         }
 
