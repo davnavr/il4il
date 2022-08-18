@@ -1,5 +1,7 @@
 //! Contains types that model the structure of an IL4IL module.
 
+#![deny(unsafe_code)]
+
 use crate::binary::parser;
 use crate::binary::writer;
 use crate::versioning::SupportedFormat;

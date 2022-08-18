@@ -3,7 +3,9 @@
 #![deny(unsafe_op_in_unsafe_fn, clippy::missing_safety_doc)]
 
 pub mod binary;
+pub mod function;
 pub mod identifier;
+pub mod index;
 pub mod integer;
 pub mod module;
 pub mod type_system;

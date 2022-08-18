@@ -417,6 +417,8 @@ impl Display for Float {
 pub enum Type {
     Integer(Integer),
     Float(Float),
+    //Array
+    //Vector
 }
 
 impl Display for Type {
@@ -431,6 +433,25 @@ impl Display for Type {
 impl From<SizedInteger> for Type {
     fn from(ty: SizedInteger) -> Self {
         Self::Integer(Integer::Sized(ty))
+    }
+}
+
+/// An IL4IL type, or an index to an IL4IL type.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Reference {
+    Inline(Type),
+    Index(crate::index::Type),
+}
+
+impl From<Type> for Reference {
+    fn from(ty: Type) -> Self {
+        Self::Inline(ty)
+    }
+}
+
+impl From<crate::index::Type> for Reference {
+    fn from(index: crate::index::Type) -> Self {
+        Self::Index(index)
     }
 }
 
