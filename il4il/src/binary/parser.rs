@@ -112,10 +112,10 @@ impl<R: Read> Read for Source<R> {
 #[non_exhaustive]
 pub struct InvalidMagicError;
 
-/// Error type used when an unsigned integer length cannot be used.
+/// Error type used when an unsigned integer length or index cannot be converted to a [`usize`].
 #[derive(Clone, Debug, thiserror::Error)]
-#[error("{0} is not a valid length value")]
-pub struct LengthIntegerError(integer::VarU28);
+#[error("{0} is too large for the current platform")]
+pub struct SizeConversionError(integer::VarU28);
 
 /// Trait implemented by types representing bit flags or tags.
 trait FlagsValue: Sized {
@@ -199,7 +199,7 @@ pub enum ErrorKind {
     #[error(transparent)]
     UnsupportedIntegerLength(#[from] integer::LengthError),
     #[error(transparent)]
-    BadLengthInteger(#[from] LengthIntegerError),
+    SizeConversion(#[from] SizeConversionError),
     #[error(transparent)]
     InvalidFlags(#[from] InvalidFlagsError),
     #[error(transparent)]
@@ -207,7 +207,11 @@ pub enum ErrorKind {
     #[error(transparent)]
     SectionLengthMismatch(#[from] SectionLengthError),
     #[error(transparent)]
+    InvalidTypeTag(#[from] type_system::InvalidTagError),
+    #[error(transparent)]
     UnsupportedTypeKind(#[from] UnsupportedTypeError),
+    #[error(transparent)]
+    InvalidIntegerBitWidth(#[from] type_system::InvalidBitWidthError),
 }
 
 #[derive(Debug)]
@@ -340,7 +344,7 @@ fn parse_length<L: From<usize>>(src: &mut Source<impl Read>) -> Result<L> {
     let value = <integer::VarU28 as ReadFrom>::read_from(src)?;
     usize::try_from(value)
         .map(L::from)
-        .map_err(|_| src.create_error(LengthIntegerError(value)))
+        .map_err(|_| src.create_error(SizeConversionError(value)))
 }
 
 fn parse_many_length_encoded<T: ReadFrom, R: Read>(src: &mut Source<R>) -> Result<Box<[T]>> {
@@ -376,14 +380,58 @@ impl ReadFrom for section::Metadata<'_> {
     }
 }
 
+impl ReadFrom for type_system::IntegerSize {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        Self::from_u28(<integer::VarU28 as ReadFrom>::read_from(source)?).map_err(|e| source.create_error(e))
+    }
+}
+
 impl ReadFrom for type_system::Reference {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
-        let tag = <integer::VarI28 as ReadFrom>::read_from(source)?;
-        match integer::VarU28::try_from(tag) {
+        let tag_value = <integer::VarI28 as ReadFrom>::read_from(source)?;
+        match integer::VarU28::try_from(tag_value) {
             Ok(index) => Ok(type_system::Reference::Index(index::Type::new(
-                usize::try_from(index).map_err(|_| source.create_error(LengthIntegerError(index)))?,
+                usize::try_from(index).map_err(|_| source.create_error(SizeConversionError(index)))?,
             ))),
-            Err(_) => todo!("parse tag"),
+            Err(_) => {
+                let value = type_system::TypeTag::try_from(tag_value).map_err(|e| source.create_error(e))?;
+                let inline_type = match value {
+                    type_system::TypeTag::Bool => type_system::Type::from(type_system::SizedInteger::BOOL),
+                    type_system::TypeTag::U8 => type_system::Type::from(type_system::SizedInteger::U8),
+                    type_system::TypeTag::S8 => type_system::Type::from(type_system::SizedInteger::S8),
+                    type_system::TypeTag::U16 => type_system::Type::from(type_system::SizedInteger::U16),
+                    type_system::TypeTag::S16 => type_system::Type::from(type_system::SizedInteger::S16),
+                    type_system::TypeTag::U32 => type_system::Type::from(type_system::SizedInteger::U32),
+                    type_system::TypeTag::S32 => type_system::Type::from(type_system::SizedInteger::S32),
+                    type_system::TypeTag::U64 => type_system::Type::from(type_system::SizedInteger::U64),
+                    type_system::TypeTag::S64 => type_system::Type::from(type_system::SizedInteger::S64),
+                    type_system::TypeTag::U128 => type_system::Type::from(type_system::SizedInteger::U128),
+                    type_system::TypeTag::S128 => type_system::Type::from(type_system::SizedInteger::S128),
+                    type_system::TypeTag::U256 => type_system::Type::from(type_system::SizedInteger::U256),
+                    type_system::TypeTag::S256 => type_system::Type::from(type_system::SizedInteger::S256),
+                    type_system::TypeTag::UAddr => {
+                        type_system::Type::Integer(type_system::Integer::Address(type_system::IntegerSign::UNSIGNED))
+                    }
+                    type_system::TypeTag::SAddr => {
+                        type_system::Type::Integer(type_system::Integer::Address(type_system::IntegerSign::SIGNED))
+                    }
+                    type_system::TypeTag::UInt => type_system::Type::from(type_system::SizedInteger::new(
+                        type_system::IntegerSign::UNSIGNED,
+                        type_system::IntegerSize::read_from(source)?,
+                    )),
+                    type_system::TypeTag::SInt => type_system::Type::from(type_system::SizedInteger::new(
+                        type_system::IntegerSign::SIGNED,
+                        type_system::IntegerSize::read_from(source)?,
+                    )),
+                    type_system::TypeTag::F16 => type_system::Type::Float(type_system::Float::F16),
+                    type_system::TypeTag::F32 => type_system::Type::Float(type_system::Float::F32),
+                    type_system::TypeTag::F64 => type_system::Type::Float(type_system::Float::F64),
+                    type_system::TypeTag::F128 => type_system::Type::Float(type_system::Float::F128),
+                    type_system::TypeTag::F256 => type_system::Type::Float(type_system::Float::F256),
+                };
+
+                Ok(type_system::Reference::Inline(inline_type))
+            }
         }
     }
 }

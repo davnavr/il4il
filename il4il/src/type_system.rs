@@ -1,6 +1,6 @@
 //! Provides a model of the IL4IL type system.
 
-use crate::integer::VarI28;
+use crate::integer::{VarI28, VarU28};
 use std::fmt::{Debug, Display, Formatter, Write};
 use std::num::{NonZeroU16, NonZeroU8};
 
@@ -82,6 +82,24 @@ impl From<TypeTag> for VarI28 {
         tag.into_i28()
     }
 }
+
+/// The error type used when a negative variable-length integer does not correspond to the encoding of any type.
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("{0} is not a valid type tag")]
+pub struct InvalidTagError(VarI28);
+
+impl TryFrom<VarI28> for TypeTag {
+    type Error = InvalidTagError;
+
+    fn try_from(value: VarI28) -> Result<Self, Self::Error> {
+        Self::from_i28(value).ok_or(InvalidTagError(value))
+    }
+}
+
+/// The error type used for invalid integer bit widths.
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("{0} is not a supported integer bit width")]
+pub struct InvalidBitWidthError(VarU28);
 
 /// Represents the integer sizes supported by IL4IL.
 ///
@@ -176,6 +194,11 @@ impl IntegerSize {
         }
     }
 
+    pub fn from_u28(bit_width: VarU28) -> Result<Self, InvalidBitWidthError> {
+        let bits = u8::try_from(bit_width.get()).map_err(|_| InvalidBitWidthError(bit_width))?;
+        Self::new(bits).ok_or(InvalidBitWidthError(bit_width))
+    }
+
     /// Gets the number of bits needed to contain an integer of this size.
     pub const fn bit_width(self) -> NonZeroU16 {
         unsafe {
@@ -239,6 +262,42 @@ pub struct SizedInteger(NonZeroU16); // Bits 8 to 15 store the size, bit 1 store
 impl SizedInteger {
     /// The 1-bit `bool` type, where a value of `1` represents true, and `0` represents false.
     pub const BOOL: Self = Self(unsafe { NonZeroU16::new_unchecked(1) });
+
+    /// The unsigned byte type, an 8-bit integer.
+    pub const U8: Self = Self::new(IntegerSign::UNSIGNED, IntegerSize::I8);
+
+    /// The signed byte type, an 8-bit integer.
+    pub const S8: Self = Self::new(IntegerSign::SIGNED, IntegerSize::I8);
+
+    /// An unsigned 16-bit integer type.
+    pub const U16: Self = Self::new(IntegerSign::UNSIGNED, IntegerSize::I16);
+
+    /// A signed 16-bit integer type.
+    pub const S16: Self = Self::new(IntegerSign::SIGNED, IntegerSize::I16);
+
+    /// An unsigned 32-bit integer type.
+    pub const U32: Self = Self::new(IntegerSign::UNSIGNED, IntegerSize::I32);
+
+    /// A signed 32-bit integer type, commonly used as the typical `int` type in many programming languages.
+    pub const S32: Self = Self::new(IntegerSign::SIGNED, IntegerSize::I32);
+
+    /// An unsigned 64-bit integer type.
+    pub const U64: Self = Self::new(IntegerSign::UNSIGNED, IntegerSize::I64);
+
+    /// A signed 64-bit integer type.
+    pub const S64: Self = Self::new(IntegerSign::SIGNED, IntegerSize::I64);
+
+    /// An unsigned 128-bit integer type.
+    pub const U128: Self = Self::new(IntegerSign::UNSIGNED, IntegerSize::I128);
+
+    /// A signed 128-bit integer type.
+    pub const S128: Self = Self::new(IntegerSign::SIGNED, IntegerSize::I128);
+
+    /// An unsigned 256-bit integer type.
+    pub const U256: Self = Self::new(IntegerSign::UNSIGNED, IntegerSize::I256);
+
+    /// A signed 256-bit integer type.
+    pub const S256: Self = Self::new(IntegerSign::SIGNED, IntegerSize::I256);
 
     /// Creates an integer type of a fixed size.
     pub const fn new(sign: IntegerSign, size: IntegerSize) -> Self {
