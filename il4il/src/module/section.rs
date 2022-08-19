@@ -13,7 +13,7 @@ macro_rules! kind_enum {
         }
 
         impl $name {
-            pub fn new(value: $inty) -> Option<Self> {
+            pub const fn new(value: $inty) -> Option<Self> {
                 match value {
                     $(_ if value == $case_number => Some(Self::$case_name),)*
                     _ => None

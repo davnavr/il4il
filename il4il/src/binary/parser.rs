@@ -1,7 +1,10 @@
 //! Module for parsing the contents of an IL4IL module.
 
 use crate::identifier::Identifier;
+use crate::index;
+use crate::integer;
 use crate::module::section::{self, Section};
+use crate::type_system;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Read;
@@ -112,7 +115,7 @@ pub struct InvalidMagicError;
 /// Error type used when an unsigned integer length cannot be used.
 #[derive(Clone, Debug, thiserror::Error)]
 #[error("{0} is not a valid length value")]
-pub struct LengthIntegerError(crate::integer::VarU28);
+pub struct LengthIntegerError(integer::VarU28);
 
 /// Trait implemented by types representing bit flags or tags.
 trait FlagsValue: Sized {
@@ -169,6 +172,20 @@ pub struct SectionLengthError {
     actual: usize,
 }
 
+/// Error type used when a type is not valid for a reason other than being invalid (e.g. a float type was used when an integer type was
+/// expected)
+#[derive(Clone, Debug, thiserror::Error)]
+pub struct UnsupportedTypeError {
+    type_reference: type_system::Reference,
+    context: &'static str,
+}
+
+impl Display for UnsupportedTypeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "unsupported type {}, {}", self.type_reference, self.context)
+    }
+}
+
 /// Error type indicating why parsing failed. Used with the [`Error`] type.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -180,7 +197,7 @@ pub enum ErrorKind {
     #[error(transparent)]
     UnsupportedFormat(#[from] crate::versioning::UnsupportedFormatError),
     #[error(transparent)]
-    UnsupportedIntegerLength(#[from] crate::integer::LengthError),
+    UnsupportedIntegerLength(#[from] integer::LengthError),
     #[error(transparent)]
     BadLengthInteger(#[from] LengthIntegerError),
     #[error(transparent)]
@@ -189,6 +206,8 @@ pub enum ErrorKind {
     InvalidIdentifier(#[from] crate::identifier::ParseError),
     #[error(transparent)]
     SectionLengthMismatch(#[from] SectionLengthError),
+    #[error(transparent)]
+    UnsupportedTypeKind(#[from] UnsupportedTypeError),
 }
 
 #[derive(Debug)]
@@ -296,7 +315,7 @@ impl ReadFrom for crate::versioning::SupportedFormat {
     }
 }
 
-impl ReadFrom for crate::integer::VarU28 {
+impl ReadFrom for integer::VarU28 {
     fn read_from<R: Read>(mut source: &mut Source<R>) -> Result<Self> {
         match Self::read_from(&mut source) {
             Ok(Ok(value)) => Ok(value),
@@ -306,10 +325,22 @@ impl ReadFrom for crate::integer::VarU28 {
     }
 }
 
-fn parse_length(src: &mut Source<impl Read>) -> Result<usize> {
+impl ReadFrom for integer::VarI28 {
+    fn read_from<R: Read>(mut source: &mut Source<R>) -> Result<Self> {
+        match Self::read_from(&mut source) {
+            Ok(Ok(value)) => Ok(value),
+            Ok(Err(error)) => Err(source.create_error(error)),
+            Err(error) => Err(source.create_error(error)),
+        }
+    }
+}
+
+fn parse_length<L: From<usize>>(src: &mut Source<impl Read>) -> Result<L> {
     src.save_file_offset();
-    let value = <crate::integer::VarU28 as ReadFrom>::read_from(src)?;
-    usize::try_from(value).map_err(|_| src.create_error(LengthIntegerError(value)))
+    let value = <integer::VarU28 as ReadFrom>::read_from(src)?;
+    usize::try_from(value)
+        .map(L::from)
+        .map_err(|_| src.create_error(LengthIntegerError(value)))
 }
 
 fn parse_many_length_encoded<T: ReadFrom, R: Read>(src: &mut Source<R>) -> Result<Box<[T]>> {
@@ -342,6 +373,18 @@ impl ReadFrom for section::Metadata<'_> {
         };
         source.pop_location();
         Ok(metadata)
+    }
+}
+
+impl ReadFrom for type_system::Reference {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let tag = <integer::VarI28 as ReadFrom>::read_from(source)?;
+        match integer::VarU28::try_from(tag) {
+            Ok(index) => Ok(type_system::Reference::Index(index::Type::new(
+                usize::try_from(index).map_err(|_| source.create_error(LengthIntegerError(index)))?,
+            ))),
+            Err(_) => todo!("parse tag"),
+        }
     }
 }
 

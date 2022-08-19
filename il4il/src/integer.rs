@@ -696,6 +696,14 @@ impl Display for VarI28 {
     }
 }
 
+impl TryFrom<VarI28> for VarU28 {
+    type Error = std::num::TryFromIntError;
+
+    fn try_from(value: VarI28) -> Result<Self, Self::Error> {
+        u32::try_from(value.get()).map(VarU28::new)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::integer::{VarI28, VarU28};

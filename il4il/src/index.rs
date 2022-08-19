@@ -35,7 +35,6 @@ macro_rules! index_space {
 }
 
 /// An index to some content within an IL4IL module.
-#[derive(Copy)]
 #[repr(transparent)]
 #[non_exhaustive]
 pub struct Index<S: IndexSpace> {
@@ -88,6 +87,8 @@ impl<S: IndexSpace> Clone for Index<S> {
         }
     }
 }
+
+impl<S: IndexSpace> Copy for Index<S> {}
 
 impl<S: IndexSpace> Debug for Index<S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

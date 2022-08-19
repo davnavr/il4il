@@ -20,7 +20,10 @@ impl Signature {
     pub fn from_types<T: Into<Box<[type_system::Reference]>>>(types: T, result_type_count: usize) -> Self {
         let signature_types = types.into();
         assert!(result_type_count <= signature_types.len());
-        Self { types: signature_types, result_type_count }
+        Self {
+            types: signature_types,
+            result_type_count,
+        }
     }
 
     pub fn result_type_count(&self) -> usize {

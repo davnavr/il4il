@@ -19,6 +19,13 @@ macro_rules! type_tag {
 
         impl TypeTag {
             pub const ALL: &'static [Self] = &[$(Self::$name,)*];
+
+            pub const fn new(tag: u8) -> Option<Self> {
+                match tag {
+                    $(_ if tag == $value => Some(Self::$name),)*
+                    _ => None,
+                }
+            }
         }
 
         impl From<TypeTag> for u8 {
@@ -452,6 +459,15 @@ impl From<Type> for Reference {
 impl From<crate::index::Type> for Reference {
     fn from(index: crate::index::Type) -> Self {
         Self::Index(index)
+    }
+}
+
+impl Display for Reference {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Inline(ty) => Display::fmt(ty, f),
+            Self::Index(i) => write!(f, "#{}", usize::from(*i)),
+        }
     }
 }
 
