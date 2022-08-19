@@ -1,12 +1,13 @@
 //! Provides a model of the IL4IL type system.
 
+use crate::integer::VarI28;
 use std::fmt::{Debug, Display, Formatter, Write};
 use std::num::{NonZeroU16, NonZeroU8};
 
 macro_rules! type_tag {
-    ($($(#[$meta:meta])* $name:ident = $value:literal,)*) => {
+    ($($(#[$meta:meta])* $name:ident = $written_value:literal => $interpreted_value:literal,)*) => {
         /// Tag that reprsents a [`Type`]. Note that all type tags correspond to negative numbers in the IL4IL
-        /// [variable-length signed integer encoding](#crate::integer::VarI28), allowing positive values to represent indices into a
+        /// [variable-length signed integer encoding](#VarI28), allowing positive values to represent indices into a
         /// module's type section.
         ///
         /// Common types (bool, s32, u32, f32, s64, f64, etc.) are represented as special cases for efficiency.
@@ -14,7 +15,7 @@ macro_rules! type_tag {
         #[repr(u8)]
         #[non_exhaustive]
         pub enum TypeTag {
-            $($(#[$meta])* $name = $value,)*
+            $($(#[$meta])* $name = $written_value,)*
         }
 
         impl TypeTag {
@@ -22,45 +23,64 @@ macro_rules! type_tag {
 
             pub const fn new(tag: u8) -> Option<Self> {
                 match tag {
-                    $(_ if tag == $value => Some(Self::$name),)*
+                    $(_ if tag == $written_value => Some(Self::$name),)*
                     _ => None,
                 }
             }
-        }
 
-        impl From<TypeTag> for u8 {
-            fn from(tag: TypeTag) -> u8 {
-                tag as u8
+            pub const fn from_i28(tag: VarI28) -> Option<Self> {
+                match tag.get() {
+                    $(value if value == $interpreted_value => Some(Self::$name),)*
+                    _ => None
+                }
+            }
+
+            pub const fn into_i28(self) -> VarI28 {
+                VarI28::from_i8(match self {
+                    $(Self::$name => $interpreted_value,)*
+                })
             }
         }
     };
 }
 
 type_tag! {
-    Bool = 0x7F,
-    U8 = 0x7E,
-    S8 = 0x7D,
-    U16 = 0x7C,
-    S16 = 0x7B,
-    U32 = 0x7A,
-    S32 = 0x79,
-    U64 = 0x78,
-    S64 = 0x77,
-    U128 = 0x76,
-    S128 = 0x75,
-    U256 = 0x74,
-    S256 = 0x73,
-    UAddr = 0x72,
-    SAddr = 0x71,
+    Bool = 0xFE => -1,
+    U8 = 0xFC => -2,
+    S8 = 0xFA => -3,
+    U16 = 0xF8 => -4,
+    S16 = 0xF6 => -5,
+    U32 = 0xF4 => -6,
+    S32 = 0xF2 => -7,
+    U64 = 0xF0 => -8,
+    S64 = 0xEE => -9,
+    U128 = 0xEC => -10,
+    S128 = 0xEA => -11,
+    U256 = 0xE8 => -12,
+    S256 = 0xE6 => -13,
+    UAddr = 0xE4 => -14,
+    SAddr = 0xE2 => -15,
     /// An unsigned integer type with an arbitrary size.
-    UInt = 0x70,
+    UInt = 0xE0 => -16,
     /// A signed integer type with an arbitrary size.
-    SInt = 0x6F,
-    F16 = 0x6E,
-    F32 = 0x6D,
-    F64 = 0x6B,
-    F128 = 0x6C,
-    F256 = 0x6A,
+    SInt = 0xDE => -17,
+    F16 = 0xDC => -18,
+    F32 = 0xDA => -19,
+    F64 = 0xD8 => -20,
+    F128 = 0xD6 => -21,
+    F256 = 0xD4 => -22,
+}
+
+impl From<TypeTag> for u8 {
+    fn from(tag: TypeTag) -> u8 {
+        tag as u8
+    }
+}
+
+impl From<TypeTag> for VarI28 {
+    fn from(tag: TypeTag) -> VarI28 {
+        tag.into_i28()
+    }
 }
 
 /// Represents the integer sizes supported by IL4IL.
@@ -480,11 +500,28 @@ mod tests {
         let results = TypeTag::ALL
             .iter()
             .copied()
-            .map(|tag| crate::integer::VarI28::read_from([u8::from(tag)].as_slice()))
+            .map(|tag| VarI28::read_from([u8::from(tag)].as_slice()))
             .collect::<Vec<_>>();
 
-        if results.iter().all(|result| matches!(result, Ok(Ok(value)) if value.get() < 0)) {
+        if !results.iter().all(|result| matches!(result, Ok(Ok(value)) if value.get() < 0)) {
             panic!("{:?}", results);
         }
+    }
+
+    #[test]
+    fn type_tags_have_correct_values() {
+        let expected = TypeTag::ALL
+            .iter()
+            .copied()
+            .map(|tag| Some(tag.into_i28()))
+            .collect::<Vec<Option<VarI28>>>();
+
+        let actual = TypeTag::ALL
+            .iter()
+            .copied()
+            .map(|tag| VarI28::read_from([u8::from(tag)].as_slice()).ok().and_then(Result::ok))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, actual);
     }
 }
