@@ -45,7 +45,34 @@ impl<'data> ValidModule<'data> {
     ///
     /// Returns an error if the module contents are invalid.
     pub fn from_module_contents(contents: ModuleContents<'data>) -> Result<Self, Error> {
-        // TODO: Add validation
+        use crate::index;
+        use crate::type_system;
+
+        fn create_index_validator<S: index::IndexSpace>(length: usize) -> impl Fn(index::Index<S>) -> Result<(), Error> {
+            let maximum = if length == 0 { None } else { Some(length - 1) };
+            move |index| {
+                if usize::from(index) >= length {
+                    return Err(Error::from_kind(InvalidIndexError::new(index, maximum)));
+                }
+                Ok(())
+            }
+        }
+
+        let validate_type_index = create_index_validator::<index::TypeSpace>(contents.types.len());
+
+        let validate_type = |ty: &type_system::Reference| {
+            match ty {
+                type_system::Reference::Index(index) => (validate_type_index)(*index),
+                type_system::Reference::Inline(_) => Ok(()), // TODO: When types can have type indices, validate here as well.
+            }
+        };
+
+        contents
+            .function_signatures
+            .iter()
+            .flat_map(|signature| signature.all_types())
+            .try_for_each(&validate_type)?;
+
         Ok(Self { contents })
     }
 }
