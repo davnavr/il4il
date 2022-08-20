@@ -287,8 +287,13 @@ impl WriteTo for &type_system::Reference {
 
 impl WriteTo for &function::Signature {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
-        LengthPrefixed::from(self.result_types()).write_to(out)?;
-        LengthPrefixed::from(self.parameter_types()).write_to(out)
+        write_length(self.result_type_count(), out)?;
+        write_length(self.parameter_type_count(), out)?;
+        for ty in self.all_types() {
+            ty.write_to(out)?;
+        }
+
+        Ok(())
     }
 }
 

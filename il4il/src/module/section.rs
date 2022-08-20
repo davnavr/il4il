@@ -70,7 +70,7 @@ kind_enum! {
     pub enum SectionKind : u8 {
         Metadata = 0,
         Type = 3,
-        FuntionSignature = 4,
+        FunctionSignature = 4,
     }
 }
 
@@ -109,7 +109,7 @@ impl<'data> Section<'data> {
         match self {
             Self::Metadata(_) => SectionKind::Metadata,
             Self::Type(_) => SectionKind::Type,
-            Self::FunctionSignature(_) => SectionKind::FuntionSignature,
+            Self::FunctionSignature(_) => SectionKind::FunctionSignature,
         }
     }
 }

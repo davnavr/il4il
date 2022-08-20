@@ -1,5 +1,6 @@
 //! Module for parsing the contents of an IL4IL module.
 
+use crate::function;
 use crate::identifier::Identifier;
 use crate::index;
 use crate::integer;
@@ -448,6 +449,15 @@ impl ReadFrom for type_system::Type {
     }
 }
 
+impl ReadFrom for function::Signature {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let result_count: usize = parse_length(source)?;
+        let parameter_count: usize = parse_length(source)?;
+        type_system::Reference::read_many(source, result_count + parameter_count)
+            .map(|types| function::Signature::from_types(types, result_count))
+    }
+}
+
 impl ReadFrom for Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         source.push_location("section");
@@ -458,6 +468,7 @@ impl ReadFrom for Section<'_> {
         let section = match kind {
             section::SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
             section::SectionKind::Type => Section::Type(parse_many_length_encoded(source)?.into_vec()),
+            section::SectionKind::FunctionSignature => Section::FunctionSignature(parse_many_length_encoded(source)?.into_vec()),
             #[allow(unreachable_patterns)]
             _ => todo!(),
         };

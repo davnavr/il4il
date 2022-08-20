@@ -42,6 +42,10 @@ impl Signature {
         &self.types[self.result_type_count..]
     }
 
+    pub(crate) fn all_types(&self) -> &[type_system::Reference] {
+        &self.types
+    }
+
     pub fn into_types(self) -> Box<[type_system::Reference]> {
         self.types
     }
