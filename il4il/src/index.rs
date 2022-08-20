@@ -141,3 +141,11 @@ index_space! {
 /// Function signature indices refer to a function signature within a module, with `0` referring to the first signature of the first
 /// function signature section.
 pub type FunctionSignature = Index<FunctionSignatureSpace>;
+
+index_space! {
+    pub struct FunctionTemplateSpace {
+        const NAME = "function template";
+    }
+}
+
+pub type FunctionTemplate = Index<FunctionTemplateSpace>;

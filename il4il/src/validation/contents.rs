@@ -32,6 +32,7 @@ impl<'data> ModuleContents<'data> {
                 Section::Metadata(mut metadata) => contents.metadata.append(&mut metadata),
                 Section::Type(mut types) => contents.types.append(&mut types),
                 Section::FunctionSignature(mut signatures) => contents.function_signatures.append(&mut signatures),
+                Section::Symbol(symbols) => todo!("symbol content is not yet supported"),
             }
         }
 

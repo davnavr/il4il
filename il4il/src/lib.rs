@@ -15,3 +15,34 @@ pub mod versioning;
 
 #[cfg(test)]
 use il4il_propcheck as propcheck;
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! kind_enum {
+    ($(#[$meta:meta])* $vis:vis enum $name:ident : $inty:ty {
+        $($(#[$case_meta:meta])* $case_name:ident = $case_number:literal,)*
+    }) => {
+        $(#[$meta])*
+        #[repr(u8)]
+        $vis enum $name {
+            $($(#[$case_meta])* $case_name = $case_number,)*
+        }
+
+        impl $name {
+            pub const fn new(value: $inty) -> Option<Self> {
+                match value {
+                    $(_ if value == $case_number => Some(Self::$case_name),)*
+                    _ => None
+                }
+            }
+        }
+
+        impl From<$name> for $inty {
+            fn from(kind: $name) -> Self {
+                match kind {
+                    $($name::$case_name => $case_number,)*
+                }
+            }
+        }
+    };
+}

@@ -5,15 +5,72 @@
 #![deny(unsafe_code)]
 
 use crate::identifier::{Id, Identifier};
+use crate::index;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 
-/// Indicates whether the symbol is visible outside of the containing module.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-#[repr(u8)]
-pub enum SymbolKind {
-    Private,
-    Export,
+crate::kind_enum! {
+    /// Indicates whether the symbol is accessible outside of the containing module.
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+    pub enum Kind : u8 {
+        Private = 0,
+        Export = 1,
+    }
+}
+
+crate::kind_enum! {
+    /// Represents the set of all things that can be assigned a symbol within a module.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[non_exhaustive]
+    pub enum TargetKind : u8 {
+        FunctionTemplate = 1,
+    }
+}
+
+/// Represents an index to content within a module that is capable of having a symbol.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum TargetIndex {
+    FunctionTemplate(index::FunctionTemplate),
+}
+
+/// Assigns content within a module corresponding to indices with symbol names.
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub struct Assignment<'data> {
+    pub symbols: Vec<(usize, Cow<'data, Id>)>,
+    symbol_kind: Kind,
+    target_kind: TargetKind,
+}
+
+impl<'data> Assignment<'data> {
+    pub fn new(symbol_kind: Kind, target_kind: TargetKind) -> Self {
+        Self {
+            symbols: Vec::new(),
+            symbol_kind,
+            target_kind,
+        }
+    }
+
+    pub fn symbol_kind(&self) -> Kind {
+        self.symbol_kind
+    }
+
+    pub fn target_kind(&self) -> TargetKind {
+        self.target_kind
+    }
+
+    pub(crate) fn into_owned(self) -> Assignment<'static> {
+        Assignment {
+            symbols: self
+                .symbols
+                .into_iter()
+                .map(|(index, name)| (index, Cow::Owned(name.into_owned())))
+                .collect(),
+            symbol_kind: self.symbol_kind,
+            target_kind: self.target_kind,
+        }
+    }
 }
 
 #[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -29,23 +86,23 @@ enum Contents<'data> {
 pub struct Symbol<'data>(Contents<'data>);
 
 impl<'data> Symbol<'data> {
-    pub fn new<N: Into<Cow<'data, Id>>>(kind: SymbolKind, name: N) -> Self {
+    pub fn new<N: Into<Cow<'data, Id>>>(kind: Kind, name: N) -> Self {
         Self(match name.into() {
             Cow::Borrowed(borrowed) => match kind {
-                SymbolKind::Export => Contents::ExportBorrowed(borrowed),
-                SymbolKind::Private => Contents::PrivateBorrowed(borrowed),
+                Kind::Export => Contents::ExportBorrowed(borrowed),
+                Kind::Private => Contents::PrivateBorrowed(borrowed),
             },
             Cow::Owned(owned) => match kind {
-                SymbolKind::Export => Contents::ExportOwned(owned),
-                SymbolKind::Private => Contents::PrivateOwned(owned),
+                Kind::Export => Contents::ExportOwned(owned),
+                Kind::Private => Contents::PrivateOwned(owned),
             },
         })
     }
 
-    pub fn kind(&self) -> SymbolKind {
+    pub fn kind(&self) -> Kind {
         match self.0 {
-            Contents::ExportBorrowed(_) | Contents::ExportOwned(_) => SymbolKind::Export,
-            Contents::PrivateBorrowed(_) | Contents::PrivateOwned(_) => SymbolKind::Private,
+            Contents::ExportBorrowed(_) | Contents::ExportOwned(_) => Kind::Export,
+            Contents::PrivateBorrowed(_) | Contents::PrivateOwned(_) => Kind::Private,
         }
     }
 

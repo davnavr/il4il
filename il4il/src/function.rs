@@ -10,6 +10,7 @@ use crate::type_system;
 pub struct Definition {
     /// An index to the function signature indicating the parameters and results of this function definition.
     pub signature: crate::index::FunctionSignature,
+    //body: ,
 }
 
 /// Function signatures specify the parameter types and result types of functions.
