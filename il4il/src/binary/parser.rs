@@ -5,6 +5,7 @@ use crate::identifier::Identifier;
 use crate::index;
 use crate::integer;
 use crate::module::section::{self, Section};
+use crate::symbol;
 use crate::type_system;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
@@ -146,6 +147,8 @@ macro_rules! flags_values {
 flags_values! {
     section::SectionKind : u8, name = "section kind";
     section::MetadataKind : u8, name = "metadata kind";
+    symbol::Kind : u8, name = "symbol kind";
+    symbol::TargetKind : u8, name = "symbol target";
 }
 
 /// Error type used when some combination of flags is invalid.
@@ -381,6 +384,22 @@ impl ReadFrom for section::Metadata<'_> {
     }
 }
 
+impl ReadFrom for symbol::Assignment<'_> {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let target_kind: symbol::TargetKind = parse_flags_value(source)?;
+        let symbol_kind: symbol::Kind = parse_flags_value(source)?;
+        let mut assignment = Self::new(symbol_kind, target_kind);
+        let count: usize = parse_length(source)?;
+        for _ in 0..count {
+            let name = Identifier::read_from(source)?;
+            let index: usize = parse_length(source)?;
+            assignment.symbols.push((Cow::Owned(name), index));
+        }
+
+        Ok(assignment)
+    }
+}
+
 impl ReadFrom for type_system::IntegerSize {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         Self::from_u28(<integer::VarU28 as ReadFrom>::read_from(source)?).map_err(|e| source.create_error(e))
@@ -467,6 +486,7 @@ impl ReadFrom for Section<'_> {
         let kind = parse_flags_value(source)?;
         let section = match kind {
             section::SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
+            section::SectionKind::Symbol => Section::Symbol(parse_many_length_encoded(source)?.into_vec()),
             section::SectionKind::Type => Section::Type(parse_many_length_encoded(source)?.into_vec()),
             section::SectionKind::FunctionSignature => Section::FunctionSignature(parse_many_length_encoded(source)?.into_vec()),
             #[allow(unreachable_patterns)]
