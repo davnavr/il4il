@@ -1,5 +1,6 @@
 //! Low-level module for writing the contents of an IL4IL module.
 
+use crate::function;
 use crate::integer::VarU28;
 use crate::module::section::{self, Section};
 use crate::type_system::{self, TypeTag};
@@ -275,6 +276,22 @@ impl WriteTo for type_system::Type {
     }
 }
 
+impl WriteTo for &type_system::Reference {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        match self {
+            type_system::Reference::Index(index) => write_length(usize::from(*index), out),
+            type_system::Reference::Inline(ty) => ty.write_to(out),
+        }
+    }
+}
+
+impl WriteTo for &function::Signature {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        LengthPrefixed::from(self.result_types()).write_to(out)?;
+        LengthPrefixed::from(self.parameter_types()).write_to(out)
+    }
+}
+
 impl WriteTo for &Section<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         u8::from(self.kind()).write_to(out)?;
@@ -285,6 +302,7 @@ impl WriteTo for &Section<'_> {
             match self {
                 Section::Metadata(metadata) => LengthPrefixed::from(metadata).write_to(section_writer)?,
                 Section::Type(types) => LengthPrefixed::from(types.iter()).write_to(section_writer)?,
+                Section::FunctionSignature(signatures) => LengthPrefixed::from(signatures).write_to(section_writer)?,
             }
         }
 

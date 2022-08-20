@@ -70,6 +70,7 @@ kind_enum! {
     pub enum SectionKind : u8 {
         Metadata = 0,
         Type = 3,
+        FuntionSignature = 4,
     }
 }
 
@@ -80,7 +81,17 @@ pub enum Section<'data> {
     /// The metadata section contains information about the module.
     Metadata(Vec<Metadata<'data>>),
     /// The type section stores commonly used types throughout the module.
+    ///
+    /// See also [`index::Type`].
+    ///
+    /// [`index::Type`]: crate::index::Type
     Type(Vec<crate::type_system::Type>),
+    /// The function signature section stores the parameter and return types of functions throughout the module.
+    ///
+    /// See also [`index::FunctionSignature`].
+    ///
+    /// [`index::FunctionSignature`]: crate::index::FunctionSignature
+    FunctionSignature(Vec<crate::function::Signature>),
 }
 
 impl<'data> Section<'data> {
@@ -89,6 +100,7 @@ impl<'data> Section<'data> {
         match self {
             Self::Metadata(metadata) => Section::Metadata(metadata.into_iter().map(Metadata::into_owned).collect()),
             Self::Type(types) => Section::Type(types),
+            Self::FunctionSignature(signatures) => Section::FunctionSignature(signatures),
         }
     }
 
@@ -97,6 +109,7 @@ impl<'data> Section<'data> {
         match self {
             Self::Metadata(_) => SectionKind::Metadata,
             Self::Type(_) => SectionKind::Type,
+            Self::FunctionSignature(_) => SectionKind::FuntionSignature,
         }
     }
 }

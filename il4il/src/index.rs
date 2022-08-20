@@ -131,3 +131,13 @@ index_space! {
 /// Type indices refer to the contents of all type sections within a module, with `0` referring to the first type of the first type
 /// section.
 pub type Type = Index<TypeSpace>;
+
+index_space! {
+    pub struct FunctionSignatureSpace {
+        const NAME = "function signature";
+    }
+}
+
+/// Function signature indices refer to a function signature within a module, with `0` referring to the first signature of the first
+/// function signature section.
+pub type FunctionSignature = Index<FunctionSignatureSpace>;

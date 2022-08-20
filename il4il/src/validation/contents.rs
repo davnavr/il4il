@@ -1,5 +1,6 @@
 //! Contains types that model the contents of a valid IL4IL module.
 
+use crate::function;
 use crate::module::section::{self, Section};
 use crate::module::Module;
 use crate::type_system;
@@ -10,6 +11,7 @@ use crate::type_system;
 pub struct ModuleContents<'data> {
     pub metadata: Vec<section::Metadata<'data>>,
     pub types: Vec<type_system::Type>,
+    pub function_signatures: Vec<function::Signature>,
 }
 
 impl<'data> ModuleContents<'data> {
@@ -29,6 +31,7 @@ impl<'data> ModuleContents<'data> {
             match sect? {
                 Section::Metadata(mut metadata) => contents.metadata.append(&mut metadata),
                 Section::Type(mut types) => contents.types.append(&mut types),
+                Section::FunctionSignature(mut signatures) => contents.function_signatures.append(&mut signatures),
             }
         }
 
