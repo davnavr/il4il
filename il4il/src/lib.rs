@@ -8,6 +8,7 @@ pub mod identifier;
 pub mod index;
 pub mod integer;
 pub mod module;
+pub mod symbol;
 pub mod type_system;
 pub mod validation;
 pub mod versioning;

@@ -4,6 +4,14 @@
 
 use crate::type_system;
 
+/// Function definitions associate an IL4IL function body with a [`Signature`].
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub struct Definition {
+    /// An index to the function signature indicating the parameters and results of this function definition.
+    pub signature: crate::index::FunctionSignature,
+}
+
 /// Function signatures specify the parameter types and result types of functions.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Signature {

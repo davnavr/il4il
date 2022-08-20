@@ -4,7 +4,7 @@
 //!
 //! [`Id`] is to [`Identifier`] as [`str`] is to [`String`].
 
-use std::borrow::{Borrow, ToOwned};
+use std::borrow::{Borrow, Cow, ToOwned};
 use std::convert::AsRef;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
@@ -36,7 +36,7 @@ pub enum ParseError {
 ///
 /// Additionally, [`Id`] does not provide methods to mutate or manipulate identifier strings, in order to ensure that its
 /// invariants hold.
-#[derive(Eq, Hash, PartialEq, PartialOrd)]
+#[derive(Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Id(str);
 
@@ -154,6 +154,12 @@ impl ToOwned for Id {
 
     fn to_owned(&self) -> Self::Owned {
         self.to_identifier()
+    }
+}
+
+impl<'a> From<&'a Id> for Cow<'a, Id> {
+    fn from(identifier: &'a Id) -> Self {
+        Cow::Borrowed(identifier)
     }
 }
 
@@ -317,6 +323,27 @@ impl std::str::FromStr for Identifier {
 
     fn from_str(identifier: &str) -> Result<Self, Self::Err> {
         Id::new(identifier).map(Id::to_identifier)
+    }
+}
+
+impl<'a> From<&'a Identifier> for Cow<'a, Id> {
+    fn from(identifier: &'a Identifier) -> Self {
+        Cow::Borrowed(identifier)
+    }
+}
+
+impl<'a> From<Identifier> for Cow<'a, Id> {
+    fn from(identifier: Identifier) -> Self {
+        Cow::Owned(identifier)
+    }
+}
+
+impl<'a> From<Cow<'a, Id>> for Identifier {
+    fn from(identifier: Cow<'a, Id>) -> Self {
+        match identifier {
+            Cow::Owned(owned) => owned,
+            Cow::Borrowed(borrowed) => Identifier::from_id(borrowed),
+        }
     }
 }
 
