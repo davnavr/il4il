@@ -313,6 +313,13 @@ impl WriteTo for &function::Signature {
     }
 }
 
+impl WriteTo for &function::Definition {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        write_length(usize::from(self.signature), out)?;
+        write_length(usize::from(self.body), out)
+    }
+}
+
 impl WriteTo for &Section<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         u8::from(self.kind()).write_to(out)?;
@@ -325,6 +332,7 @@ impl WriteTo for &Section<'_> {
                 Section::Symbol(symbols) => LengthPrefixed::from(symbols).write_to(section_writer)?,
                 Section::Type(types) => LengthPrefixed::from(types).write_to(section_writer)?,
                 Section::FunctionSignature(signatures) => LengthPrefixed::from(signatures).write_to(section_writer)?,
+                Section::FunctionDefinition(definitions) => LengthPrefixed::from(definitions).write_to(section_writer)?,
             }
         }
 

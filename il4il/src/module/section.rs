@@ -44,6 +44,7 @@ crate::kind_enum! {
         Symbol = 3,
         Type = 4,
         FunctionSignature = 5,
+        FunctionDefinition = 8,
     }
 }
 
@@ -66,6 +67,7 @@ pub enum Section<'data> {
     ///
     /// [`index::FunctionSignature`]: crate::index::FunctionSignature
     FunctionSignature(Vec<crate::function::Signature>),
+    FunctionDefinition(Vec<crate::function::Definition>),
 }
 
 impl<'data> Section<'data> {
@@ -76,6 +78,7 @@ impl<'data> Section<'data> {
             Self::Symbol(symbols) => Section::Symbol(symbols.into_iter().map(crate::symbol::Assignment::into_owned).collect()),
             Self::Type(types) => Section::Type(types),
             Self::FunctionSignature(signatures) => Section::FunctionSignature(signatures),
+            Self::FunctionDefinition(definitions) => Section::FunctionDefinition(definitions),
         }
     }
 
@@ -86,6 +89,7 @@ impl<'data> Section<'data> {
             Self::Symbol(_) => SectionKind::Symbol,
             Self::Type(_) => SectionKind::Type,
             Self::FunctionSignature(_) => SectionKind::FunctionSignature,
+            Self::FunctionDefinition(_) => SectionKind::FunctionDefinition,
         }
     }
 }

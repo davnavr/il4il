@@ -2,6 +2,7 @@
 
 #![deny(unsafe_code)]
 
+use crate::index;
 use crate::type_system;
 
 /// Function definitions associate an IL4IL function body with a [`Signature`].
@@ -9,8 +10,14 @@ use crate::type_system;
 #[non_exhaustive]
 pub struct Definition {
     /// An index to the function signature indicating the parameters and results of this function definition.
-    pub signature: crate::index::FunctionSignature,
-    //body: ,
+    pub signature: index::FunctionSignature,
+    pub body: index::Code,
+}
+
+impl Definition {
+    pub fn new(signature: crate::index::FunctionSignature, body: index::Code) -> Self {
+        Self { signature, body }
+    }
 }
 
 /// Function signatures specify the parameter types and result types of functions.
@@ -57,5 +64,41 @@ impl Signature {
 
     pub fn into_types(self) -> Box<[type_system::Reference]> {
         self.types
+    }
+}
+
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum Template {
+    Definition(usize),
+    //Import(),
+}
+
+#[derive(Clone, Default, Eq, PartialEq)]
+pub struct TemplateLookup {
+    templates: Vec<Template>
+}
+
+impl TemplateLookup {
+    pub(crate) fn reserve(&mut self, capacity: usize) {
+        self.templates.reserve(capacity)
+    }
+
+    pub(crate) fn insert(&mut self, template: Template) {
+        self.templates.push(template)
+    }
+
+    pub fn get_template(&self, index: crate::index::FunctionTemplate) -> Option<&Template> {
+        self.templates.get(usize::from(index))
+    }
+
+    pub fn iter_templates(&self) -> impl std::iter::ExactSizeIterator<Item = &Template> {
+        self.templates.iter()
+    }
+}
+
+impl std::fmt::Debug for TemplateLookup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.iter_templates()).finish()
     }
 }

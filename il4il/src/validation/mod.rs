@@ -90,6 +90,8 @@ impl<'data> ValidModule<'data> {
             crate::symbol::TargetIndex::FunctionTemplate(template) => (validate_function_template_index)(template),
         })?;
 
+        // TODO: Check that template lookup is valid
+
         Ok(Self { contents, symbols })
     }
 }

@@ -128,6 +128,12 @@ impl<S: IndexSpace> PartialOrd for Index<S> {
     }
 }
 
+impl<S: IndexSpace> std::ops::AddAssign<usize> for Index<S> {
+    fn add_assign(&mut self, rhs: usize) {
+        self.index += rhs;
+    }
+}
+
 index_space! {
     pub struct TypeSpace {
         const NAME = "type";
@@ -155,3 +161,11 @@ index_space! {
 }
 
 pub type FunctionTemplate = Index<FunctionTemplateSpace>;
+
+index_space! {
+    pub struct CodeSpace {
+        const NAME = "function body";
+    }
+}
+
+pub type Code = Index<CodeSpace>;

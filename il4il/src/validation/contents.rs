@@ -12,7 +12,9 @@ pub struct ModuleContents<'data> {
     pub metadata: Vec<section::Metadata<'data>>,
     pub types: Vec<type_system::Type>,
     pub function_signatures: Vec<function::Signature>,
+    pub function_definitions: Vec<function::Definition>,
     pub symbols: Vec<crate::symbol::Assignment<'data>>,
+    pub function_templates: function::TemplateLookup,
 }
 
 impl<'data> ModuleContents<'data> {
@@ -27,6 +29,7 @@ impl<'data> ModuleContents<'data> {
         S: IntoIterator<Item = Result<Section<'data>, E>>,
     {
         let mut contents = ModuleContents::default();
+        let mut function_definition_index = 0;
 
         for sect in sections.into_iter() {
             match sect? {
@@ -34,6 +37,15 @@ impl<'data> ModuleContents<'data> {
                 Section::Symbol(mut symbols) => contents.symbols.append(&mut symbols),
                 Section::Type(mut types) => contents.types.append(&mut types),
                 Section::FunctionSignature(mut signatures) => contents.function_signatures.append(&mut signatures),
+                Section::FunctionDefinition(definitions) => {
+                    contents.function_templates.reserve(definitions.len());
+                    contents.function_definitions.reserve(definitions.len());
+                    for func in definitions {
+                        contents.function_templates.insert(function::Template::Definition(function_definition_index));
+                        function_definition_index += 1;
+                        contents.function_definitions.push(func);
+                    }
+                },
             }
         }
 
