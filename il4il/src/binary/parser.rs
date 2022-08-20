@@ -436,6 +436,18 @@ impl ReadFrom for type_system::Reference {
     }
 }
 
+impl ReadFrom for type_system::Type {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        match type_system::Reference::read_from(source)? {
+            type_system::Reference::Inline(ty) => Ok(ty),
+            type_reference => Err(source.create_error(UnsupportedTypeError {
+                type_reference,
+                context: "type index is not allowed here",
+            })),
+        }
+    }
+}
+
 impl ReadFrom for Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         source.push_location("section");
@@ -445,6 +457,7 @@ impl ReadFrom for Section<'_> {
         let kind = parse_flags_value(source)?;
         let section = match kind {
             section::SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
+            section::SectionKind::Type => Section::Type(parse_many_length_encoded(source)?.into_vec()),
             #[allow(unreachable_patterns)]
             _ => todo!(),
         };
