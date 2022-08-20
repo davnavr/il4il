@@ -1,8 +1,10 @@
 //! Low-level module for writing the contents of an IL4IL module.
 
 use crate::function;
+use crate::identifier::Id;
 use crate::integer::VarU28;
 use crate::module::section::{self, Section};
+use crate::symbol;
 use crate::type_system::{self, TypeTag};
 use std::io::{Error, ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
@@ -123,7 +125,7 @@ impl WriteTo for &[u8] {
     }
 }
 
-impl WriteTo for &crate::identifier::Id {
+impl WriteTo for &Id {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         self.as_bytes().write_to(out)
     }
@@ -165,6 +167,20 @@ impl WriteTo for &section::Metadata<'_> {
         match self {
             section::Metadata::Name(name) => name.write_to(out),
         }
+    }
+}
+
+impl WriteTo for &symbol::Assignment<'_> {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        out.write_all([u8::from(self.target_kind()), u8::from(self.symbol_kind())].as_slice())?;
+
+        write_length(self.symbols.len(), out)?;
+        for (symbol, index) in self.symbols.iter() {
+            <&'_ Id>::write_to(symbol, out)?;
+            write_length(*index, out)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -306,7 +322,8 @@ impl WriteTo for &Section<'_> {
             let section_writer = &mut section_buffer;
             match self {
                 Section::Metadata(metadata) => LengthPrefixed::from(metadata).write_to(section_writer)?,
-                Section::Type(types) => LengthPrefixed::from(types.iter()).write_to(section_writer)?,
+                Section::Symbol(symbols) => LengthPrefixed::from(symbols).write_to(section_writer)?,
+                Section::Type(types) => LengthPrefixed::from(types).write_to(section_writer)?,
                 Section::FunctionSignature(signatures) => LengthPrefixed::from(signatures).write_to(section_writer)?,
             }
         }

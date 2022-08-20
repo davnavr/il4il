@@ -34,11 +34,11 @@ pub enum TargetIndex {
     FunctionTemplate(index::FunctionTemplate),
 }
 
-/// Assigns content within a module corresponding to indices with symbol names.
+/// Assigns symbol names to indices to content within a module.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct Assignment<'data> {
-    pub symbols: Vec<(usize, Cow<'data, Id>)>,
+    pub symbols: Vec<(Cow<'data, Id>, usize)>,
     symbol_kind: Kind,
     target_kind: TargetKind,
 }
@@ -65,7 +65,7 @@ impl<'data> Assignment<'data> {
             symbols: self
                 .symbols
                 .into_iter()
-                .map(|(index, name)| (index, Cow::Owned(name.into_owned())))
+                .map(|(name, index)| (Cow::Owned(name.into_owned()), index))
                 .collect(),
             symbol_kind: self.symbol_kind,
             target_kind: self.target_kind,
