@@ -15,6 +15,7 @@ pub use error::*;
 #[derive(Clone, Default)]
 pub struct ValidModule<'data> {
     contents: ModuleContents<'data>,
+    symbols: crate::symbol::Lookup<'data>,
 }
 
 impl<'data> ValidModule<'data> {
@@ -28,11 +29,18 @@ impl<'data> ValidModule<'data> {
     #[allow(unsafe_code)]
     #[must_use]
     pub unsafe fn from_contents_unchecked(contents: ModuleContents<'data>) -> Self {
-        Self { contents }
+        Self {
+            contents,
+            symbols: Default::default(),
+        }
     }
 
     pub fn contents(&self) -> &ModuleContents<'data> {
         &self.contents
+    }
+
+    pub fn symbol_lookup(&self) -> &crate::symbol::Lookup<'data> {
+        &self.symbols
     }
 
     pub fn into_contents(self) -> ModuleContents<'data> {
@@ -59,6 +67,9 @@ impl<'data> ValidModule<'data> {
         }
 
         let validate_type_index = create_index_validator::<index::TypeSpace>(contents.types.len());
+        let validate_function_template_index = |_: index::FunctionTemplate| -> Result<(), Error> {
+            todo!("add function template lookup thing to contents (function_templates: HashMap<index::FunctionTemplate, SomeEnumIndex>)")
+        };
 
         let validate_type = |ty: &type_system::Reference| {
             match ty {
@@ -73,7 +84,13 @@ impl<'data> ValidModule<'data> {
             .flat_map(|signature| signature.all_types())
             .try_for_each(&validate_type)?;
 
-        Ok(Self { contents })
+        let symbols = crate::symbol::Lookup::from_assignments(contents.symbols.iter())?;
+
+        symbols.entries().try_for_each(|entry| match entry.index() {
+            crate::symbol::TargetIndex::FunctionTemplate(template) => (validate_function_template_index)(template),
+        })?;
+
+        Ok(Self { contents, symbols })
     }
 }
 

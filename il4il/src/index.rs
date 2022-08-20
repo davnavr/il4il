@@ -110,6 +110,12 @@ impl<S: IndexSpace> PartialEq for Index<S> {
 
 impl<S: IndexSpace> Eq for Index<S> {}
 
+impl<S: IndexSpace> std::hash::Hash for Index<S> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_usize(self.index)
+    }
+}
+
 impl<S: IndexSpace> Ord for Index<S> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.index.cmp(&other.index)

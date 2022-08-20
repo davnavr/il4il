@@ -37,6 +37,8 @@ impl Display for InvalidIndexError {
 pub enum ErrorKind {
     #[error(transparent)]
     IndexOutOfBounds(#[from] InvalidIndexError),
+    #[error(transparent)]
+    DUplicateSymbol(#[from] crate::symbol::DuplicateSymbolError),
 }
 
 /// Represents an error that occured during the validation of an IL4IL module.

@@ -12,6 +12,7 @@ pub struct ModuleContents<'data> {
     pub metadata: Vec<section::Metadata<'data>>,
     pub types: Vec<type_system::Type>,
     pub function_signatures: Vec<function::Signature>,
+    pub symbols: Vec<crate::symbol::Assignment<'data>>,
 }
 
 impl<'data> ModuleContents<'data> {
@@ -30,9 +31,9 @@ impl<'data> ModuleContents<'data> {
         for sect in sections.into_iter() {
             match sect? {
                 Section::Metadata(mut metadata) => contents.metadata.append(&mut metadata),
+                Section::Symbol(mut symbols) => contents.symbols.append(&mut symbols),
                 Section::Type(mut types) => contents.types.append(&mut types),
                 Section::FunctionSignature(mut signatures) => contents.function_signatures.append(&mut signatures),
-                Section::Symbol(symbols) => todo!("symbol content is not yet supported"),
             }
         }
 
