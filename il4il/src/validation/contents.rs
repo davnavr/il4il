@@ -10,10 +10,11 @@ use crate::type_system;
 #[non_exhaustive]
 pub struct ModuleContents<'data> {
     pub metadata: Vec<section::Metadata<'data>>,
+    pub symbols: Vec<crate::symbol::Assignment<'data>>,
     pub types: Vec<type_system::Type>,
     pub function_signatures: Vec<function::Signature>,
     pub function_definitions: Vec<function::Definition>,
-    pub symbols: Vec<crate::symbol::Assignment<'data>>,
+    pub function_bodies: Vec<function::Body>,
     pub function_templates: function::TemplateLookup,
 }
 
@@ -48,6 +49,7 @@ impl<'data> ModuleContents<'data> {
                         contents.function_definitions.push(func);
                     }
                 }
+                Section::Code(mut code) => contents.function_bodies.append(&mut code),
             }
         }
 

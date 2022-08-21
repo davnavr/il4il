@@ -10,10 +10,10 @@ use crate::type_system;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Block {
-    types: Box<[type_system::Reference]>, // Vec<>, another usize might not hurt, will make it align better.
+    pub(crate) types: Box<[type_system::Reference]>, // Vec<>, another usize might not hurt, will make it align better.
     input_count: usize,
     result_count: usize,
-    instructions: Vec<Instruction>,
+    pub instructions: Vec<Instruction>,
 }
 
 impl Block {

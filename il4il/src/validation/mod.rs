@@ -92,6 +92,8 @@ impl<'data> ValidModule<'data> {
 
         // TODO: Check that template lookup is valid
 
+        // TODO: Validate function bodies
+
         Ok(Self { contents, symbols })
     }
 }

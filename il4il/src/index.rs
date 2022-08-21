@@ -168,4 +168,5 @@ index_space! {
     }
 }
 
+/// An index into the module's code sections, with `0` referring to the first function body of the first code section.
 pub type FunctionBody = Index<CodeSpace>;

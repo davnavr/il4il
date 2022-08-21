@@ -2,6 +2,7 @@
 
 use crate::function;
 use crate::identifier::Id;
+use crate::instruction::{self, Instruction};
 use crate::integer::VarU28;
 use crate::module::section::{self, Section};
 use crate::symbol;
@@ -305,11 +306,7 @@ impl WriteTo for &function::Signature {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         write_length(self.result_type_count(), out)?;
         write_length(self.parameter_type_count(), out)?;
-        for ty in self.all_types() {
-            ty.write_to(out)?;
-        }
-
-        Ok(())
+        self.all_types().iter().try_for_each(|ty| ty.write_to(out))
     }
 }
 
@@ -317,6 +314,34 @@ impl WriteTo for &function::Definition {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         write_length(usize::from(self.signature), out)?;
         write_length(usize::from(self.body), out)
+    }
+}
+
+impl WriteTo for &Instruction {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        VarU28::from(self.opcode()).write_to(out)?;
+        match self {
+            Instruction::Unreachable => Ok(()),
+        }
+    }
+}
+
+impl WriteTo for &instruction::Block {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        write_length(self.input_count(), out)?;
+        write_length(self.result_count(), out)?;
+        write_length(self.temporary_count(), out)?;
+        self.types.iter().try_for_each(|ty| ty.write_to(out))?;
+        // TODO: Include byte length of instructions?
+        self.instructions.iter().try_for_each(|instr| instr.write_to(out))
+    }
+}
+
+impl WriteTo for &function::Body {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        write_length(self.other_blocks().len(), out)?;
+        self.entry_block().write_to(out)?;
+        self.other_blocks().iter().try_for_each(|block| block.write_to(out))
     }
 }
 
@@ -333,6 +358,7 @@ impl WriteTo for &Section<'_> {
                 Section::Type(types) => LengthPrefixed::from(types).write_to(section_writer)?,
                 Section::FunctionSignature(signatures) => LengthPrefixed::from(signatures).write_to(section_writer)?,
                 Section::FunctionDefinition(definitions) => LengthPrefixed::from(definitions).write_to(section_writer)?,
+                Section::Code(code) => LengthPrefixed::from(code).write_to(section_writer)?,
             }
         }
 

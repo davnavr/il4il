@@ -3,12 +3,28 @@
 #![deny(unsafe_code)]
 
 use crate::index;
+use crate::instruction;
 use crate::type_system;
 
 /// A function body consists of a list of basic blocks and specifies the types of all inputs, temporary registers, and results.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Body {
-    //blocks: Vec<crate::instruction::Block>,
+    entry_block: instruction::Block,
+    other_blocks: Box<[instruction::Block]>,
+}
+
+impl Body {
+    pub fn new(entry_block: instruction::Block, other_blocks: Box<[instruction::Block]>) -> Self {
+        Self { entry_block, other_blocks }
+    }
+
+    pub fn entry_block(&self) -> &instruction::Block {
+        &self.entry_block
+    }
+
+    pub fn other_blocks(&self) -> &[instruction::Block] {
+        &self.other_blocks
+    }
 }
 
 /// Function definitions associate an IL4IL function body with a [`Signature`].
@@ -21,7 +37,7 @@ pub struct Definition {
 }
 
 impl Definition {
-    pub fn new(signature: crate::index::FunctionSignature, body: index::FunctionBody) -> Self {
+    pub fn new(signature: index::FunctionSignature, body: index::FunctionBody) -> Self {
         Self { signature, body }
     }
 }

@@ -35,10 +35,16 @@ macro_rules! opcode {
             $($name,)*
         }
 
+        impl From<Opcode> for crate::integer::VarU28 {
+            fn from(opcode: Opcode) -> Self {
+                Self::from(opcode as u8)
+            }
+        }
+
         impl Instruction {
             pub fn opcode(&self) -> Opcode {
                 match self {
-                    $(Self::$name { .. }=> Opcode::$name,)*
+                    $(Self::$name { .. } => Opcode::$name,)*
                 }
             }
         }
