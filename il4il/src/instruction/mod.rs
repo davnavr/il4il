@@ -1,11 +1,14 @@
 //! Provides a model of the IL4IL instruction set.
 
+pub mod value;
+
 mod block;
 
 pub use block::Block;
+pub use value::Value;
 
 /// Represents an IL4IL instruction.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Instruction {
     /// Indicates that control flow cannot reach this particular location, causing undefined behavior otherwise.
@@ -16,6 +19,14 @@ pub enum Instruction {
     /// unreachable
     /// ```
     Unreachable,
+    /// Transfers control flow back to the calling function, providing the specified return value(s).
+    ///
+    /// ### Assembly Syntax
+    /// ```text
+    /// return <value0>, <value1>, ... ; Return multiple values
+    /// return ; Return no values
+    /// ```
+    Return(Box<[Value]>),
 }
 
 impl Instruction {
@@ -53,4 +64,5 @@ macro_rules! opcode {
 
 opcode! {
     Unreachable = 0,
+    Return = 1,
 }
