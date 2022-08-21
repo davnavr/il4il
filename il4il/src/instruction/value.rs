@@ -1,6 +1,6 @@
 //! Module for manipulation of values encoded in IL4IL instructions.
 
-use crate::integer::{VarI28, VarU28};
+use crate::integer::VarI28;
 
 macro_rules! constant_tag {
     {$($name:ident = $value:literal,)*} => {
@@ -37,15 +37,19 @@ constant_tag! {
     IntegerAll = -3,
     IntegerSignedMaximum = -4,
     IntegerSignedMinimum = -5,
-    Integer8 = -6,
-    Integer16 = -7,
-    Integer32 = -8,
-    Integer64 = -9,
-    Integer128 = -10,
+    IntegerInline8 = -6,
+    IntegerInline16 = -7,
+    IntegerInline32 = -8,
+    IntegerInline64 = -9,
+    IntegerInline128 = -10,
+    Float16 = -21,
+    Float32 = -22,
+    Float64 = -23,
+    Float128 = -24,
 }
 
 /// A constant integer value.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ConstantInteger {
     /// An integer value with no bits set, also the `false` boolean value.
     Zero,
@@ -69,11 +73,41 @@ pub enum ConstantInteger {
     I128([u8; 16]),
 }
 
+impl ConstantInteger {
+    pub fn tag(&self) -> ConstantTag {
+        match self {
+            Self::Zero => ConstantTag::IntegerZero,
+            Self::One => ConstantTag::IntegerOne,
+            Self::All => ConstantTag::IntegerAll,
+            Self::SignedMaximum => ConstantTag::IntegerSignedMaximum,
+            Self::SignedMinimum => ConstantTag::IntegerSignedMinimum,
+            Self::Byte(_) => ConstantTag::IntegerInline8,
+            Self::I16(_) => ConstantTag::IntegerInline16,
+            Self::I32(_) => ConstantTag::IntegerInline32,
+            Self::I64(_) => ConstantTag::IntegerInline64,
+            Self::I128(_) => ConstantTag::IntegerInline128,
+        }
+    }
+}
+
 /// A constant floating-point value, stored in little-endian order.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ConstantFloat {
+    Half([u8; 2]),
     Single([u8; 4]),
     Double([u8; 8]),
+    Quadruple([u8; 16]),
+}
+
+impl ConstantFloat {
+    pub fn tag(&self) -> ConstantTag {
+        match self {
+            Self::Half(_) => ConstantTag::Float16,
+            Self::Single(_) => ConstantTag::Float32,
+            Self::Double(_) => ConstantTag::Float64,
+            Self::Quadruple(_) => ConstantTag::Float128,
+        }
+    }
 }
 
 impl From<f32> for ConstantFloat {
@@ -89,16 +123,25 @@ impl From<f64> for ConstantFloat {
 }
 
 /// A constant value.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Constant {
     Integer(ConstantInteger),
     Float(ConstantFloat),
 }
 
+impl Constant {
+    pub fn tag(&self) -> ConstantTag {
+        match self {
+            Self::Integer(integer) => integer.tag(),
+            Self::Float(float) => float.tag(),
+        }
+    }
+}
+
 /// A value used as an immediate argument for some IL4IL instructions.
 ///
 /// In many cases, the type of the argument is inferred, though some instructions may explicitly require a type for a value.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Value {
     Constant(Constant),
     ///// An index to a register, encoded as a [variable-length signed integer](VarI28).

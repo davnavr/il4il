@@ -2,8 +2,9 @@
 
 use crate::function;
 use crate::identifier::Id;
+use crate::instruction::value::{self, Value};
 use crate::instruction::{self, Instruction};
-use crate::integer::VarU28;
+use crate::integer::{VarI28, VarU28};
 use crate::module::section::{self, Section};
 use crate::symbol;
 use crate::type_system::{self, TypeTag};
@@ -106,9 +107,21 @@ impl WriteTo for u8 {
     }
 }
 
+impl<const N: usize> WriteTo for &[u8; N] {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        out.write_all(self.as_slice())
+    }
+}
+
 impl WriteTo for VarU28 {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
-        VarU28::write_to(self, out)
+        <VarU28>::write_to(self, out)
+    }
+}
+
+impl WriteTo for VarI28 {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        <VarI28>::write_to(self, out)
     }
 }
 
@@ -317,11 +330,40 @@ impl WriteTo for &function::Definition {
     }
 }
 
+impl WriteTo for &Value {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        use value::{Constant, ConstantFloat, ConstantInteger};
+
+        match self {
+            Value::Constant(constant) => {
+                WriteTo::write_to(VarI28::from(constant.tag()), out)?;
+                match constant {
+                    Constant::Integer(
+                        ConstantInteger::All
+                        | ConstantInteger::One
+                        | ConstantInteger::SignedMaximum
+                        | ConstantInteger::SignedMinimum
+                        | ConstantInteger::Zero,
+                    ) => Ok(()),
+                    Constant::Integer(ConstantInteger::Byte(value)) => value.write_to(out),
+                    Constant::Integer(ConstantInteger::I16(bytes)) | Constant::Float(ConstantFloat::Half(bytes)) => bytes.write_to(out),
+                    Constant::Integer(ConstantInteger::I32(bytes)) | Constant::Float(ConstantFloat::Single(bytes)) => bytes.write_to(out),
+                    Constant::Integer(ConstantInteger::I64(bytes)) | Constant::Float(ConstantFloat::Double(bytes)) => bytes.write_to(out),
+                    Constant::Integer(ConstantInteger::I128(bytes)) | Constant::Float(ConstantFloat::Quadruple(bytes)) => {
+                        bytes.write_to(out)
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl WriteTo for &Instruction {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
-        VarU28::from(self.opcode()).write_to(out)?;
+        WriteTo::write_to(VarU28::from(self.opcode()), out)?;
         match self {
             Instruction::Unreachable => Ok(()),
+            Instruction::Return(values) => LengthPrefixed::from(values.iter()).write_to(out),
         }
     }
 }
@@ -333,7 +375,7 @@ impl WriteTo for &instruction::Block {
         write_length(self.temporary_count(), out)?;
         self.types.iter().try_for_each(|ty| ty.write_to(out))?;
         // TODO: Include byte length of instructions?
-        self.instructions.iter().try_for_each(|instr| instr.write_to(out))
+        LengthPrefixed::from(self.instructions.iter()).write_to(out)
     }
 }
 

@@ -124,6 +124,7 @@ impl<'data> ValidModule<'data> {
 
                     match instruction {
                         Instruction::Unreachable => (),
+                        Instruction::Return(_values) => todo!("validate values"),
                     }
 
                     reached_terminator = instruction.is_terminator();
