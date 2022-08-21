@@ -67,7 +67,6 @@ impl Signature {
     }
 }
 
-
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Template {
     Definition(usize),
@@ -76,7 +75,7 @@ pub enum Template {
 
 #[derive(Clone, Default, Eq, PartialEq)]
 pub struct TemplateLookup {
-    templates: Vec<Template>
+    templates: Vec<Template>,
 }
 
 impl TemplateLookup {

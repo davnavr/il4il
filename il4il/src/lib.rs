@@ -6,6 +6,7 @@ pub mod binary;
 pub mod function;
 pub mod identifier;
 pub mod index;
+pub mod instruction;
 pub mod integer;
 pub mod module;
 pub mod symbol;

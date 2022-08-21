@@ -41,11 +41,13 @@ impl<'data> ModuleContents<'data> {
                     contents.function_templates.reserve(definitions.len());
                     contents.function_definitions.reserve(definitions.len());
                     for func in definitions {
-                        contents.function_templates.insert(function::Template::Definition(function_definition_index));
+                        contents
+                            .function_templates
+                            .insert(function::Template::Definition(function_definition_index));
                         function_definition_index += 1;
                         contents.function_definitions.push(func);
                     }
-                },
+                }
             }
         }
 
