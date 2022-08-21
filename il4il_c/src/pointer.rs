@@ -11,6 +11,7 @@
 //!
 //! For additional information, see [the crate documentation](crate#safety).
 
+use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 /// Error type used to indicate why a pointer is invalid.
@@ -213,7 +214,10 @@ impl<T> Pointer<'static> for Option<Box<T>> {
 /// Wrapper type for pointers used in `extern` functions.
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct Exposed<'a, P: Pointer<'a>>(P::Raw);
+pub struct Exposed<'a, P: Pointer<'a>> {
+    raw: P::Raw,
+    _phantom: PhantomData<P>,
+}
 
 impl<'a, P: Pointer<'a>> Exposed<'a, P> {
     /// Attempts to convert from a raw pointer.
@@ -222,13 +226,16 @@ impl<'a, P: Pointer<'a>> Exposed<'a, P> {
     pub(crate) unsafe fn unwrap(self) -> Result<P, InvalidPointerError> {
         unsafe {
             // Safety: Caller is responsible
-            P::from_raw(self.0)
+            P::from_raw(self.raw)
         }
     }
 
     /// Wraps a type that can be represented by a raw pointer.
     pub fn wrap(value: P) -> Self {
-        Self(P::into_raw(value))
+        Self {
+            raw: P::into_raw(value),
+            _phantom: PhantomData,
+        }
     }
 }
 
