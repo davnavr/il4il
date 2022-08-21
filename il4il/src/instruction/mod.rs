@@ -1,5 +1,9 @@
 //! Provides a model of the IL4IL instruction set.
 
+mod block;
+
+pub use block::Block;
+
 /// Represents an IL4IL instruction.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
@@ -14,10 +18,15 @@ pub enum Instruction {
     Unreachable,
 }
 
+impl Instruction {
+    /// Returns `true` if this [`Instruction`] can only be used at the end of a [`Block`].
+    pub fn is_terminator(&self) -> bool {
+        matches!(self, Self::Unreachable)
+    }
+}
+
 macro_rules! opcode {
-    {
-        $($name:ident = $code:literal,)*
-    } => {
+    {$($name:ident = $code:literal,)*} => {
         /// Specifies an IL4IL instruction.
         #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
         #[repr(u8)]

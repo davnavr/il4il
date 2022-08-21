@@ -168,4 +168,4 @@ index_space! {
     }
 }
 
-pub type Code = Index<CodeSpace>;
+pub type FunctionBody = Index<CodeSpace>;

@@ -5,17 +5,23 @@
 use crate::index;
 use crate::type_system;
 
+/// A function body consists of a list of basic blocks and specifies the types of all inputs, temporary registers, and results.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Body {
+    //blocks: Vec<crate::instruction::Block>,
+}
+
 /// Function definitions associate an IL4IL function body with a [`Signature`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Definition {
     /// An index to the function signature indicating the parameters and results of this function definition.
     pub signature: index::FunctionSignature,
-    pub body: index::Code,
+    pub body: index::FunctionBody,
 }
 
 impl Definition {
-    pub fn new(signature: crate::index::FunctionSignature, body: index::Code) -> Self {
+    pub fn new(signature: crate::index::FunctionSignature, body: index::FunctionBody) -> Self {
         Self { signature, body }
     }
 }
