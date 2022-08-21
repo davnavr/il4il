@@ -170,3 +170,12 @@ index_space! {
 
 /// An index into the module's code sections, with `0` referring to the first function body of the first code section.
 pub type FunctionBody = Index<CodeSpace>;
+
+index_space! {
+    pub struct BlockSpace {
+        const NAME = "basic block";
+    }
+}
+
+/// An index into a function body's basic blocks, with `0` referring to the entry block.
+pub type Block = Index<BlockSpace>;

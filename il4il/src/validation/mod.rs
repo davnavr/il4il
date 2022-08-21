@@ -98,21 +98,39 @@ impl<'data> ValidModule<'data> {
         let validate_function_body_index = create_index_validator::<index::CodeSpace>(contents.function_bodies.len());
         for body in contents.function_bodies.iter() {
             // TODO: Create a lookup to allow easy retrieval of entry block's input and result types
-            for block in body.iter_blocks() {
+            for (actual_block_index, block) in body.iter_blocks().enumerate() {
+                let block_index = index::Block::from(actual_block_index);
+
+                let instruction_location = std::cell::RefCell::new(Option::<(usize, &Instruction)>::None);
+
+                let invalid_instruction = |kind: InvalidInstructionKind| {
+                    Error::from_kind(InvalidInstructionError::new(
+                        block_index,
+                        instruction_location
+                            .take()
+                            .map(|(index, instruction)| InvalidInstructionLocation::new(instruction.clone(), index)),
+                        kind,
+                    ))
+                };
+
                 let mut reached_terminator = false;
 
-                for instr in block.instructions.iter() {
+                for location @ (_, instruction) in block.instructions.iter().enumerate() {
+                    instruction_location.replace(Some(location));
+
                     if reached_terminator {
-                        todo!("error for no more instructions allowed after terminator")
+                        return Err(invalid_instruction(InvalidInstructionKind::ExpectedTerminatorAsLastInstruction));
                     }
 
-                    match instr {
-                        Instruction::Unreachable => reached_terminator = true,
+                    match instruction {
+                        Instruction::Unreachable => (),
                     }
+
+                    reached_terminator = instruction.is_terminator();
                 }
 
                 if !reached_terminator {
-                    todo!("error for missing block terminator")
+                    return Err(invalid_instruction(InvalidInstructionKind::ExpectedTerminatorAsLastInstruction));
                 }
             }
         }
