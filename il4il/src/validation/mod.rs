@@ -67,6 +67,8 @@ impl<'data> ValidModule<'data> {
         }
 
         let validate_type_index = create_index_validator::<index::TypeSpace>(contents.types.len());
+        let validate_function_signature_index = create_index_validator(contents.function_signatures.len());
+
         let validate_function_template_index = |_: index::FunctionTemplate| -> Result<(), Error> {
             todo!("add function template lookup thing to contents (function_templates: HashMap<index::FunctionTemplate, SomeEnumIndex>)")
         };
@@ -92,7 +94,16 @@ impl<'data> ValidModule<'data> {
 
         // TODO: Check that template lookup is valid
 
-        // TODO: Validate function bodies
+        let validate_function_body_index = create_index_validator::<index::CodeSpace>(contents.function_bodies.len());
+        for definition in contents.function_definitions.iter() {
+            validate_function_signature_index(definition.signature)?;
+            validate_function_body_index(definition.body)?;
+            // TODO: How to check that body inputs and results match function signature?
+        }
+
+        for body in contents.function_bodies.iter() {
+            todo!("validate function body")
+        }
 
         Ok(Self { contents, symbols })
     }
