@@ -54,6 +54,7 @@ impl<'data> ValidModule<'data> {
     /// Returns an error if the module contents are invalid.
     pub fn from_module_contents(contents: ModuleContents<'data>) -> Result<Self, Error> {
         use crate::index;
+        use crate::instruction::Instruction;
         use crate::type_system;
 
         fn create_index_validator<S: index::IndexSpace>(length: usize) -> impl Fn(index::Index<S>) -> Result<(), Error> {
@@ -95,14 +96,31 @@ impl<'data> ValidModule<'data> {
         // TODO: Check that template lookup is valid
 
         let validate_function_body_index = create_index_validator::<index::CodeSpace>(contents.function_bodies.len());
+        for body in contents.function_bodies.iter() {
+            // TODO: Create a lookup to allow easy retrieval of entry block's input and result types
+            for block in body.iter_blocks() {
+                let mut reached_terminator = false;
+
+                for instr in block.instructions.iter() {
+                    if reached_terminator {
+                        todo!("error for no more instructions allowed after terminator")
+                    }
+
+                    match instr {
+                        Instruction::Unreachable => reached_terminator = true,
+                    }
+                }
+
+                if !reached_terminator {
+                    todo!("error for missing block terminator")
+                }
+            }
+        }
+
         for definition in contents.function_definitions.iter() {
             validate_function_signature_index(definition.signature)?;
             validate_function_body_index(definition.body)?;
-            // TODO: How to check that body inputs and results match function signature?
-        }
-
-        for body in contents.function_bodies.iter() {
-            todo!("validate function body")
+            // TODO: How to check that entry block inputs and results match function signature?
         }
 
         Ok(Self { contents, symbols })

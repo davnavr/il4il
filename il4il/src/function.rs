@@ -6,6 +6,36 @@ use crate::index;
 use crate::instruction;
 use crate::type_system;
 
+/// Iterates over the basic blocks of a function [`Body`].
+///
+/// See also the [`Body::iter_blocks`] function.
+#[derive(Clone)]
+pub struct Blocks<'body> {
+    entry: Option<&'body instruction::Block>,
+    others: std::slice::Iter<'body, instruction::Block>,
+}
+
+impl<'body> Iterator for Blocks<'body> {
+    type Item = &'body instruction::Block;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.entry.take().or_else(|| self.others.next())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let count = self.len();
+        (count, Some(count))
+    }
+}
+
+impl ExactSizeIterator for Blocks<'_> {
+    fn len(&self) -> usize {
+        self.others.len() + if self.entry.is_some() { 1 } else { 0 }
+    }
+}
+
+impl std::iter::FusedIterator for Blocks<'_> {}
+
 /// A function body consists of a list of basic blocks and specifies the types of all inputs, temporary registers, and results.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Body {
@@ -24,6 +54,13 @@ impl Body {
 
     pub fn other_blocks(&self) -> &[instruction::Block] {
         &self.other_blocks
+    }
+
+    pub fn iter_blocks(&self) -> Blocks<'_> {
+        Blocks {
+            entry: Some(&self.entry_block),
+            others: self.other_blocks.iter(),
+        }
     }
 }
 
