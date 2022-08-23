@@ -47,6 +47,10 @@ impl<'data> ValidModule<'data> {
         self.contents
     }
 
+    pub fn take_symbols(&mut self) -> crate::symbol::Lookup<'data> {
+        std::mem::take(&mut self.symbols)
+    }
+
     /// Validates the given module contents.
     ///
     /// # Errors
