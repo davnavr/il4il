@@ -1,30 +1,42 @@
 //! Contains types that describe the environment that an IL4IL module is loaded in.
 
+use il4il::type_system::IntegerSize;
+
 /// Indicates the size of pointer addresses.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct AddressSize(std::num::NonZeroU16);
+pub struct AddressSize(IntegerSize);
 
 impl AddressSize {
-    pub const fn with_byte_size(size: std::num::NonZeroU16) -> Self {
+    pub const fn from_integer_size(size: IntegerSize) -> Self {
         Self(size)
     }
 
-    pub const fn byte_size(self) -> std::num::NonZeroU16 {
+    pub const fn size(self) -> IntegerSize {
         self.0
     }
 
-    pub const fn bit_size(self) -> std::num::NonZeroU32 {
-        unsafe {
-            // Safety: Address size is guaranteed to never be zero.
-            std::num::NonZeroU32::new_unchecked((self.0.get() as u32) * 8)
-        }
+    pub const fn bit_width(self) -> std::num::NonZeroU16 {
+        self.0.bit_width()
     }
 
-    pub const NATIVE: Self = unsafe {
-        // Safety: Size of pointers in Rust is assumed to never be zero.
-        Self::with_byte_size(std::num::NonZeroU16::new_unchecked(std::mem::size_of::<usize>() as u16))
-    };
+    /// The size of pointer addresses in 32-bit architectures.
+    pub const BITS_32: Self = Self::from_integer_size(IntegerSize::I32);
+
+    /// The size of pointer addresses in 64-bit architectures.
+    pub const BITS_64: Self = Self::from_integer_size(IntegerSize::I64);
+
+    /// The size of pointer addresses for the current CPU architecture.
+    pub const NATIVE: Self = Self::from_integer_size(unsafe {
+        // Safety: Rust address size is assumed to be greater than 1
+        IntegerSize::new_unchecked((std::mem::size_of::<usize>() as u8) * 8u8)
+    });
+}
+
+impl From<AddressSize> for IntegerSize {
+    fn from(size: AddressSize) -> Self {
+        size.0
+    }
 }
 
 #[derive(Debug)]

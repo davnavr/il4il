@@ -104,7 +104,7 @@ pub struct InvalidBitWidthError(VarU28);
 /// Represents the integer sizes supported by IL4IL.
 ///
 /// Note that an integer size of 1 is not allowed, and is instead represented by [`SizedInteger::BOOL`].
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct IntegerSize(NonZeroU8);
 
@@ -182,13 +182,25 @@ impl IntegerSize {
     /// The maximum allowed bit width of fixed width integers in IL4IL.
     pub const MAX: Self = Self::I256;
 
-    /// Creates an integer size from a bit width.
+    /// Creates an integer size from a bit width that is greater than 1.
+    ///
+    /// # Safety
+    ///
+    /// The bit width must be greater than or equal to two.
+    pub const unsafe fn new_unchecked(bit_width: u8) -> Self {
+        Self(unsafe {
+            // Safety: If bit width is not 1 or 0, size is never zero
+            NonZeroU8::new_unchecked(bit_width - 1u8)
+        })
+    }
+
+    /// Creates an integer size from a bit width. Returns `None` if the bit width is less than two.
     pub const fn new(bit_width: u8) -> Option<Self> {
         if bit_width >= 2u8 {
-            Some(Self(unsafe {
-                // Safety: Size is guaranteed to never be zero
-                NonZeroU8::new_unchecked(bit_width - 1u8)
-            }))
+            Some(unsafe {
+                // Safety: Check above ensures size is at least two
+                Self::new_unchecked(bit_width)
+            })
         } else {
             None
         }
