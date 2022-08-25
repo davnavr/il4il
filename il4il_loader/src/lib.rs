@@ -8,3 +8,4 @@ pub mod code;
 pub mod environment;
 pub mod function;
 pub mod module;
+pub mod types;

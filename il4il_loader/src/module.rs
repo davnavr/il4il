@@ -4,7 +4,10 @@ use crate::code;
 use crate::debug::LazyDebug;
 use crate::environment::Context;
 use crate::function;
+use crate::types;
 use std::fmt::{Debug, Formatter};
+
+type Types<'env> = lazy_init::LazyTransform<Vec<il4il::type_system::Type>, Box<[types::Type<'env>]>>;
 
 type FunctionDefinitions<'env> = lazy_init::LazyTransform<Vec<il4il::function::Definition>, Box<[function::template::Definition<'env>]>>;
 
@@ -15,6 +18,7 @@ type FunctionBodies<'env> = lazy_init::LazyTransform<Vec<il4il::function::Body>,
 /// Encapsulates an IL4IL module and its associated state, allowing for easy resolution of imports, types, etc.
 pub struct Module<'env> {
     environment: &'env Context,
+    types: Types<'env>,
     function_definitions: FunctionDefinitions<'env>,
     function_templates: FunctionTemplates<'env>,
     function_bodies: FunctionBodies<'env>,
@@ -27,6 +31,7 @@ impl<'env> Module<'env> {
 
         Self {
             environment,
+            types: Types::new(contents.types),
             function_definitions: FunctionDefinitions::new(contents.function_definitions),
             function_templates: FunctionTemplates::new(contents.function_templates),
             function_bodies: FunctionBodies::new(contents.function_bodies),
@@ -35,6 +40,11 @@ impl<'env> Module<'env> {
 
     pub fn environment(&'env self) -> &'env Context {
         self.environment
+    }
+
+    pub fn types(&'env self) -> &'env [types::Type<'env>] {
+        self.types
+            .get_or_create(|types| types.into_iter().map(|ty| types::Type::new(self, ty)).collect())
     }
 
     /// Gets this module's function definitions.
