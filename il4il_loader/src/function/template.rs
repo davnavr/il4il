@@ -45,3 +45,31 @@ impl Debug for Definition<'_> {
             .finish_non_exhaustive()
     }
 }
+
+pub enum TemplateKind<'env> {
+    Definition(&'env Definition<'env>),
+}
+
+pub struct Template<'env> {
+    module: &'env Module<'env>,
+    kind: lazy_init::LazyTransform<il4il::function::Template, TemplateKind<'env>>,
+}
+
+impl<'env> Template<'env> {
+    pub(crate) fn new(module: &'env Module<'env>, template: il4il::function::Template) -> Self {
+        Self {
+            module,
+            kind: lazy_init::LazyTransform::new(template),
+        }
+    }
+
+    pub fn module(&'env self) -> &'env Module<'env> {
+        self.module
+    }
+
+    pub fn kind(&'env self) -> &'env TemplateKind<'env> {
+        self.kind.get_or_create(|template| match template {
+            il4il::function::Template::Definition(index) => TemplateKind::Definition(&self.module.function_definitions()[index]),
+        })
+    }
+}

@@ -153,6 +153,10 @@ impl TemplateLookup {
     pub fn iter_templates(&self) -> impl std::iter::ExactSizeIterator<Item = &Template> {
         self.templates.iter()
     }
+
+    pub fn into_templates(self) -> impl std::iter::ExactSizeIterator<Item = Template> {
+        self.templates.into_iter()
+    }
 }
 
 impl std::fmt::Debug for TemplateLookup {

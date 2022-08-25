@@ -39,7 +39,13 @@ impl From<AddressSize> for IntegerSize {
     }
 }
 
-#[derive(Debug)]
+impl Default for AddressSize {
+    fn default() -> Self {
+        Self::NATIVE
+    }
+}
+
+#[derive(Debug, Default)]
 #[non_exhaustive]
 pub struct Context {
     /// Specifies the sizes of pointer addresses for all modules in this context.

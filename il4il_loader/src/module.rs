@@ -8,11 +8,15 @@ use std::fmt::{Debug, Formatter};
 
 type FunctionDefinitions<'env> = lazy_init::LazyTransform<Vec<il4il::function::Definition>, Box<[function::template::Definition<'env>]>>;
 
+type FunctionTemplates<'env> = lazy_init::LazyTransform<il4il::function::TemplateLookup, Box<[function::template::Template<'env>]>>;
+
 type FunctionBodies<'env> = lazy_init::LazyTransform<Vec<il4il::function::Body>, Box<[code::Code<'env>]>>;
 
+/// Encapsulates an IL4IL module and its associated state, allowing for easy resolution of imports, types, etc.
 pub struct Module<'env> {
     environment: &'env Context,
     function_definitions: FunctionDefinitions<'env>,
+    function_templates: FunctionTemplates<'env>,
     function_bodies: FunctionBodies<'env>,
 }
 
@@ -24,6 +28,7 @@ impl<'env> Module<'env> {
         Self {
             environment,
             function_definitions: FunctionDefinitions::new(contents.function_definitions),
+            function_templates: FunctionTemplates::new(contents.function_templates),
             function_bodies: FunctionBodies::new(contents.function_bodies),
         }
     }
@@ -32,6 +37,7 @@ impl<'env> Module<'env> {
         self.environment
     }
 
+    /// Gets this module's function definitions.
     pub fn function_definitions(&'env self) -> &'env [function::template::Definition<'env>] {
         self.function_definitions.get_or_create(|definitions| {
             definitions
@@ -41,6 +47,17 @@ impl<'env> Module<'env> {
         })
     }
 
+    /// Gets this module's function templates.
+    pub fn function_templates(&'env self) -> &'env [function::template::Template<'env>] {
+        self.function_templates.get_or_create(|lookup| {
+            lookup
+                .into_templates()
+                .map(|template| function::template::Template::new(self, template))
+                .collect()
+        })
+    }
+
+    /// Gets this module's function bodies.
     pub fn function_bodies(&'env self) -> &'env [code::Code<'env>] {
         self.function_bodies.get_or_create(|bodies| {
             bodies
