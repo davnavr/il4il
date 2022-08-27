@@ -37,6 +37,30 @@ impl Block {
         }
     }
 
+    pub fn new<I, R, T>(input_types: I, result_types: R, temporary_types: T, instructions: Vec<Instruction>) -> Self
+    where
+        I: IntoIterator<Item = type_system::Reference>,
+        I::IntoIter: ExactSizeIterator,
+        R: IntoIterator<Item = type_system::Reference>,
+        R::IntoIter: ExactSizeIterator,
+        T: IntoIterator<Item = type_system::Reference>,
+    {
+        let input_types_iter = input_types.into_iter();
+        let result_types_iter = result_types.into_iter();
+        let input_count = input_types_iter.len();
+        let result_count = result_types_iter.len();
+        Self::from_types(
+            input_types_iter
+                .into_iter()
+                .chain(result_types_iter)
+                .chain(temporary_types)
+                .collect(),
+            input_count,
+            result_count,
+            instructions,
+        )
+    }
+
     pub fn input_count(&self) -> usize {
         self.input_count
     }

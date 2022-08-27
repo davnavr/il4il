@@ -553,6 +553,12 @@ impl From<crate::index::Type> for Reference {
     }
 }
 
+impl From<SizedInteger> for Reference {
+    fn from(i: SizedInteger) -> Self {
+        Self::Inline(Type::from(i))
+    }
+}
+
 impl Display for Reference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

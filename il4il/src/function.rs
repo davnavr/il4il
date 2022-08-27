@@ -101,6 +101,20 @@ impl Signature {
         }
     }
 
+    pub fn new<R, P>(result_types: R, parameter_types: P) -> Self
+    where
+        R: IntoIterator<Item = type_system::Reference>,
+        R::IntoIter: ExactSizeIterator,
+        P: IntoIterator<Item = type_system::Reference>,
+    {
+        let result_types_iter = result_types.into_iter();
+        let result_type_count = result_types_iter.len();
+        Self::from_types(
+            result_types_iter.chain(parameter_types).collect::<Box<[type_system::Reference]>>(),
+            result_type_count,
+        )
+    }
+
     pub fn result_type_count(&self) -> usize {
         self.result_type_count
     }

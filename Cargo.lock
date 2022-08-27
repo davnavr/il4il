@@ -52,6 +52,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "il4il_samples"
+version = "0.1.0"
+dependencies = [
+ "il4il",
+]
+
+[[package]]
 name = "lazy-init"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

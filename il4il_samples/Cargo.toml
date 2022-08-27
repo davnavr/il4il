@@ -1,0 +1,7 @@
+[package]
+name = "il4il_samples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+il4il = { path = "../il4il" }
