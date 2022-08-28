@@ -74,9 +74,7 @@ impl<'data> ValidModule<'data> {
         let validate_type_index = create_index_validator::<index::TypeSpace>(contents.types.len());
         let validate_function_signature_index = create_index_validator(contents.function_signatures.len());
 
-        let validate_function_template_index = |_: index::FunctionTemplate| -> Result<(), Error> {
-            todo!("add function template lookup thing to contents (function_templates: HashMap<index::FunctionTemplate, SomeEnumIndex>)")
-        };
+        let validate_function_template_index = create_index_validator::<index::FunctionTemplateSpace>(contents.function_templates.count());
 
         let validate_type = |ty: &type_system::Reference| {
             match ty {
@@ -98,7 +96,12 @@ impl<'data> ValidModule<'data> {
         })?;
 
         // TODO: Check that template lookup is valid
-        let validate_function_template_index = create_index_validator::<index::FunctionTemplateSpace>(contents.function_templates.count());
+        //contents.function_templates.iter
+
+        contents
+            .function_instantiations
+            .iter()
+            .try_for_each(|instantiation| validate_function_template_index(instantiation.template))?;
 
         let validate_function_body_index = create_index_validator::<index::CodeSpace>(contents.function_bodies.len());
         for body in contents.function_bodies.iter() {
@@ -147,10 +150,9 @@ impl<'data> ValidModule<'data> {
             // TODO: How to check that entry block inputs and results match function signature?
         }
 
-        contents
-            .function_instantiations
-            .iter()
-            .try_for_each(|instantiation| validate_function_template_index(instantiation.template))?;
+        if contents.entry_point.len() > 1 {
+            todo!("error for too many entry points");
+        }
 
         Ok(Self { contents, symbols })
     }

@@ -409,6 +409,7 @@ impl WriteTo for &Section<'_> {
                 Section::FunctionInstantiation(instantiations) => LengthPrefixed::from(instantiations).write_to(section_writer)?,
                 Section::FunctionDefinition(definitions) => LengthPrefixed::from(definitions).write_to(section_writer)?,
                 Section::Code(code) => LengthPrefixed::from(code).write_to(section_writer)?,
+                Section::EntryPoint(index) => write_length(usize::from(*index), section_writer)?,
             }
         }
 

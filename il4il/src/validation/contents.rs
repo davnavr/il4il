@@ -17,6 +17,7 @@ pub struct ModuleContents<'data> {
     pub function_bodies: Vec<function::Body>,
     pub function_templates: function::TemplateLookup,
     pub function_instantiations: Vec<function::Instantiation>,
+    pub entry_point: Vec<crate::index::FunctionInstantiation>,
 }
 
 impl<'data> ModuleContents<'data> {
@@ -52,6 +53,7 @@ impl<'data> ModuleContents<'data> {
                     }
                 }
                 Section::Code(mut code) => contents.function_bodies.append(&mut code),
+                Section::EntryPoint(index) => contents.entry_point.push(index),
             }
         }
 

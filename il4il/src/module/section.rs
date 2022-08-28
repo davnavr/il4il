@@ -47,6 +47,7 @@ crate::kind_enum! {
         FunctionInstantiation = 6,
         FunctionDefinition = 8,
         Code = 9,
+        EntryPoint = 10,
     }
 }
 
@@ -73,6 +74,8 @@ pub enum Section<'data> {
     FunctionInstantiation(Vec<crate::function::Instantiation>),
     /// The code section contains function bodies, which consist of basic blocks containing sequences of instructions.
     Code(Vec<crate::function::Body>),
+    /// Specifies an entry point function for the module.
+    EntryPoint(crate::index::FunctionInstantiation),
 }
 
 impl<'data> Section<'data> {
@@ -86,6 +89,7 @@ impl<'data> Section<'data> {
             Self::FunctionInstantiation(instantiations) => Section::FunctionInstantiation(instantiations),
             Self::FunctionDefinition(definitions) => Section::FunctionDefinition(definitions),
             Self::Code(code) => Section::Code(code),
+            Self::EntryPoint(index) => Section::EntryPoint(index),
         }
     }
 
@@ -99,6 +103,7 @@ impl<'data> Section<'data> {
             Self::FunctionInstantiation(_) => SectionKind::FunctionInstantiation,
             Self::FunctionDefinition(_) => SectionKind::FunctionDefinition,
             Self::Code(_) => SectionKind::Code,
+            Self::EntryPoint(_) => SectionKind::EntryPoint,
         }
     }
 }
