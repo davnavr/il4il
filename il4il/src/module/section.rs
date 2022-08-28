@@ -44,6 +44,7 @@ crate::kind_enum! {
         Symbol = 3,
         Type = 4,
         FunctionSignature = 5,
+        FunctionInstantiation = 6,
         FunctionDefinition = 8,
         Code = 9,
     }
@@ -69,6 +70,7 @@ pub enum Section<'data> {
     /// [`index::FunctionSignature`]: crate::index::FunctionSignature
     FunctionSignature(Vec<crate::function::Signature>),
     FunctionDefinition(Vec<crate::function::Definition>),
+    FunctionInstantiation(Vec<crate::function::Instantiation>),
     /// The code section contains function bodies, which consist of basic blocks containing sequences of instructions.
     Code(Vec<crate::function::Body>),
 }
@@ -81,6 +83,7 @@ impl<'data> Section<'data> {
             Self::Symbol(symbols) => Section::Symbol(symbols.into_iter().map(crate::symbol::Assignment::into_owned).collect()),
             Self::Type(types) => Section::Type(types),
             Self::FunctionSignature(signatures) => Section::FunctionSignature(signatures),
+            Self::FunctionInstantiation(instantiations) => Section::FunctionInstantiation(instantiations),
             Self::FunctionDefinition(definitions) => Section::FunctionDefinition(definitions),
             Self::Code(code) => Section::Code(code),
         }
@@ -93,6 +96,7 @@ impl<'data> Section<'data> {
             Self::Symbol(_) => SectionKind::Symbol,
             Self::Type(_) => SectionKind::Type,
             Self::FunctionSignature(_) => SectionKind::FunctionSignature,
+            Self::FunctionInstantiation(_) => SectionKind::FunctionInstantiation,
             Self::FunctionDefinition(_) => SectionKind::FunctionDefinition,
             Self::Code(_) => SectionKind::Code,
         }

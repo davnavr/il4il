@@ -160,7 +160,18 @@ index_space! {
     }
 }
 
+/// A function template index can either return to function templates defined within the current module, or imported function templates.
+/// The index `0` refers to the first template in the first function template or function import section within the module.
 pub type FunctionTemplate = Index<FunctionTemplateSpace>;
+
+index_space! {
+    pub struct FunctionInstantiationSpace {
+        const NAME = "function instantiation";
+    }
+}
+
+/// Refers to the module's function instantiations.
+pub type FunctionInstantiation = Index<FunctionInstantiationSpace>;
 
 index_space! {
     pub struct CodeSpace {

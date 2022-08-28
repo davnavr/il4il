@@ -140,6 +140,18 @@ impl Signature {
     }
 }
 
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub struct Instantiation {
+    pub template: index::FunctionTemplate,
+}
+
+impl Instantiation {
+    pub fn with_template(template: index::FunctionTemplate) -> Self {
+        Self { template }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Template {
     Definition(usize),
@@ -158,6 +170,10 @@ impl TemplateLookup {
 
     pub(crate) fn insert(&mut self, template: Template) {
         self.templates.push(template)
+    }
+
+    pub fn count(&self) -> usize {
+        self.templates.len()
     }
 
     pub fn get_template(&self, index: crate::index::FunctionTemplate) -> Option<&Template> {

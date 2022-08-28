@@ -16,6 +16,7 @@ pub struct ModuleContents<'data> {
     pub function_definitions: Vec<function::Definition>,
     pub function_bodies: Vec<function::Body>,
     pub function_templates: function::TemplateLookup,
+    pub function_instantiations: Vec<function::Instantiation>,
 }
 
 impl<'data> ModuleContents<'data> {
@@ -38,6 +39,7 @@ impl<'data> ModuleContents<'data> {
                 Section::Symbol(mut symbols) => contents.symbols.append(&mut symbols),
                 Section::Type(mut types) => contents.types.append(&mut types),
                 Section::FunctionSignature(mut signatures) => contents.function_signatures.append(&mut signatures),
+                Section::FunctionInstantiation(mut instantiations) => contents.function_instantiations.append(&mut instantiations),
                 Section::FunctionDefinition(definitions) => {
                     contents.function_templates.reserve(definitions.len());
                     contents.function_definitions.reserve(definitions.len());

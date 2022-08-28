@@ -98,6 +98,7 @@ impl<'data> ValidModule<'data> {
         })?;
 
         // TODO: Check that template lookup is valid
+        let validate_function_template_index = create_index_validator::<index::FunctionTemplateSpace>(contents.function_templates.count());
 
         let validate_function_body_index = create_index_validator::<index::CodeSpace>(contents.function_bodies.len());
         for body in contents.function_bodies.iter() {
@@ -145,6 +146,11 @@ impl<'data> ValidModule<'data> {
             validate_function_body_index(definition.body)?;
             // TODO: How to check that entry block inputs and results match function signature?
         }
+
+        contents
+            .function_instantiations
+            .iter()
+            .try_for_each(|instantiation| validate_function_template_index(instantiation.template))?;
 
         Ok(Self { contents, symbols })
     }
