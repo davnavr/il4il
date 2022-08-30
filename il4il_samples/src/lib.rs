@@ -9,6 +9,13 @@ use il4il::module::Module;
 use il4il::type_system;
 use il4il::validation;
 
+/// Creates an IL4IL module containing an entry point function that simply returns an integer exit code.
+///
+/// # Examples
+///
+/// ```
+/// il4il_samples::return_int("ok", 0);
+/// ```
 pub fn return_int(name: &'static str, exit_code: i32) -> validation::ValidModule<'static> {
     let mut builder = Module::new();
     let s32_type = type_system::Reference::from(type_system::SizedInteger::S32);
@@ -25,6 +32,8 @@ pub fn return_int(name: &'static str, exit_code: i32) -> validation::ValidModule
         )]),
         Section::FunctionSignature(vec![function::Signature::new([s32_type], [])]),
         Section::FunctionDefinition(vec![function::Definition::new(Index::new(0), Index::new(0))]),
+        Section::FunctionInstantiation(vec![function::Instantiation::with_template(Index::new(0))]),
+        Section::EntryPoint(Index::new(0)),
     ];
     validation::ValidModule::try_from(builder).unwrap()
 }

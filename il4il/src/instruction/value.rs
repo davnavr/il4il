@@ -100,6 +100,18 @@ pub enum ConstantFloat {
 }
 
 impl ConstantFloat {
+    pub fn bit_width(&self) -> std::num::NonZeroU16 {
+        unsafe {
+            // Safety: Values below are not zero
+            std::num::NonZeroU16::new_unchecked(match self {
+                Self::Half(_) => 16,
+                Self::Single(_) => 32,
+                Self::Double(_) => 64,
+                Self::Quadruple(_) => 128,
+            })
+        }
+    }
+
     pub fn tag(&self) -> ConstantTag {
         match self {
             Self::Half(_) => ConstantTag::Float16,

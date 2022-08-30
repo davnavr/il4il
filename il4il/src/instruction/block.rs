@@ -78,5 +78,9 @@ impl Block {
         &self.types[0..self.input_count]
     }
 
+    pub fn result_types(&self) -> &[type_system::Reference] {
+        &self.types[self.input_count..self.input_count + self.result_count]
+    }
+
     // TODO: have a TemporaryRegisters structure which is like a Vec, but only mutates the latter portion of self.types
 }

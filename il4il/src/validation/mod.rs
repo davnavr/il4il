@@ -58,14 +58,22 @@ impl<'data> ValidModule<'data> {
     /// Returns an error if the module contents are invalid.
     pub fn from_module_contents(contents: ModuleContents<'data>) -> Result<Self, Error> {
         use crate::index;
+        use crate::instruction::value::{self, Value};
         use crate::instruction::Instruction;
         use crate::type_system;
 
+        fn maximum_index(length: usize) -> Option<usize> {
+            if length == 0 {
+                None
+            } else {
+                Some(length - 1)
+            }
+        }
+
         fn create_index_validator<S: index::IndexSpace>(length: usize) -> impl Fn(index::Index<S>) -> Result<(), Error> {
-            let maximum = if length == 0 { None } else { Some(length - 1) };
             move |index| {
                 if usize::from(index) >= length {
-                    return Err(Error::from_kind(InvalidIndexError::new(index, maximum)));
+                    return Err(Error::from_kind(InvalidIndexError::new(index, maximum_index(length))));
                 }
                 Ok(())
             }
@@ -104,10 +112,69 @@ impl<'data> ValidModule<'data> {
             .try_for_each(|instantiation| validate_function_template_index(instantiation.template))?;
 
         let validate_function_body_index = create_index_validator::<index::CodeSpace>(contents.function_bodies.len());
+
+        let validate_typed_value = |value: &Value, expected_type: type_system::Type| match value {
+            Value::Constant(value::Constant::Integer(_)) => {
+                if let type_system::Type::Integer(_) = expected_type {
+                    Result::<_, Error>::Ok(())
+                } else {
+                    todo!("err for int value for non int type")
+                }
+            }
+            Value::Constant(value::Constant::Float(float_value)) => {
+                if let type_system::Type::Float(float_type) = expected_type {
+                    if float_type.bit_width() == float_value.bit_width() {
+                        Ok(())
+                    } else {
+                        todo!("error for float bit width mismatch between value and type")
+                    }
+                } else {
+                    todo!("error for float value for non float type")
+                }
+            }
+        };
+
+        let validate_rtyped_value = |value: &Value, expected_type: &type_system::Reference| {
+            let actual_expected_type = match expected_type {
+                type_system::Reference::Index(index) => contents
+                    .types
+                    .get(usize::from(*index))
+                    .ok_or_else(|| Error::from_kind(InvalidIndexError::new(*index, maximum_index(contents.types.len()))))?,
+                type_system::Reference::Inline(ty) => ty,
+            };
+            (&validate_typed_value)(value, *actual_expected_type)
+        };
+
+        // TODO: Avoid code duplication with validate_type
+        let resolve_type = |ty: &type_system::Reference| match ty {
+            type_system::Reference::Inline(t) => Ok(*t),
+            type_system::Reference::Index(index) => contents
+                .types
+                .get(usize::from(*index))
+                .ok_or_else(|| Error::from_kind(InvalidIndexError::new(*index, maximum_index(contents.types.len()))))
+                .copied(),
+        };
+
+        // TODO: Return a slice so the buffer is reused.
+        let resolve_many_types = {
+            let mut type_buffer = Vec::<type_system::Type>::new();
+            let resolve_type = &resolve_type;
+            move |types: &[type_system::Reference]| -> Result<_, Error> {
+                type_buffer.clear();
+                for ty in types.iter() {
+                    type_buffer.push(resolve_type(ty)?);
+                }
+                Ok(type_buffer.into_boxed_slice())
+            }
+        };
+
+        let a = &resolve_many_types;
+
         for body in contents.function_bodies.iter() {
             // TODO: Create a lookup to allow easy retrieval of entry block's input and result types
             for (actual_block_index, block) in body.iter_blocks().enumerate() {
                 let block_index = index::Block::from(actual_block_index);
+                //let expected_result_types = (a)(body.entry_block().result_types())?;
 
                 let instruction_location = std::cell::RefCell::new(Option::<(usize, &Instruction)>::None);
 
@@ -132,7 +199,7 @@ impl<'data> ValidModule<'data> {
 
                     match instruction {
                         Instruction::Unreachable => (),
-                        Instruction::Return(_values) => todo!("validate values"),
+                        Instruction::Return(values) => todo!("validate values"),
                     }
 
                     reached_terminator = instruction.is_terminator();
