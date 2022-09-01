@@ -32,7 +32,7 @@ pub enum Instruction {
 impl Instruction {
     /// Returns `true` if this [`Instruction`] can only be used at the end of a [`Block`].
     pub fn is_terminator(&self) -> bool {
-        matches!(self, Self::Unreachable)
+        matches!(self, Self::Unreachable | Self::Return(_))
     }
 }
 
