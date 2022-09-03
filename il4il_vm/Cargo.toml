@@ -1,0 +1,10 @@
+[package]
+name = "il4il_vm"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.63"
+
+[dependencies]
+elsa = "1.7.0"
+il4il = { path = "../il4il" }
+il4il_loader = { path = "../il4il_loader" }

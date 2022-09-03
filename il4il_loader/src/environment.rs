@@ -45,11 +45,23 @@ impl Default for AddressSize {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub struct Context {
     /// Specifies the sizes of pointer addresses for all modules in this context.
     ///
     /// This affects certain aspects of loading, such as type size calculation.
     pub address_size: AddressSize,
+}
+
+impl Context {
+    pub const HOST: Self = Self {
+        address_size: AddressSize::NATIVE,
+    };
+}
+
+impl Default for Context {
+    fn default() -> Self {
+        Self::HOST
+    }
 }
