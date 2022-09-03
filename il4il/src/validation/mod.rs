@@ -8,6 +8,7 @@
 mod contents;
 mod index_checker;
 mod instruction_checker;
+mod type_comparer;
 mod type_resolver;
 mod value_checker;
 
@@ -101,6 +102,7 @@ impl<'data> ValidModule<'data> {
         }
 
         let mut type_buffer = Vec::new();
+        let mut type_buffer_2 = Vec::new();
 
         for (body_index, body) in contents.function_bodies.iter().enumerate() {
             instruction_checker::validate_body(body, &contents, &mut type_buffer)
@@ -108,20 +110,43 @@ impl<'data> ValidModule<'data> {
                 .attach_printable_lazy(|| format!("function body #{body_index} is invalid"))?;
         }
 
-        for (index, definition) in contents.function_definitions.iter().enumerate() {
+        for (definition_index, definition) in contents.function_definitions.iter().enumerate() {
             let signature = index_checker::get_function_signatures(definition.signature, &contents)
                 .change_context(ValidationError)
-                .attach_printable_lazy(|| format!("function definition #{index} has an invalid signature"))?;
+                .attach_printable_lazy(|| format!("function definition #{definition_index} has an invalid signature"))?;
 
-            index_checker::get_function_body(definition.body, &contents)
+            let body = index_checker::get_function_body(definition.body, &contents)
                 .change_context(ValidationError)
-                .attach_printable_lazy(|| format!("function definition #{index} has an invalid body"))?;
+                .attach_printable_lazy(|| format!("function definition #{definition_index} has an invalid body"))?;
 
             let expected_parameter_types = type_resolver::resolve_many(signature.parameter_types(), &mut type_buffer, &contents)
                 .change_context(ValidationError)
-                .attach_printable_lazy(|| format!("function definition #{index} has invalid input types"))?;
+                .attach_printable_lazy(|| format!("function definition #{definition_index} has invalid input types"))?;
 
-            // TODO: How to check that entry block inputs and results match function signature?
+            let actual_parameter_types = type_resolver::resolve_many(body.entry_block().input_types(), &mut type_buffer_2, &contents)
+                .change_context(ValidationError)
+                .attach_printable_lazy(|| {
+                    format!("could not obtain entry block input types for function definition #{definition_index}")
+                })?;
+
+            if actual_parameter_types.len() != expected_parameter_types.len() {
+                return Err(error_stack::Report::new(ValidationError)).attach_printable_lazy(|| {
+                    format!(
+                        "function definition {definition_index} was expected to have {} parameters, but entry block defines {} inputs",
+                        expected_parameter_types.len(),
+                        actual_parameter_types.len()
+                    )
+                });
+            }
+
+            for (index, (expected, actual)) in expected_parameter_types.iter().zip(actual_parameter_types).enumerate() {
+                type_comparer::are_equal(expected, actual, &contents)
+                    .report()
+                    .change_context(ValidationError)
+                    .attach_printable_lazy(|| format!("function parameter #{index} in definition #{definition_index} is invalid"))?;
+            }
+
+            // TODO: How to check that block result types match function signature?
         }
 
         if contents.entry_point.len() > 1 {
