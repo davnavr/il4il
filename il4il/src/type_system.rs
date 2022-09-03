@@ -510,7 +510,7 @@ impl Display for Float {
 }
 
 /// Represents the set of all types representable in IL4IL.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Type {
     Integer(Integer),

@@ -15,7 +15,7 @@ pub struct InvalidValueError {
 
 pub type Result = error_stack::Result<(), InvalidValueError>;
 
-pub(crate) fn check_value<T: IntoType>(value: &Value, expected_type: T, contents: &ModuleContents) -> Result {
+pub(crate) fn check_value<'c, T: IntoType<'c>>(value: &Value, expected_type: T, contents: &'c ModuleContents) -> Result {
     let fail = || InvalidValueError { value: *value };
     let expected = expected_type.into_type(contents).change_context_lazy(fail)?;
 
@@ -47,10 +47,10 @@ pub(crate) fn check_value<T: IntoType>(value: &Value, expected_type: T, contents
     }
 }
 
-pub(crate) fn check_values_iter<'a, T, I>(values: I, contents: &ModuleContents) -> Result
+pub(crate) fn check_values_iter<'c, T, I>(values: I, contents: &'c ModuleContents) -> Result
 where
-    T: IntoType,
-    I: IntoIterator<Item = (&'a Value, T)>,
+    T: IntoType<'c>,
+    I: IntoIterator<Item = (&'c Value, T)>,
 {
     values
         .into_iter()

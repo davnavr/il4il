@@ -53,10 +53,10 @@ impl std::fmt::Display for InvalidInstructionError {
 
 impl std::error::Error for InvalidInstructionError {}
 
-pub(crate) fn validate_body(
-    body: &function::Body,
-    contents: &crate::validation::ModuleContents,
-    type_buffer: &mut Vec<type_system::Type>,
+pub(crate) fn validate_body<'c>(
+    body: &'c function::Body,
+    contents: &'c crate::validation::ModuleContents,
+    type_buffer: &mut Vec<&'c type_system::Type>,
 ) -> error_stack::Result<(), InvalidInstructionError> {
     for (actual_block_index, block) in body.iter_blocks().enumerate() {
         let block_index = crate::index::Block::from(actual_block_index);

@@ -297,11 +297,11 @@ impl WriteTo for type_system::Float {
     }
 }
 
-impl WriteTo for type_system::Type {
+impl WriteTo for &type_system::Type {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         match self {
-            Self::Integer(i) => i.write_to(out),
-            Self::Float(f) => f.write_to(out),
+            type_system::Type::Integer(i) => i.write_to(out),
+            type_system::Type::Float(f) => f.write_to(out),
         }
     }
 }
