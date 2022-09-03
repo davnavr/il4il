@@ -7,12 +7,15 @@
 
 mod contents;
 mod index_checker;
+mod instruction_checker;
 mod type_resolver;
 mod value_checker;
 
 pub use contents::ModuleContents;
 
 /// Error type used when a SAILAR module is not valid.
+///
+/// Used with [`error_stack::Report`].
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 #[error("module validation failed")]
@@ -85,7 +88,7 @@ impl<'data> ValidModule<'data> {
                 crate::symbol::TargetIndex::FunctionTemplate(template) => index_checker::get_function_template(template, &contents),
             }
             .change_context(ValidationError)
-            .attach_printable(format!("symbol entry #{index} ({:?}) is invalid", entry.name()))?;
+            .attach_printable_lazy(|| format!("symbol entry #{index} ({:?}) is invalid", entry.name()))?;
         }
 
         // TODO: Check that template lookup is valid
@@ -94,49 +97,15 @@ impl<'data> ValidModule<'data> {
         for (index, instantiation) in contents.function_instantiations.iter().enumerate() {
             index_checker::get_function_template(instantiation.template, &contents)
                 .change_context(ValidationError)
-                .attach_printable("function instantiation #{index} has an invalid template")?;
+                .attach_printable_lazy(|| format!("function instantiation #{index} has an invalid template"))?;
         }
 
-        for body in contents.function_bodies.iter() {
-            // TODO: Create a lookup to allow easy retrieval of entry block's input and result types
-            for (actual_block_index, block) in body.iter_blocks().enumerate() {
-                // let block_index = index::Block::from(actual_block_index);
-                // //let expected_result_types = (a)(body.entry_block().result_types())?;
+        let mut type_buffer = Vec::new();
 
-                // let instruction_location = std::cell::RefCell::new(Option::<(usize, &Instruction)>::None);
-
-                // let invalid_instruction = |kind: InvalidInstructionKind| {
-                //     Error::from_kind(InvalidInstructionError::new(
-                //         block_index,
-                //         instruction_location
-                //             .take()
-                //             .map(|(index, instruction)| InvalidInstructionLocation::new(instruction.clone(), index)),
-                //         kind,
-                //     ))
-                // };
-
-                // let mut reached_terminator = false;
-
-                // for location @ (_, instruction) in block.instructions.iter().enumerate() {
-                //     instruction_location.replace(Some(location));
-
-                //     if reached_terminator {
-                //         return Err(invalid_instruction(InvalidInstructionKind::ExpectedTerminatorAsLastInstruction));
-                //     }
-
-                //     match instruction {
-                //         Instruction::Unreachable => (),
-                //         Instruction::Return(values) => todo!("validate values {values:?}"),
-                //     }
-
-                //     reached_terminator = instruction.is_terminator();
-                // }
-
-                // if !reached_terminator {
-                //     return Err(invalid_instruction(InvalidInstructionKind::ExpectedTerminatorAsLastInstruction));
-                // }
-                todo!("validate code body")
-            }
+        for (body_index, body) in contents.function_bodies.iter().enumerate() {
+            instruction_checker::validate_body(body, &contents, &mut type_buffer)
+                .change_context(ValidationError)
+                .attach_printable_lazy(|| format!("function body #{body_index} is invalid"))?;
         }
 
         for (index, definition) in contents.function_definitions.iter().enumerate() {
