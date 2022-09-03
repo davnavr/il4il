@@ -35,6 +35,17 @@ pub unsafe extern "C" fn il4il_module_dispose(module: Exposed<'static, Box<Insta
     }
 }
 
+#[derive(Debug)]
+pub struct ValidationError(il4il::error_stack::Report<il4il::validation::ValidationError>);
+
+impl std::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl std::error::Error for ValidationError {}
+
 /// Performs validation on a module, and disposes the module. If an error occured, returns an [`Error`]; otherwise, returns `null`.
 ///
 /// Callers should dispose the returned browser later by calling [`il4il_browser_dispose`](crate::browser::il4il_browser_dispose).
@@ -61,7 +72,9 @@ pub unsafe extern "C" fn il4il_module_validate_and_dispose<'a>(
                 module.unwrap().expect("module")
             };
 
-            Ok(Box::into_raw(Box::new(crate::browser::Instance::try_from(*m)?)))
+            Ok(Box::into_raw(Box::new(
+                crate::browser::Instance::try_from(*m).map_err(ValidationError)?,
+            )))
         },
         unsafe {
             // Safety: Caller ensures this is dereferenceable
