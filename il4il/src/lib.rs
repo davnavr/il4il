@@ -14,6 +14,8 @@ pub mod type_system;
 pub mod validation;
 pub mod versioning;
 
+pub use error_stack;
+
 #[cfg(test)]
 use il4il_propcheck as propcheck;
 

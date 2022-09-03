@@ -112,6 +112,7 @@ impl<'data> From<ModuleContents<'data>> for Module<'data> {
     }
 }
 
+// TODO: Move this to a separate module.
 macro_rules! module_indexer {
     ($(fn $name:ident($index_type:ty) -> $item_type:ty [$field:ident];)*) => {
         impl<'data> ModuleContents<'data> {

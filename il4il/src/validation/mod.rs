@@ -7,6 +7,7 @@
 
 mod contents;
 mod error;
+mod value_checker;
 
 pub use contents::ModuleContents;
 pub use error::*;
@@ -199,7 +200,7 @@ impl<'data> ValidModule<'data> {
 
                     match instruction {
                         Instruction::Unreachable => (),
-                        Instruction::Return(values) => todo!("validate values"),
+                        Instruction::Return(values) => todo!("validate values {values:?}"),
                     }
 
                     reached_terminator = instruction.is_terminator();
