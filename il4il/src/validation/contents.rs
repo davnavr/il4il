@@ -111,23 +111,3 @@ impl<'data> From<ModuleContents<'data>> for Module<'data> {
         contents.into_module()
     }
 }
-
-// TODO: Move this to a separate module.
-macro_rules! module_indexer {
-    ($(fn $name:ident($index_type:ty) -> $item_type:ty [$field:ident];)*) => {
-        impl<'data> ModuleContents<'data> {
-            $(pub fn $name(&self, index: $index_type) -> Result<&$item_type, crate::validation::error::InvalidIndexError> {
-                if let Some(item) = self.$field.get(usize::from(index)) {
-                    Ok(item)
-                } else {
-                    let count = self.$field.len();
-                    Err(crate::validation::InvalidIndexError::new(index, if count == 0 { None } else { Some(count - 1) }))
-                }
-            })*
-        }
-    };
-}
-
-module_indexer! {
-    fn get_type(crate::index::Type) -> type_system::Type [types];
-}

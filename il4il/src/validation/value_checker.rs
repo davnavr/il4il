@@ -2,7 +2,7 @@
 
 use crate::instruction::{value, Value};
 use crate::type_system;
-use crate::validation::ModuleContents;
+use crate::validation::{index_checker, ModuleContents};
 use error_stack::ResultExt;
 
 /// The error type used when a value is invalid.
@@ -29,13 +29,12 @@ impl IntoType for type_system::Type {
 }
 
 impl IntoType for &type_system::Reference {
-    //type Error = crate::validation::index_checker::InvalidIndexError;
-    type Error = crate::validation::error::InvalidIndexError;
+    type Error = index_checker::InvalidIndexError;
 
     fn into_type(self, contents: &ModuleContents) -> error_stack::Result<type_system::Type, Self::Error> {
         match self {
             type_system::Reference::Inline(ty) => Ok(*ty),
-            type_system::Reference::Index(index) => todo!("index the module's type section"),
+            type_system::Reference::Index(index) => index_checker::get_type(contents, *index).copied(),
         }
     }
 }
@@ -75,5 +74,7 @@ where
     T: IntoType,
     I: IntoIterator<Item = (&'a Value, T)>,
 {
-    values.into_iter().try_for_each(|(value, expected_type)| check_value(value, expected_type, contents))
+    values
+        .into_iter()
+        .try_for_each(|(value, expected_type)| check_value(value, expected_type, contents))
 }

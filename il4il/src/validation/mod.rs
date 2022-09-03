@@ -6,11 +6,13 @@
 #![deny(unsafe_code)]
 
 mod contents;
-mod error;
+mod index_checker;
 mod value_checker;
 
-pub use contents::ModuleContents;
+mod error; // TODO: Make this obsolete.
 pub use error::*;
+
+pub use contents::ModuleContents;
 
 /// Represents a validated SAILAR module.
 #[derive(Clone, Default)]
@@ -74,7 +76,7 @@ impl<'data> ValidModule<'data> {
         fn create_index_validator<S: index::IndexSpace>(length: usize) -> impl Fn(index::Index<S>) -> Result<(), Error> {
             move |index| {
                 if usize::from(index) >= length {
-                    return Err(Error::from_kind(InvalidIndexError::new(index, maximum_index(length))));
+                    todo!("bad index")
                 }
                 Ok(())
             }
@@ -137,10 +139,7 @@ impl<'data> ValidModule<'data> {
 
         let validate_rtyped_value = |value: &Value, expected_type: &type_system::Reference| {
             let actual_expected_type = match expected_type {
-                type_system::Reference::Index(index) => contents
-                    .types
-                    .get(usize::from(*index))
-                    .ok_or_else(|| Error::from_kind(InvalidIndexError::new(*index, maximum_index(contents.types.len()))))?,
+                type_system::Reference::Index(index) => todo!(),
                 type_system::Reference::Inline(ty) => ty,
             };
             (&validate_typed_value)(value, *actual_expected_type)
@@ -148,12 +147,8 @@ impl<'data> ValidModule<'data> {
 
         // TODO: Avoid code duplication with validate_type
         let resolve_type = |ty: &type_system::Reference| match ty {
-            type_system::Reference::Inline(t) => Ok(*t),
-            type_system::Reference::Index(index) => contents
-                .types
-                .get(usize::from(*index))
-                .ok_or_else(|| Error::from_kind(InvalidIndexError::new(*index, maximum_index(contents.types.len()))))
-                .copied(),
+            type_system::Reference::Inline(t) => Result::<_, Error>::Ok(*t),
+            type_system::Reference::Index(index) => contents.types.get(usize::from(*index)).ok_or_else(|| todo!("bad index")).copied(),
         };
 
         // TODO: Return a slice so the buffer is reused.

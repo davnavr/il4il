@@ -3,33 +3,6 @@
 use crate::index;
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone, Debug, Eq, thiserror::Error, PartialEq)]
-pub struct InvalidIndexError {
-    kind: &'static str,
-    index: usize,
-    maximum: Option<usize>,
-}
-
-impl InvalidIndexError {
-    pub(crate) fn new<S: index::IndexSpace>(index: index::Index<S>, maximum: Option<usize>) -> Self {
-        Self {
-            kind: S::name(),
-            index: usize::from(index),
-            maximum,
-        }
-    }
-}
-
-impl Display for InvalidIndexError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} index #{} is out of bounds", self.kind, self.index)?;
-        if let Some(maximum) = self.maximum {
-            write!(f, "maximum valid index is #{}", maximum)?;
-        }
-        Ok(())
-    }
-}
-
 /// A list specifying the different ways in which an IL4IL instruction is considered invalid.
 ///
 /// Used with the [`InvalidInstructionError`] type.
@@ -99,8 +72,6 @@ impl Display for InvalidInstructionError {
 #[derive(Clone, Debug, Eq, thiserror::Error, PartialEq)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    #[error(transparent)]
-    IndexOutOfBounds(#[from] InvalidIndexError),
     #[error(transparent)]
     DuplicateSymbol(#[from] crate::symbol::DuplicateSymbolError),
     #[error(transparent)]
