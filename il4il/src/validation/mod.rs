@@ -109,13 +109,17 @@ impl<'data> ValidModule<'data> {
         }
 
         for (index, definition) in contents.function_definitions.iter().enumerate() {
-            index_checker::get_function_signatures(definition.signature, &contents)
+            let signature = index_checker::get_function_signatures(definition.signature, &contents)
                 .change_context(ValidationError)
                 .attach_printable_lazy(|| format!("function definition #{index} has an invalid signature"))?;
 
             index_checker::get_function_body(definition.body, &contents)
                 .change_context(ValidationError)
                 .attach_printable_lazy(|| format!("function definition #{index} has an invalid body"))?;
+
+            let expected_parameter_types = type_resolver::resolve_many(signature.parameter_types(), &mut type_buffer, &contents)
+                .change_context(ValidationError)
+                .attach_printable_lazy(|| format!("function definition #{index} has invalid input types"))?;
 
             // TODO: How to check that entry block inputs and results match function signature?
         }

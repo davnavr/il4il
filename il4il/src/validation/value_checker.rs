@@ -16,7 +16,7 @@ pub struct InvalidValueError {
 pub type Result = error_stack::Result<(), InvalidValueError>;
 
 pub(crate) fn check_value<T: IntoType>(value: &Value, expected_type: T, contents: &ModuleContents) -> Result {
-    let fail = || InvalidValueError { value: value.clone() };
+    let fail = || InvalidValueError { value: *value };
     let expected = expected_type.into_type(contents).change_context_lazy(fail)?;
 
     match value {

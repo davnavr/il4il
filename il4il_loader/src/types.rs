@@ -3,7 +3,7 @@
 use crate::module::Module;
 use il4il::type_system;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum TypeKind {
     Integer(type_system::Integer),
     Float(type_system::Float),

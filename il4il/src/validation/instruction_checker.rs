@@ -2,7 +2,7 @@
 
 use crate::function;
 use crate::index;
-use crate::instruction::{self, Instruction};
+use crate::instruction::Instruction;
 use crate::type_system;
 use crate::validation::type_resolver;
 use crate::validation::value_checker;
