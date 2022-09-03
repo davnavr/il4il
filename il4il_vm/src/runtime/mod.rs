@@ -7,36 +7,27 @@ mod module;
 pub use module::Module;
 
 use crate::loader;
-use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
-
-pub type Scope<'env> = std::thread::Scope<'env, 'env>;
 
 pub struct Runtime<'env> {
     configuration: configuration::Configuration,
     modules: Mutex<Vec<Arc<Module<'env>>>>,
-    scope: &'env Scope<'env>,
 }
 
 impl<'env> Runtime<'env> {
-    pub fn with_configuration(configuration: configuration::Configuration, scope: &'env Scope<'env>) -> Self {
+    pub fn with_configuration(configuration: configuration::Configuration) -> Self {
         Self {
             configuration,
             modules: Default::default(),
-            scope,
         }
     }
 
-    pub fn new(scope: &'env Scope<'env>) -> Self {
-        Self::with_configuration(configuration::Configuration::HOST, scope)
+    pub fn new() -> Self {
+        Self::with_configuration(configuration::Configuration::HOST)
     }
 
     pub fn configuration(&'env self) -> &'env configuration::Configuration {
         &self.configuration
-    }
-
-    pub fn scope(&'env self) -> &'env Scope {
-        self.scope
     }
 
     pub fn load_module(&'env self, module: il4il::validation::ValidModule<'env>) -> Arc<Module<'env>> {
@@ -49,8 +40,8 @@ impl<'env> Runtime<'env> {
     }
 }
 
-impl Debug for Runtime<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Runtime").field("scope", self.scope).finish_non_exhaustive()
+impl Default for Runtime<'_> {
+    fn default() -> Self {
+        Self::new()
     }
 }

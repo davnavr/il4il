@@ -1,5 +1,6 @@
 //! Provides the [`Module`] struct.
 
+use crate::interpreter::Interpreter;
 use crate::loader;
 use crate::runtime;
 
@@ -20,5 +21,17 @@ impl<'env> Module<'env> {
 
     pub fn module(&'env self) -> &'env loader::module::Module<'env> {
         &self.module
+    }
+
+    fn setup_interpreter(&'env self, instantiation: &'env loader::function::Instantiation<'env>) -> Interpreter {
+        Interpreter::initialize(self.runtime, instantiation)
+    }
+
+    pub fn interpret_function_instantiation(&'env self, index: il4il::index::FunctionInstantiation) -> Interpreter {
+        self.setup_interpreter(&self.module.function_instantiations()[usize::from(index)])
+    }
+
+    pub fn interpret_entry_point(&'env self) -> Option<Interpreter> {
+        self.module.entry_point().map(|entry| self.setup_interpreter(entry))
     }
 }

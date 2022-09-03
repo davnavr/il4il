@@ -74,6 +74,7 @@ version = "0.1.0"
 dependencies = [
  "il4il",
  "il4il_loader",
+ "il4il_samples",
 ]
 
 [[package]]

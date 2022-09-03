@@ -17,6 +17,8 @@ type FunctionInstantiations<'env> = lazy_init::LazyTransform<Vec<il4il::function
 
 type FunctionBodies<'env> = lazy_init::LazyTransform<Vec<il4il::function::Body>, Box<[code::Code<'env>]>>;
 
+type EntryPoint<'env> = lazy_init::LazyTransform<Option<il4il::index::FunctionInstantiation>, Option<&'env function::Instantiation<'env>>>;
+
 /// Encapsulates an IL4IL module and its associated state, allowing for easy resolution of imports, types, etc.
 pub struct Module<'env> {
     environment: &'env Context,
@@ -25,6 +27,7 @@ pub struct Module<'env> {
     function_templates: FunctionTemplates<'env>,
     function_instantiations: FunctionInstantiations<'env>,
     function_bodies: FunctionBodies<'env>,
+    entry_point: EntryPoint<'env>,
 }
 
 impl<'env> Module<'env> {
@@ -39,6 +42,7 @@ impl<'env> Module<'env> {
             function_templates: FunctionTemplates::new(contents.function_templates),
             function_instantiations: FunctionInstantiations::new(contents.function_instantiations),
             function_bodies: FunctionBodies::new(contents.function_bodies),
+            entry_point: EntryPoint::new(contents.entry_point.first().copied()),
         }
     }
 
@@ -89,6 +93,11 @@ impl<'env> Module<'env> {
                 .map(|(index, body)| code::Code::new(self, index.into(), body))
                 .collect()
         })
+    }
+
+    /// Gets the module's entry point function, or `None` it exists.
+    pub fn entry_point(&'env self) -> Option<&'env function::Instantiation<'env>> {
+        *self.entry_point.get_or_create(|index| index.map(|index| &self.function_instantiations()[usize::from(index)]))
     }
 }
 

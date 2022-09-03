@@ -7,3 +7,6 @@ rust-version = "1.63"
 [dependencies]
 il4il = { path = "../il4il" }
 il4il_loader = { path = "../il4il_loader" }
+
+[dev-dependencies]
+il4il_samples = { path = "../il4il_samples" }
