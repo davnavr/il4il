@@ -13,6 +13,8 @@ type FunctionDefinitions<'env> = lazy_init::LazyTransform<Vec<il4il::function::D
 
 type FunctionTemplates<'env> = lazy_init::LazyTransform<il4il::function::TemplateLookup, Box<[function::template::Template<'env>]>>;
 
+type FunctionInstantiations<'env> = lazy_init::LazyTransform<Vec<il4il::function::Instantiation>, Box<[function::Instantiation<'env>]>>;
+
 type FunctionBodies<'env> = lazy_init::LazyTransform<Vec<il4il::function::Body>, Box<[code::Code<'env>]>>;
 
 /// Encapsulates an IL4IL module and its associated state, allowing for easy resolution of imports, types, etc.
@@ -21,6 +23,7 @@ pub struct Module<'env> {
     types: Types<'env>,
     function_definitions: FunctionDefinitions<'env>,
     function_templates: FunctionTemplates<'env>,
+    function_instantiations: FunctionInstantiations<'env>,
     function_bodies: FunctionBodies<'env>,
 }
 
@@ -34,6 +37,7 @@ impl<'env> Module<'env> {
             types: Types::new(contents.types),
             function_definitions: FunctionDefinitions::new(contents.function_definitions),
             function_templates: FunctionTemplates::new(contents.function_templates),
+            function_instantiations: FunctionInstantiations::new(contents.function_instantiations),
             function_bodies: FunctionBodies::new(contents.function_bodies),
         }
     }
@@ -67,6 +71,15 @@ impl<'env> Module<'env> {
         })
     }
 
+    pub fn function_instantiations(&'env self) -> &'env [function::Instantiation<'env>] {
+        self.function_instantiations.get_or_create(|instantiations| {
+            instantiations
+                .into_iter()
+                .map(|inst| function::Instantiation::new(self, inst))
+                .collect()
+        })
+    }
+
     /// Gets this module's function bodies.
     pub fn function_bodies(&'env self) -> &'env [code::Code<'env>] {
         self.function_bodies.get_or_create(|bodies| {
@@ -84,6 +97,7 @@ impl<'env> Debug for &'env Module<'env> {
         f.debug_struct("Module")
             .field("environment", self.environment)
             .field("function_definitions", &LazyDebug(&self.function_definitions))
+            .field("function_instantiations", &LazyDebug(&self.function_instantiations))
             .field("function_bodies", &LazyDebug(&self.function_bodies))
             .finish_non_exhaustive()
     }

@@ -46,6 +46,7 @@ impl Debug for Definition<'_> {
     }
 }
 
+#[derive(Debug)]
 pub enum TemplateKind<'env> {
     Definition(&'env Definition<'env>),
 }
@@ -71,5 +72,13 @@ impl<'env> Template<'env> {
         self.kind.get_or_create(|template| match template {
             il4il::function::Template::Definition(index) => TemplateKind::Definition(&self.module.function_definitions()[index]),
         })
+    }
+}
+
+impl Debug for Template<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Template")
+            .field("kind", &crate::debug::LazyDebug(&self.kind))
+            .finish_non_exhaustive()
     }
 }
