@@ -1,6 +1,7 @@
 //! Provides functions for validating indices to content within a module.
 
 use crate::index;
+use crate::validation::ModuleContents;
 use std::fmt::{Display, Formatter};
 
 /// The error type used when an index to content within a module is invalid.
@@ -31,12 +32,11 @@ impl Display for InvalidIndexError {
     }
 }
 
+pub type Result<T> = error_stack::Result<T, InvalidIndexError>;
+
 macro_rules! module_indexer {
     ($($vis:vis fn $name:ident($index_type:ty) -> $item_type:ty [$field:ident];)*) => {
-        $($vis fn $name<'a>(
-            contents: &'a crate::validation::ModuleContents,
-            index: $index_type
-        ) -> error_stack::Result<&'a $item_type, InvalidIndexError> {
+        $($vis fn $name<'a>(index: $index_type, contents: &'a ModuleContents) -> Result<&'a $item_type> {
             if let Some(item) = contents.$field.get(usize::from(index)) {
                 Ok(item)
             } else {
@@ -48,5 +48,18 @@ macro_rules! module_indexer {
 }
 
 module_indexer! {
-    pub fn get_type(index::Type) -> crate::type_system::Type [types];
+    pub(crate) fn get_type(index::Type) -> crate::type_system::Type [types];
+
+    pub(crate) fn get_function_signatures(index::FunctionSignature) -> crate::function::Signature [function_signatures];
+
+    pub(crate) fn get_function_body(index::FunctionBody) -> crate::function::Body [function_bodies];
+}
+
+pub fn get_function_template<'a>(index: index::FunctionTemplate, contents: &'a ModuleContents) -> Result<&'a crate::function::Template> {
+    if let Some(item) = contents.function_templates.get_template(index) {
+        Ok(item)
+    } else {
+        let count = contents.function_templates.count();
+        error_stack::bail!(InvalidIndexError::new(index, if count == 0 { None } else { Some(count - 1) }))
+    }
 }
