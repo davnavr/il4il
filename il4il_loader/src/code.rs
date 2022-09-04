@@ -61,6 +61,7 @@ impl<'env> Code<'env> {
         self.index
     }
 
+    /// Returns the function body's basic blocks.
     pub fn blocks(&'env self) -> &'env [Block<'env>] {
         self.blocks.get_or_create(|body| {
             let mut blocks = Vec::with_capacity(body.other_blocks().len() + 1);
@@ -74,6 +75,10 @@ impl<'env> Code<'env> {
             );
             blocks.into_boxed_slice()
         })
+    }
+
+    pub fn entry_block(&'env self) -> &'env Block<'env> {
+        self.blocks().first().expect("entry block should always exist")
     }
 }
 

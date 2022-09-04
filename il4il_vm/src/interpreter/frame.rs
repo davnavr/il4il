@@ -1,23 +1,60 @@
 //! Module for interacting with the IL4IL interpreter call stack.
 
 use crate::interpreter::Value;
+use crate::loader::code;
 use crate::loader::function;
+use il4il::instruction::Instruction;
 use il4il::index;
+
+struct InstructionPointer<'env> {
+    index: usize,
+    instructions: std::slice::Iter<'env, Instruction>,
+}
+
+impl<'env> InstructionPointer<'env> {
+    fn new(instructions: &'env [Instruction]) -> Self {
+        Self {
+            index: 0,
+            instructions: instructions.iter(),
+        }
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+}
+
+impl<'env> Iterator for InstructionPointer<'env> {
+    type Item = &'env Instruction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let instruction = self.instructions.next()?;
+        self.index += 1;
+        Some(instruction)
+    }
+}
 
 /// Represents a frame in the call stack.
 pub struct Frame<'env> {
     function: &'env function::Instantiation<'env>,
-    //block: &'env function::,
-    block_index: index::Block,
+    block: &'env code::Block<'env>,
     arguments: Box<[Value]>,
+    instruction_pointer: InstructionPointer<'env>, // std::cell::RefCell
 }
 
 impl<'env> Frame<'env> {
     pub(super) fn new(function: &'env function::Instantiation<'env>, arguments: Box<[Value]>) -> Self {
+        let block = match function.template().kind() {
+            function::template::TemplateKind::Definition(definition) => {
+                definition.body().entry_block()
+            }
+        };
+
         Self {
             function,
-            block_index: index::Block::new(0),
+            block,
             arguments,
+            instruction_pointer: InstructionPointer::new(block.instructions())
         }
     }
 
@@ -25,8 +62,16 @@ impl<'env> Frame<'env> {
         self.function
     }
 
+    pub fn block(&self) -> &'env code::Block<'env> {
+        self.block
+    }
+
     pub fn block_index(&self) -> index::Block {
-        self.block_index
+        self.block.index()
+    }
+
+    pub fn instruction_index(&self) -> usize {
+        self.instruction_pointer.index()
     }
 
     pub fn arguments(&self) -> &[Value] {
@@ -38,7 +83,8 @@ impl std::fmt::Debug for Frame<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Frame")
             .field("function", self.function)
-            .field("block_index", &self.block_index)
+            .field("block_index", &self.block_index())
+            .field("instruction_index", &self.instruction_index())
             .field("arguments", &self.arguments)
             .finish_non_exhaustive()
     }
