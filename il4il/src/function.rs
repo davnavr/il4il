@@ -38,9 +38,10 @@ impl std::iter::FusedIterator for Blocks<'_> {}
 
 /// A function body consists of a list of basic blocks and specifies the types of all inputs, temporary registers, and results.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct Body {
-    entry_block: instruction::Block,
-    other_blocks: Box<[instruction::Block]>,
+    pub entry_block: instruction::Block,
+    pub other_blocks: Box<[instruction::Block]>,
 }
 
 impl Body {
