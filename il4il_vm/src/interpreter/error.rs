@@ -6,6 +6,11 @@ use std::fmt::{Debug, Formatter};
 #[derive(Clone, Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ErrorKind {
+    /// Used when the [`Interpreter`] no longer has any code left to execute.
+    ///
+    /// [`Interpreter`]: crate::interpreter::Interpreter
+    #[error("no code left to execute")]
+    EndOfProgram,
     /// Used when an [`Unreachable`] terminator instruction is encountered.
     ///
     /// [`Unreachable`]: il4il::instruction::Instruction::Unreachable
@@ -24,6 +29,10 @@ struct ErrorInner {
 pub struct Error(Box<ErrorInner>);
 
 impl Error {
+    pub(super) fn new(kind: ErrorKind) -> Self {
+        Self(Box::new(ErrorInner { kind }))
+    }
+
     pub fn kind(&self) -> &ErrorKind {
         &self.0.kind
     }

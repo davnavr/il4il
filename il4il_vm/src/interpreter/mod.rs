@@ -46,6 +46,7 @@ impl<'env> Interpreter<'env> {
     ///
     /// Returns an [`Error`] describing what went wrong.
     pub fn step(&self) -> Result<Option<Box<[Value]>>, Error> {
+        let current_frame = self.call_stack.last().ok_or_else(|| Error::new(ErrorKind::EndOfProgram));
         todo!()
     }
 }
