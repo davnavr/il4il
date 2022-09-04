@@ -45,9 +45,20 @@ impl<'env> Interpreter<'env> {
     /// # Errors
     ///
     /// Returns an [`Error`] describing what went wrong.
-    pub fn step(&self) -> Result<Option<Box<[Value]>>, Error> {
-        let current_frame = self.call_stack.last().ok_or_else(|| Error::new(ErrorKind::EndOfProgram));
-        todo!()
+    pub fn step(&mut self) -> Result<Option<Box<[Value]>>, Error> {
+        use il4il::instruction::Instruction;
+
+        let current_frame = self.call_stack.last_mut().ok_or_else(|| Error::new(ErrorKind::EndOfProgram))?;
+
+        match current_frame.advance() {
+            Instruction::Unreachable => return Err(Error::new(ErrorKind::EncounteredUnreachable)),
+            Instruction::Return(values) => {
+                todo!("handle return")
+            }
+            bad => return Err(Error::new(ErrorKind::UnsupportedInstruction(bad.clone()))),
+        }
+
+        //Ok(None)
     }
 }
 

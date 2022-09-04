@@ -3,8 +3,8 @@
 use crate::interpreter::Value;
 use crate::loader::code;
 use crate::loader::function;
-use il4il::instruction::Instruction;
 use il4il::index;
+use il4il::instruction::Instruction;
 
 struct InstructionPointer<'env> {
     index: usize,
@@ -32,6 +32,16 @@ impl<'env> Iterator for InstructionPointer<'env> {
         self.index += 1;
         Some(instruction)
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.instructions.size_hint()
+    }
+}
+
+impl std::iter::ExactSizeIterator for InstructionPointer<'_> {
+    fn len(&self) -> usize {
+        self.instructions.len()
+    }
 }
 
 /// Represents a frame in the call stack.
@@ -39,22 +49,20 @@ pub struct Frame<'env> {
     function: &'env function::Instantiation<'env>,
     block: &'env code::Block<'env>,
     arguments: Box<[Value]>,
-    instruction_pointer: InstructionPointer<'env>, // std::cell::RefCell
+    instruction_pointer: InstructionPointer<'env>,
 }
 
 impl<'env> Frame<'env> {
     pub(super) fn new(function: &'env function::Instantiation<'env>, arguments: Box<[Value]>) -> Self {
         let block = match function.template().kind() {
-            function::template::TemplateKind::Definition(definition) => {
-                definition.body().entry_block()
-            }
+            function::template::TemplateKind::Definition(definition) => definition.body().entry_block(),
         };
 
         Self {
             function,
             block,
             arguments,
-            instruction_pointer: InstructionPointer::new(block.instructions())
+            instruction_pointer: InstructionPointer::new(block.instructions()),
         }
     }
 
@@ -72,6 +80,12 @@ impl<'env> Frame<'env> {
 
     pub fn instruction_index(&self) -> usize {
         self.instruction_pointer.index()
+    }
+
+    pub(super) fn advance(&mut self) -> &'env Instruction {
+        self.instruction_pointer
+            .next()
+            .expect("expected terminator instruction to be handled")
     }
 
     pub fn arguments(&self) -> &[Value] {

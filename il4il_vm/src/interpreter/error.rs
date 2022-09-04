@@ -16,6 +16,8 @@ pub enum ErrorKind {
     /// [`Unreachable`]: il4il::instruction::Instruction::Unreachable
     #[error("encountered unreachable point in code")]
     EncounteredUnreachable,
+    #[error("cannot interpret {0:?} instruction")]
+    UnsupportedInstruction(il4il::instruction::Instruction),
 }
 
 #[derive(Clone)]
