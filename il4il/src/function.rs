@@ -40,21 +40,22 @@ impl std::iter::FusedIterator for Blocks<'_> {}
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Body {
+    pub result_types: Box<[type_system::Reference]>,
     pub entry_block: instruction::Block,
     pub other_blocks: Box<[instruction::Block]>,
 }
 
 impl Body {
-    pub fn new(entry_block: instruction::Block, other_blocks: Box<[instruction::Block]>) -> Self {
-        Self { entry_block, other_blocks }
-    }
-
-    pub fn entry_block(&self) -> &instruction::Block {
-        &self.entry_block
-    }
-
-    pub fn other_blocks(&self) -> &[instruction::Block] {
-        &self.other_blocks
+    pub fn new(
+        result_types: Box<[type_system::Reference]>,
+        entry_block: instruction::Block,
+        other_blocks: Box<[instruction::Block]>,
+    ) -> Self {
+        Self {
+            result_types,
+            entry_block,
+            other_blocks,
+        }
     }
 
     pub fn iter_blocks(&self) -> Blocks<'_> {

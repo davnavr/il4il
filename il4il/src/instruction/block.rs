@@ -12,51 +12,35 @@ use crate::type_system;
 pub struct Block {
     pub(crate) types: Box<[type_system::Reference]>, // Vec<>, another usize might not hurt, will make it align better.
     input_count: usize,
-    result_count: usize,
     pub instructions: Vec<Instruction>,
 }
 
 impl Block {
-    /// Creates a code block with the specified input register, result, and temporary register types.
+    /// Creates a code block with the specified input register, and temporary register types.
     ///
     /// # Panics
     ///
-    /// Panics if the number of input registers and results exceeds the total number of types.
-    pub fn from_types(
-        types: Box<[type_system::Reference]>,
-        input_count: usize,
-        result_count: usize,
-        instructions: Vec<Instruction>,
-    ) -> Self {
-        assert!(types.len() >= input_count + result_count);
+    /// Panics if the number of input registers exceeds the total number of types.
+    pub fn from_types(types: Box<[type_system::Reference]>, input_count: usize, instructions: Vec<Instruction>) -> Self {
+        assert!(types.len() >= input_count);
         Self {
             types,
             input_count,
-            result_count,
             instructions,
         }
     }
 
-    pub fn new<I, R, T>(input_types: I, result_types: R, temporary_types: T, instructions: Vec<Instruction>) -> Self
+    pub fn new<I, T>(input_types: I, temporary_types: T, instructions: Vec<Instruction>) -> Self
     where
         I: IntoIterator<Item = type_system::Reference>,
         I::IntoIter: ExactSizeIterator,
-        R: IntoIterator<Item = type_system::Reference>,
-        R::IntoIter: ExactSizeIterator,
         T: IntoIterator<Item = type_system::Reference>,
     {
         let input_types_iter = input_types.into_iter();
-        let result_types_iter = result_types.into_iter();
         let input_count = input_types_iter.len();
-        let result_count = result_types_iter.len();
         Self::from_types(
-            input_types_iter
-                .into_iter()
-                .chain(result_types_iter)
-                .chain(temporary_types)
-                .collect(),
+            input_types_iter.into_iter().chain(temporary_types).collect(),
             input_count,
-            result_count,
             instructions,
         )
     }
@@ -65,21 +49,17 @@ impl Block {
         self.input_count
     }
 
-    pub fn result_count(&self) -> usize {
-        self.result_count
-    }
-
     /// Gets the total number of temporary registers defined in this block.
     pub fn temporary_count(&self) -> usize {
-        self.types.len() - self.input_count - self.result_count
+        self.types.len() - self.input_count
     }
 
     pub fn input_types(&self) -> &[type_system::Reference] {
         &self.types[0..self.input_count]
     }
 
-    pub fn result_types(&self) -> &[type_system::Reference] {
-        &self.types[self.input_count..self.input_count + self.result_count]
+    pub fn temporary_types(&self) -> &[type_system::Reference] {
+        &self.types[self.input_count..]
     }
 
     // TODO: have a TemporaryRegisters structure which is like a Vec, but only mutates the latter portion of self.types

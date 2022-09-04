@@ -22,12 +22,8 @@ pub fn return_int(name: &'static str, exit_code: i32) -> validation::ValidModule
     *builder.sections_mut() = vec![
         Section::Metadata(vec![Metadata::Name(Id::new(name).unwrap().into())]),
         Section::Code(vec![function::Body::new(
-            instruction::Block::new(
-                [],
-                [s32_type.clone()],
-                [],
-                vec![Instruction::Return(Box::new([exit_code.into()]) as Box<[_]>)],
-            ),
+            vec![s32_type.clone()].into_boxed_slice(),
+            instruction::Block::new([], [], vec![Instruction::Return(Box::new([exit_code.into()]) as Box<[_]>)]),
             Default::default(),
         )]),
         Section::FunctionSignature(vec![function::Signature::new([s32_type], [])]),

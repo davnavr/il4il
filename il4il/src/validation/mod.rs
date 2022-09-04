@@ -123,7 +123,7 @@ impl<'data> ValidModule<'data> {
                 .change_context(ValidationError)
                 .attach_printable_lazy(|| format!("function definition #{definition_index} has invalid input types"))?;
 
-            let actual_parameter_types = type_resolver::resolve_many(body.entry_block().input_types(), &mut type_buffer_2, &contents)
+            let actual_parameter_types = type_resolver::resolve_many(body.entry_block.input_types(), &mut type_buffer_2, &contents)
                 .change_context(ValidationError)
                 .attach_printable_lazy(|| {
                     format!("could not obtain entry block input types for function definition #{definition_index}")

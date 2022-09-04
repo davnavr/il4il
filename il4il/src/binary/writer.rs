@@ -378,7 +378,6 @@ impl WriteTo for &Instruction {
 impl WriteTo for &instruction::Block {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         write_length(self.input_count(), out)?;
-        write_length(self.result_count(), out)?;
         write_length(self.temporary_count(), out)?;
         self.types.iter().try_for_each(|ty| ty.write_to(out))?;
         // TODO: Include byte length of instructions?
@@ -388,9 +387,10 @@ impl WriteTo for &instruction::Block {
 
 impl WriteTo for &function::Body {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
-        write_length(self.other_blocks().len(), out)?;
-        self.entry_block().write_to(out)?;
-        self.other_blocks().iter().try_for_each(|block| block.write_to(out))
+        LengthPrefixed::from(self.result_types.iter()).write_to(out)?;
+        write_length(self.other_blocks.len(), out)?;
+        self.entry_block.write_to(out)?;
+        self.other_blocks.iter().try_for_each(|block| block.write_to(out))
     }
 }
 

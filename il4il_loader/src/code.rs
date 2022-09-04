@@ -64,7 +64,7 @@ impl<'env> Code<'env> {
     /// Returns the function body's basic blocks.
     pub fn blocks(&'env self) -> &'env [Block<'env>] {
         self.blocks.get_or_create(|body| {
-            let mut blocks = Vec::with_capacity(body.other_blocks().len() + 1);
+            let mut blocks = Vec::with_capacity(body.other_blocks.len() + 1);
             blocks.push(Block::new(self, 0.into(), body.entry_block));
             blocks.extend(
                 body.other_blocks

@@ -73,8 +73,8 @@ pub(crate) fn validate_body<'c>(
 
         let report_invalid = || error_stack::Report::new(encountered_invalid());
 
-        // TODO: Result types should be defined in the body, shared across all blocks.
-        let expected_result_types = type_resolver::resolve_many(body.entry_block().result_types(), type_buffer, contents)
+        // TODO: Since result types are shared, cache the result type buffer
+        let expected_result_types = type_resolver::resolve_many(body.result_types.iter(), type_buffer, contents)
             .change_context_lazy(encountered_invalid)
             .attach_printable("result types are invalid")?;
 
