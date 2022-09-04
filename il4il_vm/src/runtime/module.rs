@@ -1,6 +1,6 @@
 //! Provides the [`Module`] struct.
 
-use crate::interpreter::Interpreter;
+use crate::interpreter::{self, Interpreter};
 use crate::loader;
 use crate::runtime;
 
@@ -23,15 +23,33 @@ impl<'env> Module<'env> {
         &self.module
     }
 
-    fn setup_interpreter(&'env self, instantiation: &'env loader::function::Instantiation<'env>) -> Interpreter {
-        Interpreter::initialize(self.runtime, instantiation)
+    fn setup_interpreter(
+        &'env self,
+        instantiation: &'env loader::function::Instantiation<'env>,
+        arguments: Box<[interpreter::Value]>,
+    ) -> Interpreter {
+        Interpreter::initialize(self.runtime, instantiation, arguments)
     }
 
-    pub fn interpret_function_instantiation(&'env self, index: il4il::index::FunctionInstantiation) -> Interpreter {
-        self.setup_interpreter(&self.module.function_instantiations()[usize::from(index)])
+    /// Initializes an interpreter for a given function instantiation.
+    ///
+    /// See [`Interpreter::initialize`] for more information.
+    ///
+    /// [`Interpreter::initialize`]: crate::interpreter::Interpreter::initialize
+    pub fn interpret_function_instantiation(
+        &'env self,
+        index: il4il::index::FunctionInstantiation,
+        arguments: Box<[interpreter::Value]>,
+    ) -> Interpreter {
+        self.setup_interpreter(&self.module.function_instantiations()[usize::from(index)], arguments)
     }
 
-    pub fn interpret_entry_point(&'env self) -> Option<Interpreter> {
-        self.module.entry_point().map(|entry| self.setup_interpreter(entry))
+    /// Initializes an interpreter for the module's entry point function, returning `None` if no entry point exists.
+    ///
+    /// See [`Interpreter::initialize`] for more information.
+    ///
+    /// [`Interpreter::initialize`]: crate::interpreter::Interpreter::initialize
+    pub fn interpret_entry_point(&'env self, arguments: Box<[interpreter::Value]>) -> Option<Interpreter> {
+        self.module.entry_point().map(|entry| self.setup_interpreter(entry, arguments))
     }
 }
