@@ -1,8 +1,10 @@
 //! Contains the IL4IL bytecode interpreter.
 
+mod error;
 mod frame;
 mod value;
 
+pub use error::{Error, ErrorKind};
 pub use frame::Frame;
 pub use value::Value;
 
@@ -34,6 +36,17 @@ impl<'env> Interpreter<'env> {
 
     pub fn runtime(&self) -> &'env runtime::Runtime<'env> {
         self.runtime
+    }
+
+    /// Interprets a single instruction.
+    ///
+    /// Returns Ok(None) if there are more instructions to execute and Ok(Some) if execution is complete.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`] describing what went wrong.
+    pub fn step(&self) -> Result<Option<Box<[Value]>>, Error> {
+        todo!()
     }
 }
 
