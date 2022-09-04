@@ -1,5 +1,9 @@
 //! Contains the IL4IL bytecode interpreter.
 
+mod value;
+
+pub use value::Value;
+
 use crate::loader;
 use crate::runtime;
 
@@ -13,9 +17,7 @@ pub struct Interpreter<'env> {
 
 impl<'env> Interpreter<'env> {
     pub fn initialize(runtime: &'env runtime::Runtime<'env>, entry_point: &'env loader::function::Instantiation<'env>) -> Self {
-        Self {
-            runtime
-        }
+        Self { runtime }
     }
 
     pub fn runtime(&self) -> &'env runtime::Runtime<'env> {

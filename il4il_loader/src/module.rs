@@ -97,7 +97,9 @@ impl<'env> Module<'env> {
 
     /// Gets the module's entry point function, or `None` it exists.
     pub fn entry_point(&'env self) -> Option<&'env function::Instantiation<'env>> {
-        *self.entry_point.get_or_create(|index| index.map(|index| &self.function_instantiations()[usize::from(index)]))
+        *self
+            .entry_point
+            .get_or_create(|index| index.map(|index| &self.function_instantiations()[usize::from(index)]))
     }
 }
 
