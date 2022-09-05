@@ -112,6 +112,7 @@ impl Value {
                         ConstantInteger::Zero => Self::zero(byte_width),
                         ConstantInteger::All => Self::with_byte(0xFFu8, byte_width),
                         ConstantInteger::One => {
+                            // TODO: Fix, will not work for exotic integer types in Big Endian mode.
                             let mut value = Self::zero(byte_width);
                             let index = if endianness == Endianness::Little {
                                 0
@@ -121,7 +122,15 @@ impl Value {
                             value.as_bytes_mut()[index] = 1u8;
                             value
                         }
-                        _ => todo!("account for the endianness when calculating the values"),
+                        ConstantInteger::I32(mut bits) => {
+                            let mut value = Self::zero(byte_width);
+                            if endianness == Endianness::Big {
+                                bits.reverse();
+                            }
+                            value.as_bytes_mut().copy_from_slice(&bits[0..byte_width.get()]);
+                            value
+                        }
+                        bad => todo!("account for the endianness when calculating the values ({bad:?})"),
                     }
                 }
                 Constant::Float(_) => panic!("cannot construct integer value from float constant"),
