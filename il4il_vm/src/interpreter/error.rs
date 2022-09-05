@@ -23,6 +23,7 @@ pub enum ErrorKind {
 #[derive(Clone)]
 struct ErrorInner {
     kind: ErrorKind,
+    //stack_trace: ,
 }
 
 /// The error type used for interpreter errors.

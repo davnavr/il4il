@@ -63,7 +63,7 @@ impl Value {
         })
     }
 
-    pub(crate) fn from_constant_value<'env>(value: Constant, value_type: &'env types::Type<'env>) -> Self {
+    pub(crate) fn from_constant_value<'env>(value: &Constant, value_type: &'env types::Type<'env>) -> Self {
         match value_type.kind() {
             TypeKind::Integer(integer_type) => match value {
                 Constant::Integer(integer_value) => {

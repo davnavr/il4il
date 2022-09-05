@@ -1,10 +1,9 @@
 //! Module for interacting with the IL4IL interpreter call stack.
 
 use crate::interpreter::Value;
-use crate::loader::code;
-use crate::loader::function;
+use crate::loader::{code, function};
 use il4il::index;
-use il4il::instruction::Instruction;
+use il4il::instruction::{self, Instruction};
 
 struct InstructionPointer<'env> {
     index: usize,
@@ -86,6 +85,12 @@ impl<'env> Frame<'env> {
         self.instruction_pointer
             .next()
             .expect("expected terminator instruction to be handled")
+    }
+
+    pub(super) fn create_value(&self, value: &instruction::Value, value_type: &'env crate::loader::types::Type<'env>) -> Value {
+        match value {
+            instruction::Value::Constant(constant) => Value::from_constant_value(constant, value_type),
+        }
     }
 
     pub fn arguments(&self) -> &[Value] {

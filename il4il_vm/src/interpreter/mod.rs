@@ -53,8 +53,19 @@ impl<'env> Interpreter<'env> {
         match current_frame.advance() {
             Instruction::Unreachable => return Err(Error::new(ErrorKind::EncounteredUnreachable)),
             Instruction::Return(values) => {
-                let result_types = current_frame.block().body().result_types();
-                todo!("handle return")
+                let return_types = current_frame.block().body().result_types();
+
+                if return_types.len() != values.len() {
+                    panic!("error kind for result count mismatch (expected {} values)", return_types.len());
+                }
+
+                return Ok(Some(
+                    return_types
+                        .iter()
+                        .zip(values.iter())
+                        .map(|(value_type, value)| current_frame.create_value(value, value_type.as_type()))
+                        .collect(),
+                ));
             }
             bad => return Err(Error::new(ErrorKind::UnsupportedInstruction(bad.clone()))),
         }
