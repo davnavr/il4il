@@ -12,6 +12,12 @@ use crate::loader;
 use crate::runtime;
 
 /// Encapsulates all state for a single thread of interpretation.
+///
+/// For simple scenarios, an [`Interpreter`] can be used to quickly evaluate the result of calling an IL4IL function.
+///
+/// For more complex situations, the [`host`] module is usually used to handle interpretation of IL4IL programs.
+///
+/// [`host`]: crate::host
 pub struct Interpreter<'env> {
     runtime: &'env runtime::Runtime<'env>,
     call_stack: Vec<Frame<'env>>,

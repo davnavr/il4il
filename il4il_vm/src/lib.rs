@@ -2,5 +2,6 @@
 
 pub use il4il_loader as loader;
 
+pub mod host;
 pub mod interpreter;
 pub mod runtime;
