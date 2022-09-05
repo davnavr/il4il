@@ -228,6 +228,30 @@ impl Value {
             Box::from(inlined)
         }
     }
+
+    /// Interprets this value as an unsigned 32-bit integer, performing zero-extension or truncation where needed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il_vm::interpreter::Value;
+    /// # use il4il_vm::runtime::configuration::Endianness;
+    /// assert_eq!(Value::zero(std::num::NonZeroUsize::new(3).unwrap()).into_u32(Endianness::Little), 0);
+    /// assert_eq!(Value::with_byte(0xFF, std::num::NonZeroUsize::new(4).unwrap()).into_u32(Endianness::Little), u32::MAX);
+    /// assert_eq!(Value::from_u32(42, Endianness::Little).into_u32(Endianness::Little), 42u32);
+    /// assert_eq!(Value::from_u32(43, Endianness::Big).into_u32(Endianness::Big), 43u32);
+    /// ```
+    pub fn into_u32(self, endianness: Endianness) -> u32 {
+        let mut bits = [0u8; 4];
+        let value = self.as_bytes();
+        let length = 4.min(value.len());
+        bits[0..length].copy_from_slice(self.as_bytes());
+        if endianness == Endianness::Little {
+            u32::from_le_bytes(bits)
+        } else {
+            u32::from_be_bytes(bits)
+        }
+    }
 }
 
 impl std::fmt::Debug for Value {

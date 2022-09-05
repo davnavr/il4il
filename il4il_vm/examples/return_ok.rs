@@ -11,5 +11,8 @@ fn main() {
         }
     };
 
-    println!("Returned: {return_values:?}");
+    assert_eq!(
+        il4il_vm::interpreter::Value::into_u32(return_values[0].clone(), runtime.configuration().endianness),
+        1u32
+    );
 }
