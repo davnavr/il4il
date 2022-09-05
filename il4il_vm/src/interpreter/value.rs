@@ -106,10 +106,7 @@ impl Value {
         match value_type.kind() {
             TypeKind::Integer(integer_type) => match value {
                 Constant::Integer(integer_value) => {
-                    let byte_width = unsafe {
-                        // Safety: This is never zero
-                        NonZeroUsize::new_unchecked(integer_type.bit_width().get() as usize * 8usize)
-                    };
+                    let byte_width = NonZeroUsize::from(integer_type.byte_width());
 
                     match integer_value {
                         ConstantInteger::Zero => Self::zero(byte_width),

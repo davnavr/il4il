@@ -116,6 +116,7 @@ impl IntegerSize {
     /// ```
     /// # use il4il::type_system::IntegerSize;
     /// assert_eq!(IntegerSize::MIN.bit_width().get(), 2);
+    /// assert_eq!(IntegerSize::MIN.byte_width().get(), 1);
     /// ```
     pub const MIN: Self = Self(unsafe { NonZeroU8::new_unchecked(1u8) });
 
@@ -126,6 +127,7 @@ impl IntegerSize {
     /// ```
     /// # use il4il::type_system::IntegerSize;
     /// assert_eq!(IntegerSize::I8.bit_width().get(), 8);
+    /// assert_eq!(IntegerSize::I8.byte_width().get(), 1);
     /// ```
     pub const I8: Self = Self(unsafe { NonZeroU8::new_unchecked(7u8) });
 
@@ -136,6 +138,7 @@ impl IntegerSize {
     /// ```
     /// # use il4il::type_system::IntegerSize;
     /// assert_eq!(IntegerSize::I16.bit_width().get(), 16);
+    /// assert_eq!(IntegerSize::I16.byte_width().get(), 2);
     /// ```
     pub const I16: Self = Self(unsafe { NonZeroU8::new_unchecked(15u8) });
 
@@ -146,6 +149,7 @@ impl IntegerSize {
     /// ```
     /// # use il4il::type_system::IntegerSize;
     /// assert_eq!(IntegerSize::I32.bit_width().get(), 32);
+    /// assert_eq!(IntegerSize::I32.byte_width().get(), 4);
     /// ```
     pub const I32: Self = Self(unsafe { NonZeroU8::new_unchecked(31u8) });
 
@@ -156,6 +160,7 @@ impl IntegerSize {
     /// ```
     /// # use il4il::type_system::IntegerSize;
     /// assert_eq!(IntegerSize::I64.bit_width().get(), 64);
+    /// assert_eq!(IntegerSize::I64.byte_width().get(), 8);
     /// ```
     pub const I64: Self = Self(unsafe { NonZeroU8::new_unchecked(63u8) });
 
@@ -166,6 +171,7 @@ impl IntegerSize {
     /// ```
     /// # use il4il::type_system::IntegerSize;
     /// assert_eq!(IntegerSize::I128.bit_width().get(), 128);
+    /// assert_eq!(IntegerSize::I128.byte_width().get(), 16);
     /// ```
     pub const I128: Self = Self(unsafe { NonZeroU8::new_unchecked(127u8) });
 
@@ -176,6 +182,7 @@ impl IntegerSize {
     /// ```
     /// # use il4il::type_system::IntegerSize;
     /// assert_eq!(IntegerSize::I256.bit_width().get(), 256);
+    /// assert_eq!(IntegerSize::I256.byte_width().get(), 32);
     /// ```
     pub const I256: Self = Self(unsafe { NonZeroU8::new_unchecked(255u8) });
 
@@ -214,8 +221,25 @@ impl IntegerSize {
     /// Gets the number of bits needed to contain an integer of this size.
     pub const fn bit_width(self) -> NonZeroU16 {
         unsafe {
-            // Safety: width is guaranteed to never be zero
+            // Safety: width is guaranteed to never be zero, an overflow should also never occur
             NonZeroU16::new_unchecked((self.0.get() as u16) + 1u16)
+        }
+    }
+
+    /// Gets the number of bytes needed to contain an integer of this size.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::type_system::IntegerSize;
+    /// assert_eq!(IntegerSize::new(14).unwrap().byte_width().get(), 2);
+    /// assert_eq!(IntegerSize::new(17).unwrap().byte_width().get(), 3);
+    /// ```
+    pub const fn byte_width(self) -> NonZeroU16 {
+        let bit_width = self.bit_width().get();
+        unsafe {
+            // Safety: Width is never zero
+            NonZeroU16::new_unchecked((bit_width / 8u16) + if bit_width % 8u16 == 0 { 0u16 } else { 1u16 })
         }
     }
 }
@@ -341,7 +365,30 @@ impl SizedInteger {
         if let Some(size) = self.size() {
             size.bit_width()
         } else {
-            unsafe { NonZeroU16::new_unchecked(1) }
+            unsafe {
+                // Safety: 1 != 0
+                NonZeroU16::new_unchecked(1)
+            }
+        }
+    }
+
+    /// Gets the size of this integer type, in bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il::type_system::{IntegerSign, IntegerSize, SizedInteger};
+    /// assert_eq!(SizedInteger::BOOL.byte_width().get(), 1);
+    /// assert_eq!(SizedInteger::new(IntegerSign::UNSIGNED, IntegerSize::new(24).unwrap()).byte_width().get(), 3);
+    /// ```
+    pub const fn byte_width(self) -> NonZeroU16 {
+        if let Some(size) = self.size() {
+            size.byte_width()
+        } else {
+            unsafe {
+                // Safety: 1 != 0
+                NonZeroU16::new_unchecked(1)
+            }
         }
     }
 
