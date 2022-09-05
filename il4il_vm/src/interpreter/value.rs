@@ -3,6 +3,7 @@
 use crate::loader::types::{self, TypeKind};
 use std::num::NonZeroUsize;
 
+pub use crate::runtime::configuration::Endianness;
 pub use il4il::instruction::value::{Constant, ConstantInteger};
 
 const POINTER_SIZE: usize = std::mem::size_of::<*const u8>();
@@ -101,7 +102,7 @@ impl Value {
         })
     }
 
-    pub(crate) fn from_constant_value<'env>(value: &Constant, value_type: &'env types::Type<'env>) -> Self {
+    pub(crate) fn from_constant_value<'env>(value: &Constant, value_type: &'env types::Type<'env>, endianness: Endianness) -> Self {
         match value_type.kind() {
             TypeKind::Integer(integer_type) => match value {
                 Constant::Integer(integer_value) => {
@@ -113,6 +114,16 @@ impl Value {
                     match integer_value {
                         ConstantInteger::Zero => Self::zero(byte_width),
                         ConstantInteger::All => Self::with_byte(0xFFu8, byte_width),
+                        ConstantInteger::One => {
+                            let mut value = Self::zero(byte_width);
+                            let index = if endianness == Endianness::Little {
+                                0
+                            } else {
+                                byte_width.get() - 1
+                            };
+                            value.as_bytes_mut()[index] = 1u8;
+                            value
+                        }
                         _ => todo!("account for the endianness when calculating the values"),
                     }
                 }

@@ -45,6 +45,7 @@ impl std::iter::ExactSizeIterator for InstructionPointer<'_> {
 
 /// Represents a frame in the call stack.
 pub struct Frame<'env> {
+    runtime: &'env crate::runtime::Runtime<'env>,
     function: &'env function::Instantiation<'env>,
     block: &'env code::Block<'env>,
     arguments: Box<[Value]>,
@@ -52,12 +53,17 @@ pub struct Frame<'env> {
 }
 
 impl<'env> Frame<'env> {
-    pub(super) fn new(function: &'env function::Instantiation<'env>, arguments: Box<[Value]>) -> Self {
+    pub(super) fn new(
+        runtime: &'env crate::runtime::Runtime<'env>,
+        function: &'env function::Instantiation<'env>,
+        arguments: Box<[Value]>,
+    ) -> Self {
         let block = match function.template().kind() {
             function::template::TemplateKind::Definition(definition) => definition.body().entry_block(),
         };
 
         Self {
+            runtime,
             function,
             block,
             arguments,
@@ -89,7 +95,9 @@ impl<'env> Frame<'env> {
 
     pub(super) fn create_value(&self, value: &instruction::Value, value_type: &'env crate::loader::types::Type<'env>) -> Value {
         match value {
-            instruction::Value::Constant(constant) => Value::from_constant_value(constant, value_type),
+            instruction::Value::Constant(constant) => {
+                Value::from_constant_value(constant, value_type, self.runtime.configuration().endianness)
+            }
         }
     }
 

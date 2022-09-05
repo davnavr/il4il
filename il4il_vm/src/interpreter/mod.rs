@@ -25,7 +25,7 @@ impl<'env> Interpreter<'env> {
     ) -> Self {
         Self {
             runtime,
-            call_stack: vec![Frame::new(entry_point, arguments)],
+            call_stack: vec![Frame::new(runtime, entry_point, arguments)],
         }
     }
 
