@@ -7,6 +7,7 @@ use crate::runtime::{configuration::Configuration, Runtime};
 
 pub type HostScope<'host, 'parent> = &'host std::thread::Scope<'host, 'parent>;
 
+#[derive(Debug)]
 pub struct Host<'host, 'parent: 'host> {
     runtime: Runtime<'host>,
     scope: HostScope<'host, 'parent>,
@@ -19,11 +20,5 @@ impl<'host, 'parent: 'host> Host<'host, 'parent> {
             runtime: Runtime::with_configuration(configuration),
             scope,
         }
-    }
-}
-
-impl std::fmt::Debug for Host<'_, '_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Host").field("scope", &self.scope).finish_non_exhaustive()
     }
 }

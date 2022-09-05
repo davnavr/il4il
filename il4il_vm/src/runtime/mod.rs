@@ -9,6 +9,7 @@ pub use module::Module;
 use crate::loader;
 use std::sync::{Arc, Mutex};
 
+#[derive(Debug)]
 pub struct Runtime<'env> {
     configuration: configuration::Configuration,
     modules: Mutex<Vec<Arc<Module<'env>>>>,

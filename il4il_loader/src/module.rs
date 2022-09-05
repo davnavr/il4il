@@ -103,7 +103,7 @@ impl<'env> Module<'env> {
     }
 }
 
-impl<'env> Debug for &'env Module<'env> {
+impl Debug for Module<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Module")
             .field("environment", self.environment)

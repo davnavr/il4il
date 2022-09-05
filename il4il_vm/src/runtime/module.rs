@@ -3,6 +3,7 @@
 use crate::interpreter::{self, Interpreter};
 use crate::loader;
 use crate::runtime;
+use std::fmt::{Debug, Formatter};
 
 /// Encapsulates all runtime state associated with a given IL4IL Module.
 pub struct Module<'env> {
@@ -51,5 +52,11 @@ impl<'env> Module<'env> {
     /// [`Interpreter::initialize`]: crate::interpreter::Interpreter::initialize
     pub fn interpret_entry_point(&'env self, arguments: Box<[interpreter::Value]>) -> Option<Interpreter> {
         self.module.entry_point().map(|entry| self.setup_interpreter(entry, arguments))
+    }
+}
+
+impl Debug for Module<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Module").field("module", &self.module).finish_non_exhaustive()
     }
 }
