@@ -130,6 +130,7 @@ impl Value {
         }
     }
 
+    /// Creates a single byte value.
     pub fn from_u8(byte: u8) -> Self {
         Self {
             length: unsafe {
@@ -142,6 +143,18 @@ impl Value {
                 Bits { inlined }
             },
         }
+    }
+
+    pub fn from_u32(value: u32, endianness: Endianness) -> Self {
+        Self::from_bytes(
+            if endianness == Endianness::Little {
+                value.to_le_bytes()
+            } else {
+                value.to_be_bytes()
+            }
+            .as_slice(),
+        )
+        .unwrap()
     }
 
     fn is_allocated(&self) -> bool {
