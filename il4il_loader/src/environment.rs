@@ -12,6 +12,10 @@ impl AddressSize {
         Self(size)
     }
 
+    pub const fn into_integer_size(self) -> IntegerSize {
+        self.0
+    }
+
     pub const fn size(self) -> IntegerSize {
         self.0
     }

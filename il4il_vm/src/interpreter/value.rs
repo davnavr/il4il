@@ -1,6 +1,9 @@
 //! Contains the [`Value`] struct.
 
+use crate::loader::types::{self, TypeKind};
 use std::num::NonZeroUsize;
+
+pub use il4il::instruction::value::Constant;
 
 const POINTER_SIZE: usize = std::mem::size_of::<*const u8>();
 
@@ -43,6 +46,7 @@ impl Value {
         })
     }
 
+    /// Creates a value from a boxed slice of bytes.
     pub fn from_boxed_bytes(mut bytes: Box<[u8]>) -> Option<Self> {
         let length = NonZeroUsize::new(bytes.len())?;
         Some(Self {
@@ -57,6 +61,18 @@ impl Value {
                 Bits { allocated }
             },
         })
+    }
+
+    pub(crate) fn from_constant_value<'env>(value: Constant, value_type: &'env types::Type<'env>) -> Self {
+        match value_type.kind() {
+            TypeKind::Integer(integer_type) => match value {
+                Constant::Integer(integer_value) => {
+                    todo!()
+                }
+                Constant::Float(_) => panic!("cannot construct integer value from float constant"),
+            },
+            TypeKind::Float(float_type) => todo!("add support for float types {float_type:?}"),
+        }
     }
 
     pub fn from_u8(byte: u8) -> Self {

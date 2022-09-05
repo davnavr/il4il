@@ -5,7 +5,7 @@ use il4il::type_system;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TypeKind {
-    Integer(type_system::Integer),
+    Integer(type_system::SizedInteger),
     Float(type_system::Float),
 }
 
@@ -28,8 +28,13 @@ impl<'env> Type<'env> {
 
     pub fn kind(&'env self) -> &'env TypeKind {
         self.kind.get_or_create(|kind| match kind {
-            type_system::Type::Integer(i) => TypeKind::Integer(i),
-            type_system::Type::Float(f) => TypeKind::Float(f),
+            type_system::Type::Integer(integer_type) => TypeKind::Integer(match integer_type {
+                type_system::Integer::Sized(sized_integer) => sized_integer,
+                type_system::Integer::Address(sign) => {
+                    type_system::SizedInteger::new(sign, self.module.environment().address_size.into_integer_size())
+                }
+            }),
+            type_system::Type::Float(float_type) => TypeKind::Float(float_type),
             _ => todo!("unsupported type"),
         })
     }
@@ -37,8 +42,7 @@ impl<'env> Type<'env> {
     /// Gets the size, in bits, of values of this type.
     pub fn bit_width(&'env self) -> std::num::NonZeroU32 {
         match self.kind() {
-            TypeKind::Integer(type_system::Integer::Sized(i)) => i.bit_width().into(),
-            TypeKind::Integer(type_system::Integer::Address(_)) => self.module.environment().address_size.size().bit_width().into(),
+            TypeKind::Integer(integer_type) => integer_type.bit_width().into(),
             TypeKind::Float(f) => f.bit_width().into(),
         }
     }
@@ -79,6 +83,13 @@ impl<'env> Reference<'env> {
             type_system::Reference::Inline(inlined) => ReferenceKind::Inlined(Type::new(module, inlined)),
             type_system::Reference::Index(index) => ReferenceKind::Indexed(&module.types()[usize::from(index)]),
         })
+    }
+
+    pub fn module(&'env self) -> &'env Module<'env> {
+        match self.kind() {
+            ReferenceKind::Indexed(ty) => ty.module(),
+            ReferenceKind::Inlined(ty) => ty.module(),
+        }
     }
 
     pub fn as_type(&self) -> &Type<'env> {
