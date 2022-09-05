@@ -33,13 +33,15 @@ impl Value {
         Self {
             length: byte_width,
             bits: if byte_width.get() <= POINTER_SIZE {
-                Bits { inlined: [0u8; POINTER_SIZE] }
+                Bits {
+                    inlined: [0u8; POINTER_SIZE],
+                }
             } else {
                 let mut allocation = vec![0u8; byte_width.get()].into_boxed_slice();
                 let pointer = allocation.as_mut_ptr();
                 std::mem::forget(allocation);
                 Bits { allocated: pointer }
-            }
+            },
         }
     }
 
@@ -113,7 +115,7 @@ impl Value {
                         ConstantInteger::All => Self::with_byte(0xFFu8, byte_width),
                         _ => todo!("account for the endianness when calculating the values"),
                     }
-                },
+                }
                 Constant::Float(_) => panic!("cannot construct integer value from float constant"),
             },
             TypeKind::Float(float_type) => todo!("add support for float types {float_type:?}"),
