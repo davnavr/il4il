@@ -285,3 +285,6 @@ impl Drop for Value {
         }
     }
 }
+
+// Safety: Conceptually, a Value is just an enum of a byte array OR a boxed slice
+unsafe impl Send for Value {}

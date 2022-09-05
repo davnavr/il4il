@@ -11,6 +11,10 @@ pub use value::Value;
 use crate::loader;
 use crate::runtime;
 
+pub(crate) type Function<'env> = loader::function::Instantiation<'env>;
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 /// Encapsulates all state for a single thread of interpretation.
 ///
 /// For simple scenarios, an [`Interpreter`] can be used to quickly evaluate the result of calling an IL4IL function.
@@ -26,7 +30,7 @@ pub struct Interpreter<'env> {
 impl<'env> Interpreter<'env> {
     pub fn initialize(
         runtime: &'env runtime::Runtime<'env>,
-        entry_point: &'env loader::function::Instantiation<'env>,
+        entry_point: &'env Function<'env>,
         arguments: Box<[Value]>,
     ) -> Self {
         Self {
@@ -51,7 +55,7 @@ impl<'env> Interpreter<'env> {
     /// # Errors
     ///
     /// Returns an [`Error`] describing what went wrong.
-    pub fn step(&mut self) -> Result<Option<Box<[Value]>>, Error> {
+    pub fn step(&mut self) -> Result<Option<Box<[Value]>>> {
         use il4il::instruction::Instruction;
 
         let current_frame = self.call_stack.last_mut().ok_or_else(|| Error::new(ErrorKind::EndOfProgram))?;

@@ -5,6 +5,7 @@ use crate::loader;
 use crate::runtime;
 use std::fmt::{Debug, Formatter};
 
+// TODO: THis should keep track of function imports.
 /// Encapsulates all runtime state associated with a given IL4IL Module.
 pub struct Module<'env> {
     runtime: &'env runtime::Runtime<'env>,
