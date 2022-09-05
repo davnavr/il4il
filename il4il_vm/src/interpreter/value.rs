@@ -3,7 +3,7 @@
 use crate::loader::types::{self, TypeKind};
 use std::num::NonZeroUsize;
 
-pub use il4il::instruction::value::Constant;
+pub use il4il::instruction::value::{Constant, ConstantInteger};
 
 const POINTER_SIZE: usize = std::mem::size_of::<*const u8>();
 
@@ -21,6 +21,28 @@ pub struct Value {
 }
 
 impl Value {
+    /// Initializes a value of the specified byte width, with all bits set to zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il_vm::interpreter::Value;
+    /// assert_eq!(Value::zero(std::num::NonZeroUsize::new(5).unwrap()).byte_width().get(), 5);
+    /// ```
+    pub fn zero(byte_width: NonZeroUsize) -> Self {
+        Self {
+            length: byte_width,
+            bits: if byte_width.get() <= POINTER_SIZE {
+                Bits { inlined: [0u8; POINTER_SIZE] }
+            } else {
+                let mut allocation = vec![0u8; byte_width.get()].into_boxed_slice();
+                let pointer = allocation.as_mut_ptr();
+                std::mem::forget(allocation);
+                Bits { allocated: pointer }
+            }
+        }
+    }
+
     /// Creates a value from the given bytes.
     ///
     /// # Examples
@@ -46,6 +68,20 @@ impl Value {
         })
     }
 
+    /// Creates a value of a specified byte width, consisting of all bytes set to a `value`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use il4il_vm::interpreter::Value;
+    /// assert_eq!(Value::with_byte(1u8, std::num::NonZeroUsize::new(4).unwrap()).as_bytes(), &[1u8, 1, 1, 1]);
+    /// ```
+    pub fn with_byte(value: u8, byte_width: NonZeroUsize) -> Self {
+        let mut bits = Self::zero(byte_width);
+        bits.as_bytes_mut().fill(value);
+        bits
+    }
+
     /// Creates a value from a boxed slice of bytes.
     pub fn from_boxed_bytes(mut bytes: Box<[u8]>) -> Option<Self> {
         let length = NonZeroUsize::new(bytes.len())?;
@@ -67,8 +103,17 @@ impl Value {
         match value_type.kind() {
             TypeKind::Integer(integer_type) => match value {
                 Constant::Integer(integer_value) => {
-                    todo!()
-                }
+                    let byte_width = unsafe {
+                        // Safety: This is never zero
+                        NonZeroUsize::new_unchecked(integer_type.bit_width().get() as usize * 8usize)
+                    };
+
+                    match integer_value {
+                        ConstantInteger::Zero => Self::zero(byte_width),
+                        ConstantInteger::All => Self::with_byte(0xFFu8, byte_width),
+                        _ => todo!("account for the endianness when calculating the values"),
+                    }
+                },
                 Constant::Float(_) => panic!("cannot construct integer value from float constant"),
             },
             TypeKind::Float(float_type) => todo!("add support for float types {float_type:?}"),
@@ -99,10 +144,12 @@ impl Value {
     }
 
     /// Returns a slice containing this value's bytes.
+    ///
+    /// For a mutating version, see [`Value::as_bytes`].
     pub fn as_bytes(&self) -> &[u8] {
         if self.is_allocated() {
             unsafe {
-                // Safety: Check above ensure that the pointer is valid
+                // Safety: Check above ensures that the pointer is valid
                 std::slice::from_raw_parts(self.bits.allocated, self.length.get())
             }
         } else {
@@ -112,6 +159,23 @@ impl Value {
             };
 
             &inlined[0..self.length.get()]
+        }
+    }
+
+    /// Returns a mutable slice containing this value's bytes.
+    pub fn as_bytes_mut(&mut self) -> &mut [u8] {
+        if self.is_allocated() {
+            unsafe {
+                // Safety: Check above ensures that the pointer is valid
+                std::slice::from_raw_parts_mut(self.bits.allocated, self.length.get())
+            }
+        } else {
+            let inlined = unsafe {
+                // Safety: Check above ensures that the value was NOT allocated
+                &mut self.bits.inlined
+            };
+
+            &mut inlined[0..self.length.get()]
         }
     }
 
