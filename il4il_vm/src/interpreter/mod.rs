@@ -28,11 +28,7 @@ pub struct Interpreter<'env> {
 }
 
 impl<'env> Interpreter<'env> {
-    pub fn initialize(
-        runtime: &'env runtime::Runtime<'env>,
-        entry_point: &'env Function<'env>,
-        arguments: Box<[Value]>,
-    ) -> Self {
+    pub fn initialize(runtime: &'env runtime::Runtime<'env>, entry_point: &'env Function<'env>, arguments: Box<[Value]>) -> Self {
         Self {
             runtime,
             call_stack: vec![Frame::new(runtime, entry_point, arguments)],

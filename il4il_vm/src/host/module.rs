@@ -1,6 +1,6 @@
 //! Contains the [`HostModule`] struct.
 
-use crate::host::Host;
+use crate::host::{self, Host};
 use crate::runtime;
 
 /// Represents an IL4IL [`Module`] within a [`Host`].
@@ -22,5 +22,23 @@ impl<'host, 'parent: 'host> HostModule<'host, 'parent> {
 
     pub fn host(&'host self) -> &'host Host<'host, 'parent> {
         self.host
+    }
+
+    pub fn module(&'host self) -> &'host crate::loader::module::Module<'host> {
+        self.module.module()
+    }
+
+    /// Spawns an [`InterpreterThread`] to execute the module's entry point function.
+    ///
+    /// If no entry point is defined, returns `None`.
+    ///
+    /// [`InterpreterThread`]: crate::host::InterpreterThread
+    pub fn interpret_entry_point(
+        &'host self,
+        builder: std::thread::Builder,
+        arguments: Box<[crate::interpreter::Value]>,
+    ) -> Option<std::io::Result<host::InterpreterThread<'host, 'parent>>> {
+        let entry_point: &'host crate::interpreter::Function<'host> = self.module().entry_point()?;
+        Some(host::InterpreterThread::new(self.host, builder, entry_point, arguments))
     }
 }

@@ -33,6 +33,10 @@ impl<'host, 'parent: 'host> InterpreterThread<'host, 'parent> {
         Ok(Self { host, handle })
     }
 
+    pub fn host(&self) -> &'host Host<'host, 'parent> {
+        self.host
+    }
+
     pub fn await_results_blocking(self) -> interpreter::Result<Box<[interpreter::Value]>> {
         match self.handle.join() {
             Ok(results) => results,
