@@ -53,12 +53,14 @@ impl<'env> Interpreter<'env> {
         match current_frame.advance() {
             Instruction::Unreachable => return Err(Error::new(ErrorKind::EncounteredUnreachable)),
             Instruction::Return(values) => {
+                let expected_types = current_frame.block().body().result_types();
                 todo!("handle return")
             }
             bad => return Err(Error::new(ErrorKind::UnsupportedInstruction(bad.clone()))),
         }
 
-        //Ok(None)
+        #[allow(unreachable_code)]
+        Ok(None)
     }
 }
 

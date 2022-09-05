@@ -1,6 +1,7 @@
 //! Representation of IL4IL function bodies.
 
 use crate::module::Module;
+use crate::types;
 use il4il::index;
 use std::fmt::{Debug, Formatter};
 
@@ -36,11 +37,13 @@ impl<'env> Block<'env> {
     }
 }
 
-type CodeBlocks<'env> = lazy_init::LazyTransform<il4il::function::Body, Box<[Block<'env>]>>;
+type CodeBlocks<'env> = lazy_init::LazyTransform<(il4il::instruction::Block, Box<[il4il::instruction::Block]>), Box<[Block<'env>]>>;
 
+/// Represents an IL4IL function body.
 pub struct Code<'env> {
     module: &'env Module<'env>,
     index: index::FunctionBody,
+    result_types: types::ReferenceList<'env>,
     blocks: CodeBlocks<'env>,
 }
 
@@ -49,7 +52,8 @@ impl<'env> Code<'env> {
         Self {
             module,
             index,
-            blocks: CodeBlocks::new(code),
+            result_types: types::ReferenceList::new(module, code.result_types),
+            blocks: CodeBlocks::new((code.entry_block, code.other_blocks)),
         }
     }
 
@@ -63,11 +67,11 @@ impl<'env> Code<'env> {
 
     /// Returns the function body's basic blocks.
     pub fn blocks(&'env self) -> &'env [Block<'env>] {
-        self.blocks.get_or_create(|body| {
-            let mut blocks = Vec::with_capacity(body.other_blocks.len() + 1);
-            blocks.push(Block::new(self, 0.into(), body.entry_block));
+        self.blocks.get_or_create(|(entry_block, other_blocks)| {
+            let mut blocks = Vec::with_capacity(other_blocks.len() + 1);
+            blocks.push(Block::new(self, 0.into(), entry_block));
             blocks.extend(
-                body.other_blocks
+                other_blocks
                     .into_vec()
                     .into_iter()
                     .enumerate()
@@ -79,6 +83,10 @@ impl<'env> Code<'env> {
 
     pub fn entry_block(&'env self) -> &'env Block<'env> {
         self.blocks().first().expect("entry block should always exist")
+    }
+
+    pub fn result_types(&'env self) -> &'env [types::Reference<'env>] {
+        self.result_types.types()
     }
 }
 

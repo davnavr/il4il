@@ -88,7 +88,7 @@ impl<'env> Reference<'env> {
 
 type ReferenceListInner<'env> = lazy_init::LazyTransform<(&'env Module<'env>, Box<[type_system::Reference]>), Box<[Reference<'env>]>>;
 
-pub struct ReferenceList<'env>(ReferenceListInner<'env>);
+pub(crate) struct ReferenceList<'env>(ReferenceListInner<'env>);
 
 impl<'env> ReferenceList<'env> {
     pub(crate) fn new(module: &'env Module<'env>, types: Box<[type_system::Reference]>) -> Self {
