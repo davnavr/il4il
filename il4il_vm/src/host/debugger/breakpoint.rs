@@ -20,6 +20,20 @@ pub struct Location<'env> {
     instruction: usize,
 }
 
+impl<'env> Location<'env> {
+    pub fn new(block: &'env loader::code::Block<'env>, instruction: usize) -> Self {
+        Self { block, instruction }
+    }
+
+    pub fn block(&self) -> &'env loader::code::Block<'env> {
+        self.block
+    }
+
+    pub fn instruction(&self) -> usize {
+        self.instruction
+    }
+}
+
 impl Debug for Location<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Location")
@@ -80,9 +94,9 @@ impl<'env> Breakpoint<'env> {
 
 type BuildHasher = std::hash::BuildHasherDefault<rustc_hash::FxHasher>;
 
-type WriteHandle<'env> = flashmap::WriteHandle<Location<'env>, Breakpoint<'env>, BuildHasher>;
+type WriteHandle<'env> = flashmap::WriteHandle<Location<'env>, Arc<Breakpoint<'env>>, BuildHasher>;
 
-type ReadHandle<'env> = flashmap::ReadHandle<Location<'env>, Breakpoint<'env>, BuildHasher>;
+type ReadHandle<'env> = flashmap::ReadHandle<Location<'env>, Arc<Breakpoint<'env>>, BuildHasher>;
 
 /// Represents a set of breakpoints that indicate where IL4IL bytecode interpretation should stop.
 pub struct BreakpointLookup<'env> {
@@ -93,6 +107,14 @@ pub struct BreakpointLookup<'env> {
 impl<'env> BreakpointLookup<'env> {
     pub fn is_empty(&self) -> bool {
         !self.initialized.load(Ordering::Acquire) || self.lookup.guard().is_empty()
+    }
+
+    pub fn get<L: ?Sized>(&self, location: &L) -> Option<Arc<Breakpoint<'env>>>
+    where
+        Location<'env>: std::borrow::Borrow<L>,
+        L: std::hash::Hash + Eq,
+    {
+        self.lookup.guard().get(location).cloned()
     }
 }
 
@@ -105,7 +127,7 @@ pub struct BreakpointWriter<'env> {
 impl<'env> BreakpointWriter<'env> {
     pub fn insert(&self, location: Location<'env>) {
         self.initialized.store(true, Ordering::Release);
-        self.handle.borrow_mut().guard().insert(location, Breakpoint::new());
+        self.handle.borrow_mut().guard().insert(location, Arc::new(Breakpoint::new()));
     }
 
     //pub fn insert_with_conditions<F: &mut BreakpointConditions>(&self, location: Location<'env>, conditions: F)

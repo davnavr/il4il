@@ -101,6 +101,15 @@ impl<'env> Frame<'env> {
         }
     }
 
+    pub fn has_hit_breakpoint(&self, breakpoints: &crate::host::debugger::breakpoint::BreakpointLookup<'env>) -> bool {
+        breakpoints
+            .get(&crate::host::debugger::breakpoint::Location::new(
+                self.block,
+                self.instruction_index(),
+            ))
+            .is_some()
+    }
+
     pub fn arguments(&self) -> &[Value] {
         &self.arguments
     }
