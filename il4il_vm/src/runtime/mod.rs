@@ -2,8 +2,10 @@
 
 pub mod configuration;
 
+mod function;
 mod module;
 
+pub use function::{Function, HostFunction, HostFunctionResult};
 pub use module::Module;
 
 use crate::loader;
