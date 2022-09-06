@@ -37,6 +37,7 @@ impl<'host, 'parent: 'host> InterpreterThread<'host, 'parent> {
         self.host
     }
 
+    /// Blocks the current thread until the interpreter is finished executing.
     pub fn await_results_blocking(self) -> interpreter::Result<Box<[interpreter::Value]>> {
         match self.handle.join() {
             Ok(results) => results,

@@ -9,6 +9,8 @@ mod thread;
 pub use module::HostModule;
 pub use thread::InterpreterThread;
 
+pub mod debugger;
+
 use crate::runtime::configuration::Configuration;
 use crate::runtime::Runtime;
 

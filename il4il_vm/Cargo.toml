@@ -5,8 +5,10 @@ edition = "2021"
 rust-version = "1.63"
 
 [dependencies]
+flashmap = "0.1.0"
 il4il = { path = "../il4il" }
 il4il_loader = { path = "../il4il_loader" }
+rustc-hash = "1.1.0"
 thiserror = "1.0.30"
 
 [dev-dependencies]
