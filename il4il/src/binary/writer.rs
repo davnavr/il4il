@@ -336,6 +336,13 @@ impl WriteTo for &function::Instantiation {
     }
 }
 
+impl WriteTo for &function::Import {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        write_length(usize::from(self.module), out)?;
+        write_length(usize::from(self.signature), out)
+    }
+}
+
 impl WriteTo for &function::Definition {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         write_length(usize::from(self.signature), out)?;
@@ -420,6 +427,7 @@ impl WriteTo for &Section<'_> {
                 Section::Type(types) => LengthPrefixed::from(types).write_to(section_writer)?,
                 Section::FunctionSignature(signatures) => LengthPrefixed::from(signatures).write_to(section_writer)?,
                 Section::FunctionInstantiation(instantiations) => LengthPrefixed::from(instantiations).write_to(section_writer)?,
+                Section::FunctionImport(imports) => LengthPrefixed::from(imports).write_to(section_writer)?,
                 Section::FunctionDefinition(definitions) => LengthPrefixed::from(definitions).write_to(section_writer)?,
                 Section::Code(code) => LengthPrefixed::from(code).write_to(section_writer)?,
                 Section::EntryPoint(index) => write_length(usize::from(*index), section_writer)?,

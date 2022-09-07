@@ -13,6 +13,7 @@ pub struct ModuleContents<'data> {
     pub symbols: Vec<crate::symbol::Assignment<'data>>,
     pub types: Vec<type_system::Type>,
     pub function_signatures: Vec<function::Signature>,
+    pub function_imports: Vec<function::Import>,
     pub function_definitions: Vec<function::Definition>,
     pub function_bodies: Vec<function::Body>,
     pub function_templates: function::TemplateLookup,
@@ -33,6 +34,7 @@ impl<'data> ModuleContents<'data> {
         S: IntoIterator<Item = Result<Section<'data>, E>>,
     {
         let mut contents = ModuleContents::default();
+        let mut function_import_index = 0;
         let mut function_definition_index = 0;
 
         for sect in sections.into_iter() {
@@ -42,6 +44,17 @@ impl<'data> ModuleContents<'data> {
                 Section::Type(mut types) => contents.types.append(&mut types),
                 Section::FunctionSignature(mut signatures) => contents.function_signatures.append(&mut signatures),
                 Section::FunctionInstantiation(mut instantiations) => contents.function_instantiations.append(&mut instantiations),
+                Section::FunctionImport(imports) => {
+                    contents.function_templates.reserve(imports.len());
+                    contents.function_imports.reserve(imports.len());
+                    for func in imports {
+                        contents
+                            .function_templates
+                            .insert(function::Template::Import(function_import_index));
+                        function_import_index += 1;
+                        contents.function_imports.push(func);
+                    }
+                }
                 Section::FunctionDefinition(definitions) => {
                     contents.function_templates.reserve(definitions.len());
                     contents.function_definitions.reserve(definitions.len());

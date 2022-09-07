@@ -81,6 +81,19 @@ impl Definition {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub struct Import {
+    pub module: index::Module,
+    pub signature: index::FunctionSignature,
+}
+
+impl Import {
+    pub fn new(module: index::Module, signature: index::FunctionSignature) -> Self {
+        Self { module, signature }
+    }
+}
+
 /// Function signatures specify the parameter types and result types of functions.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Signature {
@@ -157,7 +170,7 @@ impl Instantiation {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Template {
     Definition(usize),
-    //Import(),
+    Import(usize),
 }
 
 #[derive(Clone, Default, Eq, PartialEq)]

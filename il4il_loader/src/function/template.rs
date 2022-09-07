@@ -71,6 +71,7 @@ impl<'env> Template<'env> {
     pub fn kind(&'env self) -> &'env TemplateKind<'env> {
         self.kind.get_or_create(|template| match template {
             il4il::function::Template::Definition(index) => TemplateKind::Definition(&self.module.function_definitions()[index]),
+            il4il::function::Template::Import(index) => todo!("handle function imports"),
         })
     }
 }
