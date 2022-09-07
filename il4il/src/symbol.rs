@@ -52,18 +52,6 @@ impl<'data> Assignment<'data> {
     pub fn target_kind(&self) -> TargetKind {
         self.target_kind
     }
-
-    pub(crate) fn into_owned(self) -> Assignment<'static> {
-        Assignment {
-            symbols: self
-                .symbols
-                .into_iter()
-                .map(|(name, index)| (Cow::Owned(name.into_owned()), index))
-                .collect(),
-            symbol_kind: self.symbol_kind,
-            target_kind: self.target_kind,
-        }
-    }
 }
 
 #[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]

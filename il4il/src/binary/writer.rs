@@ -1,7 +1,7 @@
 //! Low-level module for writing the contents of an IL4IL module.
 
 use crate::function;
-use crate::identifier::Id;
+use crate::identifier::{self, Id};
 use crate::instruction::value::{self, Value};
 use crate::instruction::{self, Instruction};
 use crate::integer::{VarI28, VarU28};
@@ -142,6 +142,12 @@ impl WriteTo for &[u8] {
 impl WriteTo for &Id {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         self.as_bytes().write_to(out)
+    }
+}
+
+impl WriteTo for &identifier::Identifier {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        <&Id>::write_to(self.as_id(), out)
     }
 }
 
@@ -394,6 +400,13 @@ impl WriteTo for &function::Body {
     }
 }
 
+impl WriteTo for &crate::module::ModuleName<'_> {
+    fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
+        self.name.write_to(out)?;
+        VarU28::MIN.write_to(out)
+    }
+}
+
 impl WriteTo for &Section<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         u8::from(self.kind()).write_to(out)?;
@@ -410,6 +423,7 @@ impl WriteTo for &Section<'_> {
                 Section::FunctionDefinition(definitions) => LengthPrefixed::from(definitions).write_to(section_writer)?,
                 Section::Code(code) => LengthPrefixed::from(code).write_to(section_writer)?,
                 Section::EntryPoint(index) => write_length(usize::from(*index), section_writer)?,
+                Section::ModuleImport(modules) => LengthPrefixed::from(modules).write_to(section_writer)?,
             }
         }
 

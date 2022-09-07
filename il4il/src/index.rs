@@ -190,3 +190,12 @@ index_space! {
 
 /// An index into a function body's basic blocks, with `0` referring to the entry block.
 pub type Block = Index<BlockSpace>;
+
+index_space! {
+    pub struct ModuleSpace {
+        const NAME = "module";
+    }
+}
+
+/// An index into a module's module imports, where `0` refers to the first module import.
+pub type Module = Index<ModuleSpace>;

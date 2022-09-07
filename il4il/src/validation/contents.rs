@@ -2,7 +2,7 @@
 
 use crate::function;
 use crate::module::section::{self, Section};
-use crate::module::Module;
+use crate::module::{Module, ModuleName};
 use crate::type_system;
 
 /// Represents the contents of a SAILAR module.
@@ -18,6 +18,7 @@ pub struct ModuleContents<'data> {
     pub function_templates: function::TemplateLookup,
     pub function_instantiations: Vec<function::Instantiation>,
     pub entry_point: Vec<crate::index::FunctionInstantiation>,
+    pub module_imports: Vec<ModuleName<'data>>,
 }
 
 impl<'data> ModuleContents<'data> {
@@ -54,6 +55,7 @@ impl<'data> ModuleContents<'data> {
                 }
                 Section::Code(mut code) => contents.function_bodies.append(&mut code),
                 Section::EntryPoint(index) => contents.entry_point.push(index),
+                Section::ModuleImport(mut modules) => contents.module_imports.append(&mut modules),
             }
         }
 
@@ -86,6 +88,8 @@ impl<'data> ModuleContents<'data> {
 
             Vec::with_capacity(capacity)
         };
+
+        // TODO: For some sections, may need to rearrange order, so this might not work correctly.
 
         sections.push(Section::Metadata(self.metadata));
         sections.push(Section::Type(self.types));

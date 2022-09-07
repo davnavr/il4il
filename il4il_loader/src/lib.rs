@@ -1,6 +1,6 @@
 //! Library for loading IL4IL modules and their imports.
 //!
-//! Lazy initialization is used extensively in order to ensure that allocations occur only when necessary.
+//! Lazy initialization is used extensively in order to ensure that allocations only occur when necessary.
 
 mod debug;
 

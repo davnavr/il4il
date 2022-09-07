@@ -16,7 +16,7 @@ crate::kind_enum! {
 #[derive(Clone, Debug)]
 pub enum Metadata<'data> {
     /// Specifies the name of an IL4IL module.
-    Name(Cow<'data, Id>),
+    Name(Cow<'data, Id>), // ModuleName<'data>
 }
 
 impl<'data> Metadata<'data> {
@@ -45,9 +45,11 @@ crate::kind_enum! {
         Type = 4,
         FunctionSignature = 5,
         FunctionInstantiation = 6,
+        //FunctionImport = 7,
         FunctionDefinition = 8,
         Code = 9,
         EntryPoint = 10,
+        ModuleImport = 11,
     }
 }
 
@@ -76,23 +78,10 @@ pub enum Section<'data> {
     Code(Vec<crate::function::Body>),
     /// Specifies an entry point function for the module.
     EntryPoint(crate::index::FunctionInstantiation),
+    ModuleImport(Vec<crate::module::ModuleName<'data>>),
 }
 
 impl<'data> Section<'data> {
-    #[must_use]
-    pub fn into_owned<'owned>(self) -> Section<'owned> {
-        match self {
-            Self::Metadata(metadata) => Section::Metadata(metadata.into_iter().map(Metadata::into_owned).collect()),
-            Self::Symbol(symbols) => Section::Symbol(symbols.into_iter().map(crate::symbol::Assignment::into_owned).collect()),
-            Self::Type(types) => Section::Type(types),
-            Self::FunctionSignature(signatures) => Section::FunctionSignature(signatures),
-            Self::FunctionInstantiation(instantiations) => Section::FunctionInstantiation(instantiations),
-            Self::FunctionDefinition(definitions) => Section::FunctionDefinition(definitions),
-            Self::Code(code) => Section::Code(code),
-            Self::EntryPoint(index) => Section::EntryPoint(index),
-        }
-    }
-
     #[must_use]
     pub fn kind(&self) -> SectionKind {
         match self {
@@ -104,6 +93,7 @@ impl<'data> Section<'data> {
             Self::FunctionDefinition(_) => SectionKind::FunctionDefinition,
             Self::Code(_) => SectionKind::Code,
             Self::EntryPoint(_) => SectionKind::EntryPoint,
+            Self::ModuleImport(_) => SectionKind::ModuleImport,
         }
     }
 }

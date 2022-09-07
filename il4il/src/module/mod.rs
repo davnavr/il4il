@@ -10,6 +10,10 @@ pub mod section;
 
 use section::Section;
 
+mod name;
+
+pub use name::ModuleName;
+
 /// An in-memory representation of an IL4IL module.
 #[derive(Clone, Debug)]
 pub struct Module<'data> {
@@ -51,14 +55,6 @@ impl<'data> Module<'data> {
     #[must_use]
     pub fn into_sections(self) -> Vec<Section<'data>> {
         self.sections
-    }
-
-    #[must_use]
-    pub fn into_owned<'owned>(self) -> Module<'owned> {
-        Module {
-            format_version: self.format_version,
-            sections: self.sections.into_iter().map(Section::into_owned).collect(),
-        }
     }
 
     /// Writes the binary contents of the module to the specified destination.
