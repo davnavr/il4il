@@ -45,7 +45,7 @@ impl<'env> Interpreter<'env> {
 
     /// Interprets a single instruction.
     ///
-    /// Returns Ok(None) if there are more instructions to execute and Ok(Some) if execution is complete.
+    /// Returns `Ok(None)` if there are more instructions to execute and `Ok(Some)` if execution is complete.
     ///
     /// # Errors
     ///
@@ -55,7 +55,7 @@ impl<'env> Interpreter<'env> {
 
         let current_frame = self.call_stack.last().ok_or_else(|| Error::new(ErrorKind::EndOfProgram))?;
 
-        match current_frame.kind() {
+        let return_values: Option<Box<[value::Value]>> = match current_frame.kind() {
             call_stack::FrameKind::Bytecode(code_frame) => match code_frame.advance() {
                 Instruction::Unreachable => return Err(Error::new(ErrorKind::EncounteredUnreachable)),
                 Instruction::Return(values) => {
@@ -65,14 +65,13 @@ impl<'env> Interpreter<'env> {
                         panic!("error kind for result count mismatch (expected {} values)", return_types.len());
                     }
 
-                    // TODO: Fix, shouldn't return, should pop from top of call stack.
-                    return Ok(Some(
+                    Some(
                         return_types
                             .iter()
                             .zip(values.iter())
                             .map(|(value_type, value)| current_frame.create_value(value, value_type.as_type()))
                             .collect(),
-                    ));
+                    )
                 }
                 bad => return Err(Error::new(ErrorKind::UnsupportedInstruction(bad.clone()))),
             },
@@ -83,12 +82,22 @@ impl<'env> Interpreter<'env> {
                     .map_err(|e| Error::new(ErrorKind::HostFunctionError(e)))?; // TODO: Incl stack trace.
 
                 // TODO: Type check the return values.
-                todo!("handle host frames {host_frame:?}")
+                Some(return_values)
             }
-        }
+        };
 
-        #[allow(unreachable_code)]
-        Ok(None)
+        if let Some(results) = return_values {
+            self.call_stack.pop();
+            if let Some(previous_frame) = self.call_stack.last() {
+                todo!("insert registers containing results")
+            } else {
+                // Call stack is empty, return the results
+                Ok(Some(results))
+            }
+        } else {
+            // No return values, continue execution of function
+            Ok(None)
+        }
     }
 }
 
