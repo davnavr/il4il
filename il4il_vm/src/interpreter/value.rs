@@ -27,7 +27,7 @@ impl Value {
     /// # Examples
     ///
     /// ```
-    /// # use il4il_vm::interpreter::Value;
+    /// # use il4il_vm::interpreter::value::Value;
     /// assert_eq!(Value::zero(std::num::NonZeroUsize::new(5).unwrap()).byte_width().get(), 5);
     /// ```
     pub fn zero(byte_width: NonZeroUsize) -> Self {
@@ -51,7 +51,7 @@ impl Value {
     /// # Examples
     ///
     /// ```
-    /// # use il4il_vm::interpreter::Value;
+    /// # use il4il_vm::interpreter::value::Value;
     /// assert!(matches!(Value::from_bytes(&[1, 2, 3]), Some(value) if value.as_bytes() == &[1, 2, 3]));
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
@@ -76,7 +76,7 @@ impl Value {
     /// # Examples
     ///
     /// ```
-    /// # use il4il_vm::interpreter::Value;
+    /// # use il4il_vm::interpreter::value::Value;
     /// assert_eq!(Value::with_byte(1u8, std::num::NonZeroUsize::new(4).unwrap()).as_bytes(), &[1u8, 1, 1, 1]);
     /// ```
     pub fn with_byte(value: u8, byte_width: NonZeroUsize) -> Self {
@@ -234,7 +234,7 @@ impl Value {
     /// # Examples
     ///
     /// ```
-    /// # use il4il_vm::interpreter::Value;
+    /// # use il4il_vm::interpreter::value::Value;
     /// # use il4il_vm::runtime::configuration::Endianness;
     /// assert_eq!(Value::zero(std::num::NonZeroUsize::new(3).unwrap()).into_u32(Endianness::Little), 0);
     /// assert_eq!(Value::with_byte(0xFF, std::num::NonZeroUsize::new(4).unwrap()).into_u32(Endianness::Little), u32::MAX);
