@@ -46,6 +46,13 @@ impl<'env> Type<'env> {
             TypeKind::Float(f) => f.bit_width().into(),
         }
     }
+
+    pub fn byte_width(&'env self) -> std::num::NonZeroU64 {
+        match self.kind() {
+            TypeKind::Integer(integer_type) => integer_type.byte_width().into(),
+            TypeKind::Float(f) => f.byte_width().into(),
+        }
+    }
 }
 
 impl<'env> PartialEq for &'env Type<'env> {

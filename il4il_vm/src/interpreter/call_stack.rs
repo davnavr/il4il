@@ -49,6 +49,12 @@ pub struct HostFrame<'env> {
     function: &'env crate::runtime::HostFunction<'env>,
 }
 
+impl<'env> HostFrame<'env> {
+    pub fn function(&self) -> &'env crate::runtime::HostFunction<'env> {
+        self.function
+    }
+}
+
 /// A frame in the call stack corresponding to a function implemented in IL4IL bytecode.
 pub struct BytecodeFrame<'env> {
     block: &'env code::Block<'env>,
@@ -130,6 +136,7 @@ impl<'env> Frame<'env> {
             kind: match function.template().kind() {
                 function::template::TemplateKind::Definition(definition) => FrameKind::Bytecode(BytecodeFrame::from_definition(definition)),
                 function::template::TemplateKind::Import(import) => {
+                    // TODO: Need to do type checking for imported functions.
                     todo!()
                 }
             },

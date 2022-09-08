@@ -53,7 +53,7 @@ impl<'env> Interpreter<'env> {
     pub fn step(&mut self) -> Result<Option<Box<[value::Value]>>> {
         use il4il::instruction::Instruction;
 
-        let current_frame = self.call_stack.last_mut().ok_or_else(|| Error::new(ErrorKind::EndOfProgram))?;
+        let current_frame = self.call_stack.last().ok_or_else(|| Error::new(ErrorKind::EndOfProgram))?;
 
         match current_frame.kind() {
             call_stack::FrameKind::Bytecode(code_frame) => match code_frame.advance() {
@@ -76,7 +76,15 @@ impl<'env> Interpreter<'env> {
                 }
                 bad => return Err(Error::new(ErrorKind::UnsupportedInstruction(bad.clone()))),
             },
-            call_stack::FrameKind::Host(host_frame) => todo!("handle host frames {host_frame:?}"),
+            call_stack::FrameKind::Host(host_frame) => {
+                let host_function = host_frame.function();
+                let return_values = host_function
+                    .invoke(current_frame.arguments(), self.runtime)
+                    .map_err(|e| Error::new(ErrorKind::HostFunctionError(e)))?; // TODO: Incl stack trace.
+
+                // TODO: Type check the return values.
+                todo!("handle host frames {host_frame:?}")
+            }
         }
 
         #[allow(unreachable_code)]

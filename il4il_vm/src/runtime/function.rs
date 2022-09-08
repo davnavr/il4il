@@ -11,12 +11,14 @@ pub type HostFunctionResult = Result<Box<[Value]>, Box<dyn std::error::Error + S
 /// A function implemented by the host that can be imported and called by an IL4IL function.
 pub struct HostFunction<'env> {
     //signature:
-    closure: Box<dyn Fn(Box<[Value]>, &'env Runtime<'env>) -> HostFunctionResult + Send + Sync>,
+    closure: Box<dyn Fn(&[Value], &'env Runtime<'env>) -> HostFunctionResult + Send + Sync>,
 }
 
+// TODO: Maybe have a trait to allow conversion of values (e.g. u32, u64, etc.), and allow easy construction of HostFunction from closures (e.g. Fn(u32, u32) should be easily translated)
+
 impl<'env> HostFunction<'env> {
-    pub fn invoke<A: Into<Box<[Value]>>>(&self, arguments: A, runtime: &'env Runtime<'env>) -> HostFunctionResult {
-        (self.closure)(arguments.into(), runtime)
+    pub fn invoke(&self, arguments: &[Value], runtime: &'env Runtime<'env>) -> HostFunctionResult {
+        (self.closure)(arguments, runtime)
     }
 }
 
