@@ -159,6 +159,7 @@ impl Signature {
         &self.types
     }
 
+    /// Returns the result types followed by the parameter types.
     pub fn into_types(self) -> Box<[type_system::Reference]> {
         self.types
     }

@@ -1,5 +1,9 @@
 //! Contains types representing IL4IL functions.
 
+mod signature;
+
+pub use signature::Signature;
+
 pub mod template;
 
 use crate::module::Module;

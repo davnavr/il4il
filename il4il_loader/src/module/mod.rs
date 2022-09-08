@@ -13,6 +13,8 @@ use std::fmt::{Debug, Formatter};
 
 type Types<'env> = lazy_init::LazyTransform<Vec<il4il::type_system::Type>, Box<[types::Type<'env>]>>;
 
+type FunctionSignatures<'env> = lazy_init::LazyTransform<Vec<il4il::function::Signature>, Box<[function::Signature<'env>]>>;
+
 type FunctionDefinitions<'env> = lazy_init::LazyTransform<Vec<il4il::function::Definition>, Box<[function::template::Definition<'env>]>>;
 
 type FunctionImports<'env> = lazy_init::LazyTransform<Vec<il4il::function::Import<'env>>, Box<[function::template::Import<'env>]>>;
@@ -31,6 +33,7 @@ type EntryPoint<'env> = lazy_init::LazyTransform<Option<il4il::index::FunctionIn
 pub struct Module<'env> {
     environment: &'env Context,
     types: Types<'env>,
+    function_signatures: FunctionSignatures<'env>,
     function_definitions: FunctionDefinitions<'env>,
     function_imports: FunctionImports<'env>,
     function_templates: FunctionTemplates<'env>,
@@ -48,6 +51,7 @@ impl<'env> Module<'env> {
         Self {
             environment,
             types: Types::new(contents.types),
+            function_signatures: FunctionSignatures::new(contents.function_signatures),
             function_definitions: FunctionDefinitions::new(contents.function_definitions),
             function_imports: FunctionImports::new(contents.function_imports),
             function_templates: FunctionTemplates::new(contents.function_templates),
@@ -65,6 +69,11 @@ impl<'env> Module<'env> {
     pub fn types(&'env self) -> &'env [types::Type<'env>] {
         self.types
             .get_or_create(|types| types.into_iter().map(|ty| types::Type::new(self, ty)).collect())
+    }
+
+    pub fn function_signatures(&'env self) -> &'env [function::Signature<'env>] {
+        self.function_signatures
+            .get_or_create(|signatures| signatures.into_iter().map(|sig| function::Signature::new(self, sig)).collect())
     }
 
     /// Gets this module's function definitions.
