@@ -10,8 +10,7 @@ pub type HostFunctionResult = Result<Box<[Value]>, Box<dyn std::error::Error + S
 
 /// A function implemented by the host that can be imported and called by an IL4IL function.
 pub struct HostFunction<'env> {
-    //signature
-    // TODO: Include function signature (parameter & return types)
+    //signature:
     closure: Box<dyn Fn(Box<[Value]>, &'env Runtime<'env>) -> HostFunctionResult + Send + Sync>,
 }
 

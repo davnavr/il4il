@@ -8,6 +8,8 @@ mod module;
 pub use function::{Function, HostFunction, HostFunctionResult};
 pub use module::Module;
 
+pub mod resolver;
+
 use crate::loader;
 use std::sync::{Arc, Mutex};
 

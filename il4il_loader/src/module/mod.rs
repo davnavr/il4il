@@ -71,6 +71,10 @@ impl<'env> Module<'env> {
             .get_or_create(|types| types.into_iter().map(|ty| types::Type::new(self, ty)).collect())
     }
 
+    pub fn name(&'env self) -> Option<&'env il4il::identifier::Id> {
+        None
+    }
+
     pub fn function_signatures(&'env self) -> &'env [function::Signature<'env>] {
         self.function_signatures
             .get_or_create(|signatures| signatures.into_iter().map(|sig| function::Signature::new(self, sig)).collect())
