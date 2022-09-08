@@ -1,6 +1,6 @@
 //! Module for interacting with the IL4IL interpreter call stack.
 
-use crate::interpreter::Value;
+use crate::interpreter::value::Value;
 use crate::loader::{code, function};
 use il4il::index;
 use il4il::instruction::{self, Instruction};

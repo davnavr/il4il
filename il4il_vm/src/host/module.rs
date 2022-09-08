@@ -14,9 +14,10 @@ pub struct HostModule<'host, 'parent: 'host> {
 
 impl<'host, 'parent: 'host> HostModule<'host, 'parent> {
     pub(super) fn new(host: &'host Host<'host, 'parent>, module: il4il::validation::ValidModule<'parent>) -> Self {
+        #[allow(unreachable_code)]
         Self {
             host,
-            module: host.runtime.load_module(module),
+            module: todo!("load module {module:?}"), // host.runtime.load_module(module),
         }
     }
 
@@ -36,7 +37,7 @@ impl<'host, 'parent: 'host> HostModule<'host, 'parent> {
     pub fn interpret_entry_point(
         &'host self,
         builder: std::thread::Builder,
-        arguments: Box<[crate::interpreter::Value]>,
+        arguments: Box<[crate::interpreter::value::Value]>,
     ) -> Option<std::io::Result<host::InterpreterThread<'host, 'parent>>> {
         let entry_point: &'host crate::interpreter::Function<'host> = self.module().entry_point()?;
         Some(host::InterpreterThread::new(self.host, builder, entry_point, arguments))

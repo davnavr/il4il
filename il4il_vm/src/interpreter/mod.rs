@@ -1,12 +1,11 @@
 //! Contains the IL4IL bytecode interpreter.
 
 mod error;
-mod frame;
-mod value;
 
 pub use error::{Error, ErrorKind};
-pub use frame::Frame;
-pub use value::Value;
+
+pub mod frame;
+pub mod value;
 
 use crate::loader;
 use crate::runtime;
@@ -24,19 +23,19 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// [`host`]: crate::host
 pub struct Interpreter<'env> {
     runtime: &'env runtime::Runtime<'env>,
-    call_stack: Vec<Frame<'env>>,
+    call_stack: Vec<frame::Frame<'env>>,
 }
 
 impl<'env> Interpreter<'env> {
-    pub fn initialize(runtime: &'env runtime::Runtime<'env>, entry_point: &'env Function<'env>, arguments: Box<[Value]>) -> Self {
+    pub fn initialize(runtime: &'env runtime::Runtime<'env>, entry_point: &'env Function<'env>, arguments: Box<[value::Value]>) -> Self {
         Self {
             runtime,
-            call_stack: vec![Frame::new(runtime, entry_point, arguments)],
+            call_stack: vec![frame::Frame::new(runtime, entry_point, arguments)],
         }
     }
 
     /// Iterates over the frames in the interpreter's call stack, starting with the most recent frames first.
-    pub fn iter_call_stack(&self) -> impl std::iter::ExactSizeIterator<Item = &Frame<'env>> {
+    pub fn iter_call_stack(&self) -> impl std::iter::ExactSizeIterator<Item = &frame::Frame<'env>> {
         self.call_stack.iter().rev()
     }
 
@@ -51,7 +50,7 @@ impl<'env> Interpreter<'env> {
     /// # Errors
     ///
     /// Returns an [`Error`] describing what went wrong.
-    pub fn step(&mut self) -> Result<Option<Box<[Value]>>> {
+    pub fn step(&mut self) -> Result<Option<Box<[value::Value]>>> {
         use il4il::instruction::Instruction;
 
         let current_frame = self.call_stack.last_mut().ok_or_else(|| Error::new(ErrorKind::EndOfProgram))?;
@@ -84,7 +83,7 @@ impl<'env> Interpreter<'env> {
 impl std::fmt::Debug for Interpreter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         #[repr(transparent)]
-        struct Frames<'a, 'b: 'a>(&'a [Frame<'b>]);
+        struct Frames<'a, 'b: 'a>(&'a [frame::Frame<'b>]);
 
         impl std::fmt::Debug for Frames<'_, '_> {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

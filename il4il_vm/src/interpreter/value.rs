@@ -1,4 +1,4 @@
-//! Contains the [`Value`] struct.
+//! Module for manipulating runtime values.
 
 use crate::loader::types::{self, TypeKind};
 use std::num::NonZeroUsize;

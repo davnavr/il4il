@@ -26,7 +26,7 @@ pub struct ValidationError;
 pub type Result<T> = error_stack::Result<T, ValidationError>;
 
 /// Represents a validated SAILAR module.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ValidModule<'data> {
     contents: ModuleContents<'data>,
     symbols: crate::symbol::Lookup<'data>,

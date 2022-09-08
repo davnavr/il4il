@@ -3,7 +3,7 @@
 use crate::host::Host;
 use crate::interpreter;
 
-type Handle<'host> = std::thread::ScopedJoinHandle<'host, interpreter::Result<Box<[interpreter::Value]>>>;
+type Handle<'host> = std::thread::ScopedJoinHandle<'host, interpreter::Result<Box<[interpreter::value::Value]>>>;
 
 /// Represents a thread containing an IL4IL bytecode [`Interpreter`].
 ///
@@ -18,7 +18,7 @@ impl<'host, 'parent: 'host> InterpreterThread<'host, 'parent> {
         host: &'host Host<'host, 'parent>,
         builder: std::thread::Builder,
         entry_point: &'host interpreter::Function<'host>,
-        arguments: Box<[interpreter::Value]>,
+        arguments: Box<[interpreter::value::Value]>,
     ) -> std::io::Result<Self> {
         let mut interpreter = interpreter::Interpreter::initialize(&host.runtime, entry_point, arguments);
 
@@ -38,7 +38,7 @@ impl<'host, 'parent: 'host> InterpreterThread<'host, 'parent> {
     }
 
     /// Blocks the current thread until the interpreter is finished executing.
-    pub fn await_results_blocking(self) -> interpreter::Result<Box<[interpreter::Value]>> {
+    pub fn await_results_blocking(self) -> interpreter::Result<Box<[interpreter::value::Value]>> {
         match self.handle.join() {
             Ok(results) => results,
             Err(e) => std::panic::resume_unwind(e), // TODO: Figure out how to handle a thread panic

@@ -1,6 +1,6 @@
 //! Provides the [`Function`] struct.
 
-use crate::interpreter::Value;
+use crate::interpreter::value::Value;
 use crate::loader;
 use crate::runtime::Runtime;
 use std::fmt::{Debug, Formatter};

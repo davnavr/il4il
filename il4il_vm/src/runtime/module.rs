@@ -1,6 +1,6 @@
 //! Provides the [`Module`] struct.
 
-use crate::interpreter::{self, Interpreter};
+use crate::interpreter::{value::Value, Interpreter};
 use crate::loader;
 use crate::runtime;
 use crate::runtime::resolver;
@@ -54,11 +54,7 @@ impl<'env> Module<'env> {
         &self.module
     }
 
-    fn setup_interpreter(
-        &'env self,
-        instantiation: &'env loader::function::Instantiation<'env>,
-        arguments: Box<[interpreter::Value]>,
-    ) -> Interpreter {
+    fn setup_interpreter(&'env self, instantiation: &'env loader::function::Instantiation<'env>, arguments: Box<[Value]>) -> Interpreter {
         Interpreter::initialize(self.runtime, instantiation, arguments)
     }
 
@@ -70,7 +66,7 @@ impl<'env> Module<'env> {
     pub fn interpret_function_instantiation(
         &'env self,
         index: il4il::index::FunctionInstantiation,
-        arguments: Box<[interpreter::Value]>,
+        arguments: Box<[Value]>,
     ) -> Interpreter {
         self.setup_interpreter(&self.module.function_instantiations()[usize::from(index)], arguments)
     }
@@ -80,7 +76,7 @@ impl<'env> Module<'env> {
     /// See [`Interpreter::initialize`] for more information.
     ///
     /// [`Interpreter::initialize`]: crate::interpreter::Interpreter::initialize
-    pub fn interpret_entry_point(&'env self, arguments: Box<[interpreter::Value]>) -> Option<Interpreter> {
+    pub fn interpret_entry_point(&'env self, arguments: Box<[Value]>) -> Option<Interpreter> {
         self.module.entry_point().map(|entry| self.setup_interpreter(entry, arguments))
     }
 }
