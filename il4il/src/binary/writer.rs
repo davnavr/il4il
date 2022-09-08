@@ -336,9 +336,10 @@ impl WriteTo for &function::Instantiation {
     }
 }
 
-impl WriteTo for &function::Import {
+impl<'data> WriteTo for &function::Import<'data> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         write_length(usize::from(self.module), out)?;
+        <&identifier::Id>::write_to(self.symbol.as_ref(), out)?;
         write_length(usize::from(self.signature), out)
     }
 }

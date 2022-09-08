@@ -13,7 +13,7 @@ pub struct ModuleContents<'data> {
     pub symbols: Vec<crate::symbol::Assignment<'data>>,
     pub types: Vec<type_system::Type>,
     pub function_signatures: Vec<function::Signature>,
-    pub function_imports: Vec<function::Import>,
+    pub function_imports: Vec<function::Import<'data>>,
     pub function_definitions: Vec<function::Definition>,
     pub function_bodies: Vec<function::Body>,
     pub function_templates: function::TemplateLookup,

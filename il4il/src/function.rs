@@ -83,14 +83,15 @@ impl Definition {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
-pub struct Import {
+pub struct Import<'data> {
     pub module: index::Module,
+    pub symbol: std::borrow::Cow<'data, crate::identifier::Id>,
     pub signature: index::FunctionSignature,
 }
 
-impl Import {
-    pub fn new(module: index::Module, signature: index::FunctionSignature) -> Self {
-        Self { module, signature }
+impl<'data> Import<'data> {
+    pub fn new<N: Into<std::borrow::Cow<'data, crate::identifier::Id>>>(module: index::Module, name: N, signature: index::FunctionSignature) -> Self {
+        Self { module, symbol: name.into(), signature }
     }
 }
 

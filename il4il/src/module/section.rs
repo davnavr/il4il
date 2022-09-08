@@ -73,7 +73,7 @@ pub enum Section<'data> {
     /// [`index::FunctionSignature`]: crate::index::FunctionSignature
     FunctionSignature(Vec<crate::function::Signature>),
     FunctionInstantiation(Vec<crate::function::Instantiation>),
-    FunctionImport(Vec<crate::function::Import>),
+    FunctionImport(Vec<crate::function::Import<'data>>),
     FunctionDefinition(Vec<crate::function::Definition>),
     /// The code section contains function bodies, which consist of basic blocks containing sequences of instructions.
     Code(Vec<crate::function::Body>),
