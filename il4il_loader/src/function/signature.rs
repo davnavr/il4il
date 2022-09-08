@@ -42,3 +42,20 @@ impl<'env> Signature<'env> {
         &all_types.types()[*result_count..]
     }
 }
+
+pub(super) struct Reference<'env> {
+    inner: lazy_init::LazyTransform<(&'env Module<'env>, il4il::index::FunctionSignature), &'env Signature<'env>>,
+}
+
+impl<'env> Reference<'env> {
+    pub fn new(module: &'env Module<'env>, index: il4il::index::FunctionSignature) -> Self {
+        Self {
+            inner: lazy_init::LazyTransform::new((module, index)),
+        }
+    }
+
+    pub fn signature(&'env self) -> &'env Signature<'env> {
+        self.inner
+            .get_or_create(|(module, index)| &module.function_signatures()[usize::from(index)])
+    }
+}

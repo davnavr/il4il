@@ -1,6 +1,7 @@
 //! Contains types representing IL4IL function templates.
 
 use crate::code::Code;
+use crate::function::signature;
 use crate::module::{self, Module};
 use std::fmt::{Debug, Formatter};
 
@@ -18,6 +19,7 @@ impl Debug for BodyDebug<'_, '_> {
 /// A function definition defined in the current module.
 pub struct Definition<'env> {
     module: &'env Module<'env>,
+    signature: signature::Reference<'env>,
     body: Body<'env>,
 }
 
@@ -25,6 +27,7 @@ impl<'env> Definition<'env> {
     pub(crate) fn new(module: &'env Module<'env>, definition: il4il::function::Definition) -> Self {
         Self {
             module,
+            signature: signature::Reference::new(module, definition.signature),
             body: Body::new(definition.body),
         }
     }
@@ -35,6 +38,10 @@ impl<'env> Definition<'env> {
 
     pub fn body(&'env self) -> &'env Code<'env> {
         self.body.get_or_create(|index| &self.module.function_bodies()[usize::from(index)])
+    }
+
+    pub fn signature(&'env self) -> &'env signature::Signature<'env> {
+        self.signature.signature()
     }
 }
 
@@ -49,13 +56,16 @@ impl Debug for Definition<'_> {
 pub struct Import<'env> {
     module: &'env module::Import<'env>,
     symbol: std::borrow::Cow<'env, il4il::identifier::Id>,
+    signature: signature::Reference<'env>,
 }
 
 impl<'env> Import<'env> {
     pub(crate) fn new(importer: &'env Module<'env>, template: il4il::function::Import<'env>) -> Self {
+        let module = &importer.module_imports()[usize::from(template.module)];
         Self {
-            module: &importer.module_imports()[usize::from(template.module)],
+            module,
             symbol: template.symbol,
+            signature: signature::Reference::new(module.importer(), template.signature),
         }
     }
 
@@ -66,11 +76,31 @@ impl<'env> Import<'env> {
     pub fn symbol(&'env self) -> &'env il4il::identifier::Id {
         self.symbol.as_ref()
     }
+
+    pub fn signature(&'env self) -> &'env signature::Signature<'env> {
+        self.signature.signature()
+    }
+}
+
+impl Debug for Import<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Import").field("symbol", &self.symbol).finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug)]
 pub enum TemplateKind<'env> {
     Definition(&'env Definition<'env>),
+    Import(&'env Import<'env>),
+}
+
+impl<'env> TemplateKind<'env> {
+    pub fn signature(&'env self) -> &'env signature::Signature<'env> {
+        match self {
+            Self::Definition(definition) => definition.signature(),
+            Self::Import(import) => import.signature(),
+        }
+    }
 }
 
 pub struct Template<'env> {
@@ -93,7 +123,7 @@ impl<'env> Template<'env> {
     pub fn kind(&'env self) -> &'env TemplateKind<'env> {
         self.kind.get_or_create(|template| match template {
             il4il::function::Template::Definition(index) => TemplateKind::Definition(&self.module.function_definitions()[index]),
-            il4il::function::Template::Import(index) => todo!("handle function imports"),
+            il4il::function::Template::Import(index) => TemplateKind::Import(&self.module.function_imports()[index]),
         })
     }
 }
