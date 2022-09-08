@@ -90,8 +90,16 @@ pub struct Import<'data> {
 }
 
 impl<'data> Import<'data> {
-    pub fn new<N: Into<std::borrow::Cow<'data, crate::identifier::Id>>>(module: index::Module, name: N, signature: index::FunctionSignature) -> Self {
-        Self { module, symbol: name.into(), signature }
+    pub fn new<N: Into<std::borrow::Cow<'data, crate::identifier::Id>>>(
+        module: index::Module,
+        name: N,
+        signature: index::FunctionSignature,
+    ) -> Self {
+        Self {
+            module,
+            symbol: name.into(),
+            signature,
+        }
     }
 }
 

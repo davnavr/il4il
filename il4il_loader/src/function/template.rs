@@ -1,7 +1,7 @@
 //! Contains types representing IL4IL function templates.
 
 use crate::code::Code;
-use crate::module::Module;
+use crate::module::{self, Module};
 use std::fmt::{Debug, Formatter};
 
 type Body<'env> = lazy_init::LazyTransform<il4il::index::FunctionBody, &'env Code<'env>>;
@@ -43,6 +43,28 @@ impl Debug for Definition<'_> {
         f.debug_struct("Definition")
             .field("body", &BodyDebug(&self.body))
             .finish_non_exhaustive()
+    }
+}
+
+pub struct Import<'env> {
+    module: &'env module::Import<'env>,
+    symbol: std::borrow::Cow<'env, il4il::identifier::Id>,
+}
+
+impl<'env> Import<'env> {
+    pub(crate) fn new(importer: &'env Module<'env>, template: il4il::function::Import<'env>) -> Self {
+        Self {
+            module: &importer.module_imports()[usize::from(template.module)],
+            symbol: template.symbol,
+        }
+    }
+
+    pub fn module(&'env self) -> &'env module::Import<'env> {
+        self.module
+    }
+
+    pub fn symbol(&'env self) -> &'env il4il::identifier::Id {
+        self.symbol.as_ref()
     }
 }
 

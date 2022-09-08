@@ -1,5 +1,9 @@
 //! Contains the [`Module`] struct.
 
+mod import;
+
+pub use import::Import;
+
 use crate::code;
 use crate::debug::LazyDebug;
 use crate::environment::Context;
@@ -11,11 +15,15 @@ type Types<'env> = lazy_init::LazyTransform<Vec<il4il::type_system::Type>, Box<[
 
 type FunctionDefinitions<'env> = lazy_init::LazyTransform<Vec<il4il::function::Definition>, Box<[function::template::Definition<'env>]>>;
 
+type FunctionImports<'env> = lazy_init::LazyTransform<Vec<il4il::function::Import<'env>>, Box<[function::template::Import<'env>]>>;
+
 type FunctionTemplates<'env> = lazy_init::LazyTransform<il4il::function::TemplateLookup, Box<[function::template::Template<'env>]>>;
 
 type FunctionInstantiations<'env> = lazy_init::LazyTransform<Vec<il4il::function::Instantiation>, Box<[function::Instantiation<'env>]>>;
 
 type FunctionBodies<'env> = lazy_init::LazyTransform<Vec<il4il::function::Body>, Box<[code::Code<'env>]>>;
+
+type ModuleImports<'env> = lazy_init::LazyTransform<Vec<il4il::module::ModuleName<'env>>, Box<[Import<'env>]>>;
 
 type EntryPoint<'env> = lazy_init::LazyTransform<Option<il4il::index::FunctionInstantiation>, Option<&'env function::Instantiation<'env>>>;
 
@@ -24,9 +32,11 @@ pub struct Module<'env> {
     environment: &'env Context,
     types: Types<'env>,
     function_definitions: FunctionDefinitions<'env>,
+    function_imports: FunctionImports<'env>,
     function_templates: FunctionTemplates<'env>,
     function_instantiations: FunctionInstantiations<'env>,
     function_bodies: FunctionBodies<'env>,
+    module_imports: ModuleImports<'env>,
     entry_point: EntryPoint<'env>,
 }
 
@@ -39,9 +49,11 @@ impl<'env> Module<'env> {
             environment,
             types: Types::new(contents.types),
             function_definitions: FunctionDefinitions::new(contents.function_definitions),
+            function_imports: FunctionImports::new(contents.function_imports),
             function_templates: FunctionTemplates::new(contents.function_templates),
             function_instantiations: FunctionInstantiations::new(contents.function_instantiations),
             function_bodies: FunctionBodies::new(contents.function_bodies),
+            module_imports: ModuleImports::new(contents.module_imports),
             entry_point: EntryPoint::new(contents.entry_point.first().copied()),
         }
     }
@@ -61,6 +73,15 @@ impl<'env> Module<'env> {
             definitions
                 .into_iter()
                 .map(|definition| function::template::Definition::new(self, definition))
+                .collect()
+        })
+    }
+
+    pub fn function_imports(&'env self) -> &'env [function::template::Import<'env>] {
+        self.function_imports.get_or_create(|imports| {
+            imports
+                .into_iter()
+                .map(|func| function::template::Import::new(self, func))
                 .collect()
         })
     }
@@ -93,6 +114,11 @@ impl<'env> Module<'env> {
                 .map(|(index, body)| code::Code::new(self, index.into(), body))
                 .collect()
         })
+    }
+
+    pub fn module_imports(&'env self) -> &'env [Import<'env>] {
+        self.module_imports
+            .get_or_create(|imports| imports.into_iter().map(|name| Import::new(self, name)).collect())
     }
 
     /// Gets the module's entry point function, or `None` it exists.
