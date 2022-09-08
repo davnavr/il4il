@@ -3,22 +3,51 @@
 use crate::interpreter::{self, Interpreter};
 use crate::loader;
 use crate::runtime;
+use crate::runtime::resolver;
 use std::fmt::{Debug, Formatter};
 
-// TODO: THis should keep track of function imports.
+enum ModuleResolver<'env> {
+    Borrowed(&'env dyn resolver::Resolver),
+    Owned(resolver::BoxedResolver),
+}
+
+impl<'env> ModuleResolver<'env> {
+    pub fn as_dyn_resolver(&self) -> &dyn resolver::Resolver {
+        match self {
+            Self::Borrowed(borrowed) => *borrowed,
+            Self::Owned(owned) => owned.as_ref(),
+        }
+    }
+}
+
 /// Encapsulates all runtime state associated with a given IL4IL Module.
 pub struct Module<'env> {
     runtime: &'env runtime::Runtime<'env>,
     module: loader::module::Module<'env>,
+    resolver: ModuleResolver<'env>,
 }
 
 impl<'env> Module<'env> {
-    pub(super) fn new(runtime: &'env runtime::Runtime<'env>, module: loader::module::Module<'env>) -> Self {
-        Self { runtime, module }
+    pub(super) fn new(
+        runtime: &'env runtime::Runtime<'env>,
+        module: loader::module::Module<'env>,
+        resolver: Option<resolver::BoxedResolver>,
+    ) -> Self {
+        Self {
+            runtime,
+            module,
+            resolver: resolver
+                .map(ModuleResolver::Owned)
+                .unwrap_or_else(|| ModuleResolver::Borrowed(runtime.default_resolver())),
+        }
     }
 
     pub fn runtime(&'env self) -> &'env runtime::Runtime<'env> {
         self.runtime
+    }
+
+    pub fn resolver(&'env self) -> &'env dyn resolver::Resolver {
+        self.resolver.as_dyn_resolver()
     }
 
     pub fn module(&'env self) -> &'env loader::module::Module<'env> {

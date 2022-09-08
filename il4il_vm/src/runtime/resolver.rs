@@ -11,12 +11,21 @@ pub type Result<T> = std::result::Result<T, ResolverError>;
 
 pub type FunctionImport<'env> = &'env il4il_loader::function::template::Import<'env>;
 
-pub trait Resolver {
+pub trait Resolver: Send + Sync {
     fn resolve_function_import<'env>(
+        &self,
         runtime: &'env runtime::Runtime<'env>,
         import: FunctionImport<'env>,
     ) -> Result<runtime::Function<'env>>;
 }
+
+impl Resolver for () {
+    fn resolve_function_import<'env>(&self, _: &'env runtime::Runtime<'env>, _: FunctionImport<'env>) -> Result<runtime::Function<'env>> {
+        Err(Box::from("no import resolver"))
+    }
+}
+
+pub type BoxedResolver = Box<dyn Resolver>;
 
 #[derive(Debug)]
 #[non_exhaustive]
