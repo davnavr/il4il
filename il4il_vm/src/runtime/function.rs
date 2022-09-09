@@ -87,7 +87,7 @@ impl<'env> Function<'env> {
     }
 
     pub fn implementation(&self) -> &'env FunctionImplementation<'env> {
-        &self.implementation
+        self.implementation
     }
 }
 

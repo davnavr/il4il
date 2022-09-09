@@ -72,7 +72,31 @@ impl<'env> Module<'env> {
                 occupied_entry = occupied;
                 occupied_entry.get()
             }
-            hash_map::Entry::Vacant(vacant) => vacant.insert(todo!()),
+            hash_map::Entry::Vacant(vacant) => {
+                let template = &self.module.function_templates()[usize::from(index)];
+                vacant.insert(Box::new({
+                    match template.kind() {
+                        loader::function::template::TemplateKind::Definition(definition) => {
+                            runtime::function::FunctionImplementation::Defined(definition)
+                        }
+                        loader::function::template::TemplateKind::Import(import) => {
+                            let resolved = self
+                                .resolver()
+                                .resolve_function_import(self.runtime, import)
+                                .map_err(|e| resolver::ImportError::new(import.module(), *import, e))?;
+
+                            match resolved {
+                                runtime::FunctionImplementation::Defined(definition) => {
+                                    runtime::function::FunctionImplementation::Defined(definition)
+                                }
+                                runtime::FunctionImplementation::Host(host_function) => {
+                                    runtime::function::FunctionImplementation::Host(host_function)
+                                }
+                            }
+                        }
+                    }
+                }))
+            }
         };
 
         Ok(unsafe {
