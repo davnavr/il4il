@@ -11,19 +11,29 @@ use std::fmt::{Debug, Formatter};
 
 pub struct Instantiation<'env> {
     module: &'env Module<'env>,
+    index: il4il::index::FunctionInstantiation,
     template: lazy_init::LazyTransform<il4il::index::FunctionTemplate, &'env template::Template<'env>>,
 }
 
 impl<'env> Instantiation<'env> {
-    pub(crate) fn new(module: &'env Module<'env>, instantiation: il4il::function::Instantiation) -> Self {
+    pub(crate) fn new(
+        module: &'env Module<'env>,
+        index: il4il::index::FunctionInstantiation,
+        instantiation: il4il::function::Instantiation,
+    ) -> Self {
         Self {
             module,
+            index,
             template: lazy_init::LazyTransform::new(instantiation.template),
         }
     }
 
     pub fn module(&'env self) -> &'env Module<'env> {
         self.module
+    }
+
+    pub fn index(&'env self) -> il4il::index::FunctionInstantiation {
+        self.index
     }
 
     pub fn template(&'env self) -> &'env template::Template<'env> {

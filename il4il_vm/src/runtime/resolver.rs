@@ -16,11 +16,15 @@ pub trait Resolver: Send + Sync {
         &self,
         runtime: &'env runtime::Runtime<'env>,
         import: FunctionImport<'env>,
-    ) -> Result<runtime::Function<'env>>;
+    ) -> Result<runtime::FunctionImplementation<'env>>;
 }
 
 impl Resolver for () {
-    fn resolve_function_import<'env>(&self, _: &'env runtime::Runtime<'env>, _: FunctionImport<'env>) -> Result<runtime::Function<'env>> {
+    fn resolve_function_import<'env>(
+        &self,
+        _: &'env runtime::Runtime<'env>,
+        _: FunctionImport<'env>,
+    ) -> Result<runtime::FunctionImplementation<'env>> {
         Err(Box::from("no import resolver"))
     }
 }

@@ -104,7 +104,8 @@ impl<'env> Module<'env> {
         self.function_templates.get_or_create(|lookup| {
             lookup
                 .into_templates()
-                .map(|template| function::template::Template::new(self, template))
+                .enumerate()
+                .map(|(index, template)| function::template::Template::new(self, index.into(), template))
                 .collect()
         })
     }
@@ -113,7 +114,8 @@ impl<'env> Module<'env> {
         self.function_instantiations.get_or_create(|instantiations| {
             instantiations
                 .into_iter()
-                .map(|inst| function::Instantiation::new(self, inst))
+                .enumerate()
+                .map(|(index, inst)| function::Instantiation::new(self, index.into(), inst))
                 .collect()
         })
     }

@@ -1,9 +1,10 @@
 //! Module for interacting with the IL4IL interpreter call stack.
 
 use crate::interpreter::value::Value;
-use crate::loader::{code, function};
+use crate::runtime::{Function, FunctionImplementation};
 use il4il::index;
 use il4il::instruction::{self, Instruction};
+use il4il_loader::{code, function};
 
 struct InstructionPointer<'env> {
     index: usize,
@@ -118,33 +119,26 @@ pub enum FrameKind<'env> {
 /// Represents a frame in the call stack.
 pub struct Frame<'env> {
     runtime: &'env crate::runtime::Runtime<'env>,
-    function: &'env function::Instantiation<'env>,
+    function: Function<'env>,
     arguments: Box<[Value]>,
     kind: FrameKind<'env>,
 }
 
 impl<'env> Frame<'env> {
-    pub(super) fn new(
-        runtime: &'env crate::runtime::Runtime<'env>,
-        function: &'env function::Instantiation<'env>,
-        arguments: Box<[Value]>,
-    ) -> Self {
+    pub(super) fn new(runtime: &'env crate::runtime::Runtime<'env>, function: Function<'env>, arguments: Box<[Value]>) -> Self {
         Self {
             runtime,
-            function,
             arguments,
-            kind: match function.template().kind() {
-                function::template::TemplateKind::Definition(definition) => FrameKind::Bytecode(BytecodeFrame::from_definition(definition)),
-                function::template::TemplateKind::Import(import) => {
-                    // TODO: Need to do type checking for imported functions.
-                    todo!()
-                }
+            kind: match function.implementation() {
+                FunctionImplementation::Defined(definition) => FrameKind::Bytecode(BytecodeFrame::from_definition(definition)),
+                FunctionImplementation::Host(host_function) => FrameKind::Host(HostFrame { function: host_function }),
             },
+            function,
         }
     }
 
-    pub fn function(&self) -> &'env function::Instantiation {
-        self.function
+    pub fn function(&self) -> &Function<'env> {
+        &self.function
     }
 
     pub fn arguments(&self) -> &[Value] {
@@ -167,7 +161,7 @@ impl<'env> Frame<'env> {
 impl std::fmt::Debug for Frame<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Frame")
-            .field("function", self.function)
+            .field("function", &self.function)
             .field("arguments", &self.arguments)
             .field("kind", &self.kind)
             .finish_non_exhaustive()

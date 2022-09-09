@@ -7,10 +7,7 @@ pub use error::{Error, ErrorKind};
 pub mod call_stack;
 pub mod value;
 
-use crate::loader;
-use crate::runtime;
-
-pub(crate) type Function<'env> = loader::function::Instantiation<'env>;
+use crate::runtime::{self, Function};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -27,7 +24,7 @@ pub struct Interpreter<'env> {
 }
 
 impl<'env> Interpreter<'env> {
-    pub fn initialize(runtime: &'env runtime::Runtime<'env>, entry_point: &'env Function<'env>, arguments: Box<[value::Value]>) -> Self {
+    pub fn initialize(runtime: &'env runtime::Runtime<'env>, entry_point: Function<'env>, arguments: Box<[value::Value]>) -> Self {
         Self {
             runtime,
             call_stack: vec![call_stack::Frame::new(runtime, entry_point, arguments)],
@@ -89,7 +86,7 @@ impl<'env> Interpreter<'env> {
         if let Some(results) = return_values {
             self.call_stack.pop();
             if let Some(previous_frame) = self.call_stack.last() {
-                todo!("insert registers containing results")
+                todo!("insert registers containing results {:?}", previous_frame)
             } else {
                 // Call stack is empty, return the results
                 Ok(Some(results))

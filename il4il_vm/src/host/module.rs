@@ -25,8 +25,8 @@ impl<'host, 'parent: 'host> HostModule<'host, 'parent> {
         self.host
     }
 
-    pub fn module(&'host self) -> &'host crate::loader::module::Module<'host> {
-        self.module.module()
+    pub fn module(&'host self) -> &'host runtime::Module<'host> {
+        &self.module
     }
 
     /// Spawns an [`InterpreterThread`] to execute the module's entry point function.
@@ -39,7 +39,8 @@ impl<'host, 'parent: 'host> HostModule<'host, 'parent> {
         builder: std::thread::Builder,
         arguments: Box<[crate::interpreter::value::Value]>,
     ) -> Option<std::io::Result<host::InterpreterThread<'host, 'parent>>> {
-        let entry_point: &'host crate::interpreter::Function<'host> = self.module().entry_point()?;
+        // TODO: Handle an import error
+        let entry_point = self.module().get_entry_point_function().transpose()?.unwrap();
         Some(host::InterpreterThread::new(self.host, builder, entry_point, arguments))
     }
 }

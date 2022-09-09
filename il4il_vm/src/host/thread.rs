@@ -17,7 +17,7 @@ impl<'host, 'parent: 'host> InterpreterThread<'host, 'parent> {
     pub(super) fn new(
         host: &'host Host<'host, 'parent>,
         builder: std::thread::Builder,
-        entry_point: &'host interpreter::Function<'host>,
+        entry_point: crate::runtime::Function<'host>,
         arguments: Box<[interpreter::value::Value]>,
     ) -> std::io::Result<Self> {
         let mut interpreter = interpreter::Interpreter::initialize(&host.runtime, entry_point, arguments);

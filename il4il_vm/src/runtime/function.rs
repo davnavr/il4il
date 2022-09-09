@@ -1,17 +1,19 @@
 //! Provides the [`Function`] struct.
 
 use crate::interpreter::value::Value;
-use crate::loader;
 use crate::runtime::Runtime;
+use il4il_loader::function::Instantiation;
 use std::fmt::{Debug, Formatter};
 
 /// The result of invoking a [`HostFunction`].
 pub type HostFunctionResult = Result<Box<[Value]>, Box<dyn std::error::Error + Send + Sync>>;
 
+type HostFunctionClosure<'env> = Box<dyn Fn(&[Value], &'env Runtime<'env>) -> HostFunctionResult + Send + Sync>;
+
 /// A function implemented by the host that can be imported and called by an IL4IL function.
 pub struct HostFunction<'env> {
     //signature:
-    closure: Box<dyn Fn(&[Value], &'env Runtime<'env>) -> HostFunctionResult + Send + Sync>,
+    closure: HostFunctionClosure<'env>,
 }
 
 // TODO: Maybe have a trait to allow conversion of values (e.g. u32, u64, etc.), and allow easy construction of HostFunction from closures (e.g. Fn(u32, u32) should be easily translated)
@@ -39,21 +41,60 @@ impl Debug for HostFunction<'_> {
 
 /// Indicates the implementation of an IL4IL function.
 #[derive(Debug)]
-pub enum Function<'env> {
+pub enum FunctionImplementation<'env> {
     /// A function implemented by the host.
     Host(HostFunction<'env>),
     /// A function implemented in IL4IL bytecode.
-    Defined(&'env loader::function::Instantiation<'env>), // TODO: How to ensure HostFunction is used when template is a function import
+    Defined(&'env il4il_loader::function::template::Definition<'env>),
 }
 
-impl<'env> Function<'env> {
+impl<'env> FunctionImplementation<'env> {
     //pub fn host_with_closure<F>()
 
     //pub fn signature(&self)
 }
 
-impl<'env> From<HostFunction<'env>> for Function<'env> {
+impl<'env> From<HostFunction<'env>> for FunctionImplementation<'env> {
     fn from(host_function: HostFunction<'env>) -> Self {
         Self::Host(host_function)
+    }
+}
+
+pub struct Function<'env> {
+    module: &'env crate::runtime::Module<'env>,
+    instantiation: &'env Instantiation<'env>,
+    implementation: &'env FunctionImplementation<'env>,
+}
+
+impl<'env> Function<'env> {
+    pub(super) fn new(
+        module: &'env crate::runtime::Module<'env>,
+        instantiation: &'env Instantiation<'env>,
+    ) -> Result<Self, crate::runtime::resolver::ImportError> {
+        Ok(Self {
+            module,
+            instantiation,
+            implementation: module.get_function_implementation(instantiation.template().index())?,
+        })
+    }
+
+    pub fn module(&self) -> &'env crate::runtime::Module<'env> {
+        self.module
+    }
+
+    pub fn instantiation(&self) -> &'env Instantiation<'env> {
+        self.instantiation
+    }
+
+    pub fn implementation(&self) -> &'env FunctionImplementation<'env> {
+        self.implementation
+    }
+}
+
+impl Debug for Function<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Function")
+            .field("implementation", &self.implementation)
+            .finish_non_exhaustive()
     }
 }

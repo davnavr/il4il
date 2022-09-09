@@ -5,7 +5,7 @@ pub mod configuration;
 mod function;
 mod module;
 
-pub use function::{Function, HostFunction, HostFunctionResult};
+pub use function::{Function, FunctionImplementation, HostFunction, HostFunctionResult};
 pub use module::Module;
 
 pub mod resolver;
