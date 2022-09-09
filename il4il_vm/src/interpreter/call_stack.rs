@@ -47,11 +47,11 @@ impl std::iter::ExactSizeIterator for InstructionPointer<'_> {
 /// A frame in the call stack corresponding to a function provided by the host.
 #[derive(Debug)]
 pub struct HostFrame<'env> {
-    function: &'env crate::runtime::HostFunction<'env>,
+    function: &'env crate::runtime::HostFunction,
 }
 
 impl<'env> HostFrame<'env> {
-    pub fn function(&self) -> &'env crate::runtime::HostFunction<'env> {
+    pub fn function(&self) -> &'env crate::runtime::HostFunction {
         self.function
     }
 }
