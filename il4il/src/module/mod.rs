@@ -77,7 +77,7 @@ impl<'data> Module<'data> {
     ///
     /// ```
     /// # use il4il::module::*;
-    /// assert!(matches!(Module::read_from([ 1u8, 2, 3, 4 ].as_slice()), Err(e) if e.file_offset() == 0));
+    /// assert!(matches!(Module::read_from([ 1u8, 2, 3, 4 ].as_slice()), Err(e) if e.current_context().file_offset() == 0));
     /// ```
     pub fn read_from<R: std::io::Read>(source: R) -> parser::Result<Self> {
         let mut reader = parser::Source::new(source);
