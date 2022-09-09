@@ -4,7 +4,6 @@ use crate::error::{self, Error};
 use crate::identifier::Identifier;
 use crate::pointer::Exposed;
 use il4il::module::section::{self, Section};
-use std::borrow::Cow;
 
 pub type Instance = il4il::module::Module<'static>;
 
@@ -117,7 +116,7 @@ pub unsafe extern "C" fn il4il_module_add_metadata_name<'a>(module: Exposed<'a, 
         }
     };
 
-    metadata.push(section::Metadata::Name(Cow::Owned(id.clone())))
+    metadata.push(section::Metadata::Name(il4il::module::ModuleName::from_name(id.clone())))
 }
 
 /// Given an identifier string containing a path, writes the binary contents of the module to the file. Any IO error that occured can be

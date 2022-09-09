@@ -4,6 +4,7 @@ use crate::function;
 use crate::identifier::Identifier;
 use crate::index;
 use crate::integer;
+use crate::module;
 use crate::module::section::{self, Section};
 use crate::symbol;
 use crate::type_system;
@@ -373,11 +374,23 @@ impl ReadFrom for Identifier {
     }
 }
 
+impl ReadFrom for module::ModuleName<'_> {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let name = Identifier::read_from(source)?;
+        let reserved = parse_length::<usize>(source)?;
+        if reserved != 0 {
+            todo!("error for bad reserved module name number")
+        }
+
+        Ok(Self::from_name(name))
+    }
+}
+
 impl ReadFrom for section::Metadata<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         source.push_location("metadata");
         let metadata = match parse_flags_value(source)? {
-            section::MetadataKind::Name => section::Metadata::Name(Cow::Owned(Identifier::read_from(source)?)),
+            section::MetadataKind::Name => section::Metadata::Name(module::ModuleName::read_from(source)?),
         };
         source.pop_location();
         Ok(metadata)
@@ -508,7 +521,7 @@ impl ReadFrom for Section<'_> {
     }
 }
 
-impl<'data> ReadFrom for crate::module::Module<'data> {
+impl<'data> ReadFrom for module::Module<'data> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         {
             source.save_file_offset();

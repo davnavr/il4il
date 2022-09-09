@@ -411,7 +411,7 @@ impl WriteTo for &function::Body {
 impl WriteTo for &crate::module::ModuleName<'_> {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         self.name.write_to(out)?;
-        VarU28::MIN.write_to(out)
+        VarU28::from_u8(0).write_to(out)
     }
 }
 

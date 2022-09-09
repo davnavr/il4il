@@ -1,8 +1,5 @@
 //! Contains types that model the sections of an IL4IL module.
 
-use crate::identifier::Id;
-use std::borrow::Cow;
-
 crate::kind_enum! {
     /// Indicates the kind of metadata.
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -16,17 +13,10 @@ crate::kind_enum! {
 #[derive(Clone, Debug)]
 pub enum Metadata<'data> {
     /// Specifies the name of an IL4IL module.
-    Name(Cow<'data, Id>), // ModuleName<'data>
+    Name(crate::module::ModuleName<'data>),
 }
 
 impl<'data> Metadata<'data> {
-    #[must_use]
-    pub fn into_owned<'owned>(self) -> Metadata<'owned> {
-        match self {
-            Self::Name(name) => Metadata::Name(Cow::Owned(name.into_owned())),
-        }
-    }
-
     #[must_use]
     pub fn kind(&self) -> MetadataKind {
         match self {

@@ -49,7 +49,7 @@ pub unsafe extern "C" fn il4il_metadata_module_name<'a>(metadata: Exposed<'a, &'
     };
 
     match r {
-        Metadata::Name(name) => Box::into_raw(Box::new(name.clone().into_owned())),
+        Metadata::Name(name) => Box::into_raw(Box::new(name.clone().name.into_owned())),
         //_ => std::ptr::null_mut(),
     }
 }
