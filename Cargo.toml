@@ -5,5 +5,6 @@ members = [
     "il4il_samples",
     "il4il_loader",
     "il4il_vm",
-    "il4il_c"
+    "il4il_c",
+    "il4il-run"
 ]

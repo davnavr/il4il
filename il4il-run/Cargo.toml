@@ -1,0 +1,9 @@
+[package]
+name = "il4il-run"
+description = "An IL4IL bytecode interpreter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "3.2.20", features = ["derive"] }
+il4il_vm = { path = "../il4il_vm" }
