@@ -467,7 +467,7 @@ impl ReadFrom for section::Section<'_> {
         }
 
         let section = parse_section_contents(source, kind)
-            .attach_printable_lazy(|| format!("while parsing {kind:?} section with content starting at offset {start_offset:#X} with an expected length of {expected_length} bytes"))?;
+            .attach_printable_lazy(|| format!("while parsing {kind:?} ({:#02X}) section with content starting at offset {start_offset:#X} with an expected length of {expected_length} bytes", u8::from(kind)))?;
 
         let end_offset = source.file_offset();
         let actual_length = end_offset - start_offset;

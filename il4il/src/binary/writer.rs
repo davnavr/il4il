@@ -34,7 +34,8 @@ impl<W: Write> Destination<W> {
     /// This allows the writing of data in cases where the length of the bytes is not known beforehand.
     fn rent_buffer(&mut self) -> Destination<Vec<u8>> {
         let mut buffer_store = std::mem::take(&mut self.buffers);
-        let buffer = buffer_store.pop().unwrap_or_default();
+        let mut buffer = buffer_store.pop().unwrap_or_default();
+        buffer.clear();
         Destination {
             destination: buffer,
             buffers: buffer_store,
