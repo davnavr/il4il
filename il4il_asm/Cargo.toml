@@ -1,0 +1,8 @@
+[package]
+name = "il4il_asm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+il4il = { path = "../il4il" }
+logos = "0.12.1"
