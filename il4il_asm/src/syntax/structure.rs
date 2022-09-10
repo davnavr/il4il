@@ -1,5 +1,7 @@
 //! Contains types modelling a low-level view of an IL4IL program.
 
+use crate::syntax::Located;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum NodeKind<'src> {
     Word(&'src str),
@@ -13,22 +15,22 @@ pub enum Atom<'src> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum NodeContents<'src> {
-    Line(Vec<Atom<'src>>),
+    Line(Vec<Located<Atom<'src>>>),
     Block {
-        attributes: Vec<Atom<'src>>,
-        nodes: Vec<Node<'src>>,
+        attributes: Vec<Located<Atom<'src>>>,
+        nodes: Vec<Located<Node<'src>>>,
     },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Node<'src> {
-    pub kind: NodeKind<'src>,
+    pub kind: Located<NodeKind<'src>>,
     pub contents: NodeContents<'src>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Tree<'src> {
-    pub contents: Vec<Node<'src>>,
+    pub contents: Vec<Located<Node<'src>>>,
 }
