@@ -23,7 +23,7 @@ pub type HostScope<'host, 'parent> = &'host std::thread::Scope<'host, 'parent>;
 /// [`host`]: crate::host
 #[derive(Debug)]
 pub struct Host<'host, 'parent: 'host> {
-    runtime: Runtime<'host>,
+    runtime: Runtime<'host>, // TODO: Fix, for some reason presence of this field makes lifetimes all weird (maybe cause compiler things 'parent can only ever be 'host?)
     scope: HostScope<'host, 'parent>,
     //interpreters: Vec<Mutex>,
 }

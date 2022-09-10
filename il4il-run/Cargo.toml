@@ -7,3 +7,4 @@ edition = "2021"
 [dependencies]
 clap = { version = "3.2.20", features = ["derive"] }
 il4il_vm = { path = "../il4il_vm" }
+thiserror = "1.0.30"

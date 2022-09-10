@@ -1,6 +1,7 @@
 //! An IL4IL bytecode interpreter.
 
 use std::path::PathBuf;
+use il4il_vm::model::error_stack::{self, IntoReport, ResultExt};
 
 #[derive(clap::Parser, Debug)]
 #[clap(author, about, version)]
@@ -11,7 +12,22 @@ struct Arguments {
     reference: Vec<PathBuf>,
 }
 
-fn main() {
+#[derive(Debug, thiserror::Error)]
+#[error("interpreter error")]
+struct Error;
+
+type Result<T> = error_stack::Result<T, Error>;
+
+fn load_module<'env>(path: &std::path::Path) -> Result<il4il_vm::model::validation::ValidModule<'env>> {
+    match il4il_vm::model::validation::ValidModule::read_from_path(path) {
+        Ok(Ok(Ok(module))) => Ok(module),
+        Ok(Ok(Err(validation_error))) => Err(validation_error).change_context(Error),
+        Ok(Err(parser_error)) => Err(parser_error).change_context(Error),
+        Err(bad_path) => Err(bad_path).report().change_context(Error),
+    }.attach_printable_lazy(|| format!("could not load module {path:?}"))
+}
+
+fn main() -> Result<()> {
     let mut program_arguments = Vec::new();
     let interpreter_options = {
         let mut environment_arguments = std::env::args();
@@ -34,6 +50,18 @@ fn main() {
         <Arguments as clap::Parser>::parse_from(interpreter_arguments)
     };
 
-    println!("{interpreter_options:?}");
-    println!("{program_arguments:?}");
+    let program_path = if let Some(path) = &interpreter_options.program {
+        path
+    } else {
+        todo!("check current directory for a program")
+    };
+
+    let configuration = il4il_vm::runtime::configuration::Configuration::HOST;
+
+    std::thread::scope(|scope| {
+        let host = il4il_vm::host::Host::with_configuration_in_scope(configuration, scope);
+        let main_program = load_module(program_path)?;
+        host.load_module(main_program);
+        Ok(())
+    })
 }

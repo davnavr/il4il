@@ -13,11 +13,11 @@ pub struct HostModule<'host, 'parent: 'host> {
 }
 
 impl<'host, 'parent: 'host> HostModule<'host, 'parent> {
-    pub(super) fn new(host: &'host Host<'host, 'parent>, module: il4il::validation::ValidModule<'parent>) -> Self {
+    pub(super) fn new(host: &'host Host<'host, 'parent>, module: il4il::validation::ValidModule<'host>) -> Self {
         #[allow(unreachable_code)]
         Self {
             host,
-            module: todo!("load module {module:?}"), // host.runtime.load_module(module),
+            module: host.runtime.load_module(module, None),
         }
     }
 
