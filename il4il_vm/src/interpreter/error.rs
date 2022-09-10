@@ -49,3 +49,12 @@ impl Debug for Error {
         f.debug_struct("Error").field("kind", self.kind()).finish()
     }
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "error: {}", self.kind())
+        // TODO: Write the stack trace.
+    }
+}
+
+impl std::error::Error for Error {}

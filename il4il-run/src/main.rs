@@ -2,6 +2,7 @@
 
 use il4il_vm::model::error_stack::{self, IntoReport, ResultExt};
 use std::path::PathBuf;
+use std::process::ExitCode;
 
 #[derive(clap::Parser, Debug)]
 #[clap(author, about, version)]
@@ -28,7 +29,7 @@ fn load_module<'env>(path: &std::path::Path) -> Result<il4il_vm::model::validati
     .attach_printable_lazy(|| format!("could not load module {path:?}"))
 }
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
     let mut program_arguments = Vec::new();
     let interpreter_options = {
         let mut environment_arguments = std::env::args();
@@ -60,10 +61,30 @@ fn main() -> Result<()> {
     let configuration = il4il_vm::runtime::configuration::Configuration::HOST;
     let runtime = il4il_vm::runtime::Runtime::with_configuration(configuration);
 
-    std::thread::scope(|scope| {
+    let exit_code: Result<ExitCode> = std::thread::scope(|scope| {
         let host = il4il_vm::host::Host::with_runtime(&runtime, scope);
         let main_module = host.load_module(load_module(program_path)?);
-        dbg!(main_module);
-        Ok(())
-    })
+
+        let main_arguments = Default::default();
+        let main_builder = std::thread::Builder::new().name("entry".to_string());
+
+        Ok(
+            if let Some(main_thread) = main_module.interpret_entry_point(main_builder, main_arguments) {
+                let interpreter = main_thread.report().change_context(Error)?;
+                interpreter.await_results_blocking().report().change_context(Error)?;
+                ExitCode::SUCCESS
+            } else {
+                eprintln!("program does not contain an entry point function");
+                ExitCode::FAILURE
+            },
+        )
+    });
+
+    match exit_code {
+        Ok(code) => code,
+        Err(error) => {
+            eprintln!("{}", error);
+            ExitCode::FAILURE
+        }
+    }
 }
