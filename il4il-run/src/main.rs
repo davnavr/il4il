@@ -1,4 +1,4 @@
-//! An IL4IL bytecode interpreter.
+//! Contains the entry point for the IL4IL bytecode interpreter.
 
 use il4il_vm::model::error_stack::{self, IntoReport, ResultExt};
 use std::path::PathBuf;
@@ -7,8 +7,10 @@ use std::process::ExitCode;
 #[derive(clap::Parser, Debug)]
 #[clap(author, about, version)]
 struct Arguments {
+    /// Path to the module containing the entry point function to execute.
     #[clap(short, long)]
     program: Option<PathBuf>,
+    /// Path to an additional module to include in import resolution.
     #[clap(short, long)]
     reference: Vec<PathBuf>,
 }
