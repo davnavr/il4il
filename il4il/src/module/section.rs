@@ -27,7 +27,7 @@ impl<'data> Metadata<'data> {
 
 crate::kind_enum! {
     /// Indicates the kind of section.
-    #[derive(Clone, Debug, Eq, PartialEq)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     #[non_exhaustive]
     pub enum SectionKind : u8 {
         Metadata = 0,

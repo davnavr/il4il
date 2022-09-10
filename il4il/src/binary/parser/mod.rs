@@ -451,18 +451,23 @@ impl ReadFrom for section::Section<'_> {
         let expected_length = parse_length(source).attach_printable("section byte length")?;
         let start_offset = source.file_offset();
 
-        let section = match kind {
-            SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::Symbol => Section::Symbol(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::Type => Section::Type(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::FunctionSignature => Section::FunctionSignature(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::FunctionInstantiation => Section::FunctionInstantiation(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::FunctionImport => Section::FunctionImport(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::FunctionDefinition => Section::FunctionDefinition(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::Code => Section::Code(parse_many_length_encoded(source)?.into_vec()),
-            SectionKind::EntryPoint => Section::EntryPoint(parse_length(source).attach_printable("entry point index")?),
-            SectionKind::ModuleImport => Section::ModuleImport(parse_many_length_encoded(source)?.into_vec()),
-        };
+        fn parse_section_contents<'a, R: Read>(src: &mut Source<R>, kind: SectionKind) -> Result<section::Section<'a>> {
+            Ok(match kind {
+                SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::Symbol => Section::Symbol(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::Type => Section::Type(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::FunctionSignature => Section::FunctionSignature(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::FunctionInstantiation => Section::FunctionInstantiation(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::FunctionImport => Section::FunctionImport(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::FunctionDefinition => Section::FunctionDefinition(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::Code => Section::Code(parse_many_length_encoded(src)?.into_vec()),
+                SectionKind::EntryPoint => Section::EntryPoint(parse_length(src).attach_printable("entry point index")?),
+                SectionKind::ModuleImport => Section::ModuleImport(parse_many_length_encoded(src)?.into_vec()),
+            })
+        }
+
+        let section = parse_section_contents(source, kind)
+            .attach_printable_lazy(|| format!("while parsing {kind:?} section with content starting at offset {start_offset:#X} with an expected length of {expected_length} bytes"))?;
 
         let end_offset = source.file_offset();
         let actual_length = end_offset - start_offset;
