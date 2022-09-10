@@ -3,3 +3,6 @@ target
 
 # rustfmt
 **/*.rs.bk
+
+# il4il_vm/examples
+*.iil

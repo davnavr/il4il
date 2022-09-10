@@ -1,7 +1,7 @@
 //! An IL4IL bytecode interpreter.
 
-use std::path::PathBuf;
 use il4il_vm::model::error_stack::{self, IntoReport, ResultExt};
+use std::path::PathBuf;
 
 #[derive(clap::Parser, Debug)]
 #[clap(author, about, version)]
@@ -24,7 +24,8 @@ fn load_module<'env>(path: &std::path::Path) -> Result<il4il_vm::model::validati
         Ok(Ok(Err(validation_error))) => Err(validation_error).change_context(Error),
         Ok(Err(parser_error)) => Err(parser_error).change_context(Error),
         Err(bad_path) => Err(bad_path).report().change_context(Error),
-    }.attach_printable_lazy(|| format!("could not load module {path:?}"))
+    }
+    .attach_printable_lazy(|| format!("could not load module {path:?}"))
 }
 
 fn main() -> Result<()> {
@@ -61,7 +62,8 @@ fn main() -> Result<()> {
     std::thread::scope(|scope| {
         let host = il4il_vm::host::Host::with_configuration_in_scope(configuration, scope);
         let main_program = load_module(program_path)?;
-        host.load_module(main_program);
+        //host.load_module(main_program);
+        println!("{main_program:?}");
         Ok(())
     })
 }

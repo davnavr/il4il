@@ -27,6 +27,7 @@ impl<'env> Runtime<'env> {
             modules: Default::default(),
         }
     }
+
     pub fn with_configuration(configuration: configuration::Configuration) -> Self {
         Self::with_configuration_and_resolver(configuration, Box::<()>::default())
     }

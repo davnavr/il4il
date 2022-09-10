@@ -5,3 +5,10 @@ edition = "2021"
 
 [dependencies]
 il4il = { path = "../il4il" }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "il4il-sample-gen"
+path = "src/bin.rs"

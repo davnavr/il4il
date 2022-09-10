@@ -199,3 +199,9 @@ impl<'data> TryFrom<crate::module::Module<'data>> for ValidModule<'data> {
         Self::from_module_contents(ModuleContents::from_module(value))
     }
 }
+
+impl<'data> From<ValidModule<'data>> for crate::module::Module<'data> {
+    fn from(module: ValidModule<'data>) -> Self {
+        Self::from(module.into_contents())
+    }
+}

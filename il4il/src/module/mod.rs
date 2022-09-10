@@ -67,7 +67,7 @@ impl<'data> Module<'data> {
     /// [`Path`]: std::path::Path
     pub fn write_to_path<P: AsRef<std::path::Path>>(&self, path: P) -> writer::Result {
         self.write_to(std::io::BufWriter::new(
-            std::fs::OpenOptions::new().write(true).truncate(true).open(path)?,
+            std::fs::OpenOptions::new().write(true).create(true).truncate(true).open(path)?,
         ))
     }
 
