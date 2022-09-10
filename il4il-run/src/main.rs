@@ -24,8 +24,8 @@ type Result<T> = error_stack::Result<T, Error>;
 fn load_module<'env>(path: &std::path::Path) -> Result<il4il_vm::model::validation::ValidModule<'env>> {
     match il4il_vm::model::validation::ValidModule::read_from_path(path) {
         Ok(Ok(Ok(module))) => Ok(module),
-        Ok(Ok(Err(validation_error))) => Err(validation_error).change_context(Error),
-        Ok(Err(parser_error)) => Err(parser_error).change_context(Error),
+        Ok(Ok(Err(validation_error))) => Err(validation_error.change_context(Error)),
+        Ok(Err(parser_error)) => Err(parser_error.change_context(Error)),
         Err(bad_path) => Err(bad_path).report().change_context(Error),
     }
     .attach_printable_lazy(|| format!("could not load module {path:?}"))
@@ -85,7 +85,7 @@ fn main() -> ExitCode {
     match exit_code {
         Ok(code) => code,
         Err(error) => {
-            eprintln!("{}", error);
+            eprintln!("{:?}", error);
             ExitCode::FAILURE
         }
     }
