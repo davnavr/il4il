@@ -1,11 +1,40 @@
 //! Module for manipulation of locations in the source code.
 
 use std::cmp::Ordering;
+use std::num::NonZeroUsize;
 
 /// Represents a line or column number.
-pub type Number = std::num::NonZeroUsize;
+#[derive(Copy, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Number(NonZeroUsize);
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+impl Number {
+    pub const START: Self = Self(unsafe {
+        // Safety: 1 != 0
+        NonZeroUsize::new_unchecked(1)
+    });
+
+    pub fn new(number: usize) -> Option<Self> {
+        NonZeroUsize::new(number).map(Self)
+    }
+
+    pub(crate) fn increment(&mut self) {
+        self.0 = NonZeroUsize::new(self.0.get() + 1).unwrap();
+    }
+}
+
+impl std::fmt::Debug for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl std::fmt::Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0, f)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Location {
     pub line: Number,
     pub column: Number,
