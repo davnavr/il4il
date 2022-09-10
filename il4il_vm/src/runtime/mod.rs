@@ -11,12 +11,13 @@ pub use module::Module;
 pub mod resolver;
 
 use crate::loader;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 pub struct Runtime<'env> {
     configuration: configuration::Configuration,
     default_resolver: resolver::BoxedResolver,
-    modules: Mutex<Vec<Arc<Module<'env>>>>,
+    #[allow(clippy::vec_box)]
+    modules: Mutex<Vec<Box<Module<'env>>>>,
 }
 
 impl<'env> Runtime<'env> {
@@ -48,14 +49,19 @@ impl<'env> Runtime<'env> {
         &'env self,
         module: il4il::validation::ValidModule<'env>,
         resolver: Option<Box<dyn resolver::Resolver>>,
-    ) -> Arc<Module<'env>> {
-        let loaded = Arc::new(Module::new(
+    ) -> &'env Module<'env> {
+        let loaded = Box::new(Module::new(
             self,
             loader::module::Module::from_valid_module(module, &self.configuration.loader_context),
             resolver,
         ));
-        self.modules.lock().unwrap().push(loaded.clone());
-        loaded
+
+        let pointer = loaded.as_ref() as *const Module<'env>;
+        self.modules.lock().unwrap().push(loaded);
+        unsafe {
+            // Safety: Since modules are only ever appended to, this will create a valid reference
+            &*pointer
+        }
     }
 }
 

@@ -2,8 +2,7 @@
 
 use crate::interpreter::{value::Value, Interpreter};
 use crate::loader;
-use crate::runtime;
-use crate::runtime::resolver;
+use crate::runtime::{self, resolver};
 use std::collections::hash_map;
 use std::fmt::{Debug, Formatter};
 use std::sync::Mutex;
@@ -64,7 +63,7 @@ impl<'env> Module<'env> {
     pub fn get_function_implementation(
         &'env self,
         index: il4il::index::FunctionTemplate,
-    ) -> Result<&'env runtime::function::FunctionImplementation<'env>, resolver::ImportError> {
+    ) -> Result<&'env runtime::FunctionImplementation<'env>, resolver::ImportError> {
         let mut implementations = self.function_implementations.lock().unwrap();
         let occupied_entry;
         let implementation = match implementations.entry(index) {
@@ -77,7 +76,7 @@ impl<'env> Module<'env> {
                 vacant.insert(Box::new({
                     match template.kind() {
                         loader::function::template::TemplateKind::Definition(definition) => {
-                            runtime::function::FunctionImplementation::Defined(definition)
+                            runtime::FunctionImplementation::Defined(definition)
                         }
                         loader::function::template::TemplateKind::Import(import) => {
                             let resolved = self
@@ -87,10 +86,10 @@ impl<'env> Module<'env> {
 
                             match resolved {
                                 runtime::FunctionImplementation::Defined(definition) => {
-                                    runtime::function::FunctionImplementation::Defined(definition)
+                                    runtime::FunctionImplementation::Defined(definition)
                                 }
                                 runtime::FunctionImplementation::Host(host_function) => {
-                                    runtime::function::FunctionImplementation::Host(host_function)
+                                    runtime::FunctionImplementation::Host(host_function)
                                 }
                             }
                         }
@@ -105,16 +104,13 @@ impl<'env> Module<'env> {
         })
     }
 
-    pub fn get_function(
-        &'env self,
-        index: il4il::index::FunctionInstantiation,
-    ) -> Result<runtime::function::Function<'env>, resolver::ImportError> {
-        runtime::function::Function::new(self, &self.module.function_instantiations()[usize::from(index)])
+    pub fn get_function(&'env self, index: il4il::index::FunctionInstantiation) -> Result<runtime::Function<'env>, resolver::ImportError> {
+        runtime::Function::new(self, &self.module.function_instantiations()[usize::from(index)])
     }
 
-    pub fn get_entry_point_function(&'env self) -> Result<Option<runtime::function::Function<'env>>, resolver::ImportError> {
+    pub fn get_entry_point_function(&'env self) -> Result<Option<runtime::Function<'env>>, resolver::ImportError> {
         Ok(if let Some(entry_point) = self.module.entry_point() {
-            Some(runtime::function::Function::new(self, entry_point)?)
+            Some(runtime::Function::new(self, entry_point)?)
         } else {
             None
         })

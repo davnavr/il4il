@@ -11,50 +11,67 @@ pub use thread::InterpreterThread;
 
 pub mod debugger;
 
-use crate::runtime::configuration::Configuration;
 use crate::runtime::Runtime;
 
-pub type HostScope<'host, 'parent> = &'host std::thread::Scope<'host, 'parent>;
+pub type HostScope<'scope, 'env> = &'scope std::thread::Scope<'scope, 'env>;
 
 /// Encapsulates all runtime state.
 ///
 /// For more information, see the [`host`] module documentation.
 ///
 /// [`host`]: crate::host
-#[derive(Debug)]
-pub struct Host<'host, 'parent: 'host> {
-    runtime: Runtime<'host>, // TODO: Fix, for some reason presence of this field makes lifetimes all weird (maybe cause compiler things 'parent can only ever be 'host?)
-    scope: HostScope<'host, 'parent>,
+pub struct Host<'host, 'scope: 'host, 'env: 'scope> {
+    runtime: &'env Runtime<'env>,
+    scope: HostScope<'scope, 'env>,
+    // Allows fields to be added later that reference data owned by Host
+    _phantom: std::marker::PhantomData<&'host ()>,
     //interpreters: Vec<Mutex>,
 }
 
-impl<'host, 'parent: 'host> Host<'host, 'parent> {
-    /// Initializes the host with the given runtime configuration and [`std::thread::Scope`] in which interpreter threads are spawned in.
+impl<'host, 'scope: 'host, 'env: 'scope> Host<'host, 'scope, 'env> {
+    /// Initializes the host with a [`Runtime`] in which modules are stored and a [`std::thread::Scope`] in which interpreter threads are
+    /// spawned in.
     ///
     /// # Example
     ///
     /// ```
     /// use il4il_vm::host::Host;
+    /// use il4il_vm::runtime::Runtime;
     /// use il4il_vm::runtime::configuration::Configuration;
     ///
+    /// let runtime = Runtime::new();
+    ///
     /// std::thread::scope(|scope| {
-    ///     Host::with_configuration_in_scope(Configuration::HOST, scope);
+    ///     Host::with_runtime(&runtime, scope);
     ///     // Start using the host to do things after this.
     /// });
     /// ```
-    pub fn with_configuration_in_scope(configuration: Configuration, scope: HostScope<'host, 'parent>) -> Self {
+    pub fn with_runtime(runtime: &'env Runtime<'env>, scope: HostScope<'scope, 'env>) -> Self {
         Self {
-            runtime: Runtime::with_configuration(configuration),
+            runtime,
             scope,
+            _phantom: std::marker::PhantomData,
         }
     }
 
     /// Gets the scope used when spawning interpreter threads.
-    pub fn scope(&'host self) -> HostScope<'host, 'parent> {
+    pub fn scope(&'host self) -> HostScope<'scope, 'env> {
         self.scope
     }
 
-    pub fn load_module(&'host self, module: il4il::validation::ValidModule<'parent>) -> HostModule<'host, 'parent> {
+    /// Initializes a given `module` for interpretation.
+    ///
+    /// To begin execution, call the [`HostModule::interpret_entry_point`] function.
+    pub fn load_module(&'host self, module: il4il::validation::ValidModule<'env>) -> HostModule<'host, 'scope, 'env> {
         HostModule::new(self, module)
+    }
+}
+
+impl std::fmt::Debug for Host<'_, '_, '_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Host")
+            .field("runtime", self.runtime)
+            .field("scope", self.scope)
+            .finish_non_exhaustive()
     }
 }

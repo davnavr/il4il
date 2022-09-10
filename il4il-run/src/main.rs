@@ -58,12 +58,12 @@ fn main() -> Result<()> {
     };
 
     let configuration = il4il_vm::runtime::configuration::Configuration::HOST;
+    let runtime = il4il_vm::runtime::Runtime::with_configuration(configuration);
 
     std::thread::scope(|scope| {
-        let host = il4il_vm::host::Host::with_configuration_in_scope(configuration, scope);
-        let main_program = load_module(program_path)?;
-        //host.load_module(main_program);
-        println!("{main_program:?}");
+        let host = il4il_vm::host::Host::with_runtime(&runtime, scope);
+        let main_module = host.load_module(load_module(program_path)?);
+        dbg!(main_module);
         Ok(())
     })
 }
