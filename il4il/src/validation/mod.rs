@@ -65,6 +65,26 @@ impl<'data> ValidModule<'data> {
         std::mem::take(&mut self.symbols)
     }
 
+    /// Validates a module from the given byte contents [`Read`] from the `source`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if parsing the module contents failed, `Ok(Err)` if the module is not valid, and `Ok(Ok)` if validation was
+    /// successful.
+    ///
+    /// [`Read`]: std::io::Read
+    pub fn read_from<R: std::io::Read>(source: R) -> crate::binary::parser::Result<Result<Self>> {
+        let module = crate::module::Module::read_from(source)?;
+        Ok(Self::from_module_contents(ModuleContents::from_module(module)))
+    }
+
+    /// Reads a module from a given `path` and performs validation on its contents.
+    pub fn read_from_path<P: std::convert::AsRef<std::path::Path>>(
+        path: P,
+    ) -> std::io::Result<crate::binary::parser::Result<Result<Self>>> {
+        Ok(Self::read_from(std::fs::File::open(path)?))
+    }
+
     /// Validates the given module contents.
     ///
     /// # Errors
