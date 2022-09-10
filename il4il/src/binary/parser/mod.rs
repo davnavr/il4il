@@ -447,10 +447,10 @@ impl ReadFrom for section::Section<'_> {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
         use section::{Section, SectionKind};
 
+        let kind = parse_flags_value(source)?;
         let expected_length = parse_length(source).attach_printable("section byte length")?;
         let start_offset = source.file_offset();
 
-        let kind = parse_flags_value(source)?;
         let section = match kind {
             SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
             SectionKind::Symbol => Section::Symbol(parse_many_length_encoded(source)?.into_vec()),
