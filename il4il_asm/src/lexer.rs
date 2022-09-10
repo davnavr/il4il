@@ -103,8 +103,41 @@ pub struct Offsets {
 }
 
 impl Offsets {
+    /// Returns the length, in bytes, of the original input string.
+    pub fn byte_length(&self) -> usize {
+        self.byte_length
+    }
+
+    /// Returns a [`Range`] of byte offsets over the original input string.
+    pub fn offsets(&self) -> Range<usize> {
+        0..self.byte_length
+    }
+
     pub fn lines(&self) -> &[Line] {
         &self.lines
+    }
+
+    /// Gets a line and column number corresponding to a byte offset.
+    pub fn get_location(&self, byte_offset: usize) -> location::Location {
+        let line = match self.lines.binary_search_by_key(&byte_offset, |line| line.bytes.start) {
+            Ok(index) => &self.lines[index],
+            Err(index) => {
+                if let Some(line) = self.lines.get(index - 1) {
+                    line
+                } else {
+                    return location::Location::new(location::Number::START, location::Number::new(byte_offset + 1).unwrap());
+                }
+            }
+        };
+
+        location::Location::new(
+            line.line_number(),
+            location::Number::new(byte_offset - line.byte_offsets().start + 1).unwrap(),
+        )
+    }
+
+    pub fn locations(&self) -> impl std::iter::ExactSizeIterator<Item = location::Location> + '_ {
+        self.offsets().into_iter().map(|offset| self.get_location(offset))
     }
 }
 
@@ -198,6 +231,26 @@ mod tests {
                 Line::new(12..13, location::Number::new(3).unwrap()),
             ]
         );
+
+        assert_eq!(
+            output.offsets().locations().collect::<Vec<_>>(),
+            vec![
+                location::Location::new(location::Number::START, location::Number::new(1).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(1).unwrap()), // 'm'
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(2).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(3).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(4).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(5).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(6).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(7).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(8).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(9).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(10).unwrap()),
+                location::Location::new(location::Number::new(2).unwrap(), location::Number::new(11).unwrap()), // '\n'
+                location::Location::new(location::Number::new(3).unwrap(), location::Number::new(1).unwrap()),  // '}'
+                location::Location::new(location::Number::new(3).unwrap(), location::Number::new(2).unwrap()),  // '\n'
+            ]
+        )
     }
 
     #[test]
