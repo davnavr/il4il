@@ -84,7 +84,7 @@ impl<'src> OffsetsBuilder {
 
     fn finish(mut self) -> Offsets {
         match self.lines.last() {
-            Some(last) if last.bytes.end < self.byte_length => self.new_line(self.byte_length),
+            Some(last) if last.bytes.end < self.byte_length - 1 => self.new_line(self.byte_length),
             _ => (),
         }
 
@@ -129,7 +129,8 @@ impl<'src> Output<'src> {
 /// # Examples
 ///
 /// ```
-/// # use il4il_asm::lexer::{self, Token};
+/// use il4il_asm::lexer::{self, Token};
+///
 /// assert_eq!(
 ///     lexer::tokenize(".metadata {}").tokens(),
 ///     &[
@@ -177,13 +178,24 @@ mod tests {
     use crate::location;
 
     #[test]
-    fn directive_lines_are_correct() {
+    fn simple_directive_produces_correct_output() {
+        let output = tokenize("\n.section {\n}\n");
+
         assert_eq!(
-            tokenize("\n.section {\n}\n").offsets().lines(),
+            output.tokens(),
+            &[
+                (Token::Directive("section"), 1..9),
+                (Token::OpenBracket, 10..11),
+                (Token::CloseBracket, 12..13),
+            ]
+        );
+
+        assert_eq!(
+            output.offsets().lines(),
             &[
                 Line::new(0..0, location::Number::new(1).unwrap()),
-                Line::new(1..12, location::Number::new(2).unwrap()),
-                Line::new(13..14, location::Number::new(3).unwrap()),
+                Line::new(1..11, location::Number::new(2).unwrap()),
+                Line::new(12..13, location::Number::new(3).unwrap()),
             ]
         );
     }
@@ -192,10 +204,7 @@ mod tests {
     fn lines_are_correct_for_input_with_newline_only() {
         assert_eq!(
             tokenize("\n").offsets().lines(),
-            &[
-                Line::new(0..0, location::Number::new(1).unwrap()),
-                Line::new(1..1, location::Number::new(2).unwrap())
-            ]
+            &[Line::new(0..0, location::Number::new(1).unwrap()),]
         );
     }
 
