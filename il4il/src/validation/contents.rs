@@ -105,7 +105,19 @@ impl<'data> ModuleContents<'data> {
         // TODO: For some sections, may need to rearrange order, so this might not work correctly.
 
         sections.push(Section::Metadata(self.metadata));
+        sections.push(Section::Symbol(self.symbols));
         sections.push(Section::Type(self.types));
+        sections.push(Section::FunctionSignature(self.function_signatures));
+        sections.push(Section::FunctionInstantiation(self.function_instantiations));
+        sections.push(Section::FunctionImport(self.function_imports));
+        sections.push(Section::FunctionDefinition(self.function_definitions));
+        sections.push(Section::Code(self.function_bodies));
+
+        if let Some(entry_point_index) = self.entry_point.into_iter().next() {
+            sections.push(Section::EntryPoint(entry_point_index));
+        }
+
+        sections.push(Section::ModuleImport(self.module_imports));
         sections.into_boxed_slice()
     }
 

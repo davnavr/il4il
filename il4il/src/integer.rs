@@ -242,6 +242,7 @@ impl VarU28 {
     /// ```
     /// # use il4il::integer::VarU28;
     /// assert_eq!(VarU28::from_u8(0b0101_0110).into_vec(), &[0b1010_1100u8]);
+    /// assert_eq!(VarU28::from_u8(6).into_vec(), &[0b0000_1100u8]);
     /// assert_eq!(VarU28::from_u8(128).into_vec(), &[1u8, 2]);
     /// assert_eq!(VarU28::from_u8(255).into_vec(), &[0b11111101u8, 0b11]);
     /// assert_eq!(VarU28::MAX_1.into_vec(), &[0b1111_1110u8]);
