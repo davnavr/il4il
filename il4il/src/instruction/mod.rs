@@ -36,6 +36,13 @@ impl Instruction {
     }
 }
 
+/// Error type used when an integer does not correspond to a valid [`Opcode`].
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("{opcode} is not a valid opcode")]
+pub struct InvalidOpcodeError {
+    opcode: crate::integer::VarU28,
+}
+
 macro_rules! opcode {
     {$($name:ident = $code:literal,)*} => {
         /// Specifies an IL4IL instruction.
@@ -49,6 +56,17 @@ macro_rules! opcode {
         impl From<Opcode> for crate::integer::VarU28 {
             fn from(opcode: Opcode) -> Self {
                 Self::from(opcode as u8)
+            }
+        }
+
+        impl TryFrom<crate::integer::VarU28> for Opcode {
+            type Error = InvalidOpcodeError;
+
+            fn try_from(value: crate::integer::VarU28) -> Result<Self, Self::Error> {
+                match value.get() {
+                    $($code => Ok(Opcode::$name),)*
+                    _ => Err(InvalidOpcodeError { opcode: value }),
+                }
             }
         }
 

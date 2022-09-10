@@ -2,6 +2,12 @@
 
 use crate::integer::VarI28;
 
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("{tag} is not a valid constant value tag")]
+pub struct InvalidTagError {
+    tag: i32,
+}
+
 macro_rules! constant_tag {
     {$($name:ident = $value:literal,)*} => {
         /// Indicates the kind of value contained in a [`Constant`]. Each tag value corresponds to negative values in the
@@ -18,6 +24,15 @@ macro_rules! constant_tag {
                     $($value => Some(Self::$name),)*
                     _ => None,
                 }
+            }
+        }
+
+        impl TryFrom<VarI28> for ConstantTag {
+            type Error = InvalidTagError;
+
+            fn try_from(tag: VarI28) -> Result<Self, Self::Error> {
+                let value = tag.get();
+                Self::from_i32(value).ok_or(InvalidTagError { tag: value })
             }
         }
 

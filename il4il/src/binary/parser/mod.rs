@@ -3,13 +3,15 @@
 use crate::function;
 use crate::identifier::Identifier;
 use crate::index;
+use crate::instruction;
 use crate::integer;
 use crate::module;
-use crate::module::section::{self, Section};
+use crate::module::section;
 use crate::symbol;
 use crate::type_system;
 use error_stack::{IntoReport, ResultExt};
 use std::borrow::Cow;
+use std::convert::TryFrom;
 use std::io::Read;
 
 mod error;
@@ -17,17 +19,6 @@ mod source;
 
 pub use error::{Error, Report};
 pub use source::Source;
-
-// /// Error type used when a file does not start with the IL4IL [module magic value](crate::binary::MAGIC).
-// #[derive(Clone, Debug, thiserror::Error)]
-// #[error("not a valid IL4IL module file")]
-// #[non_exhaustive]
-// pub struct InvalidMagicError;
-
-// /// Error type used when an unsigned integer length or index cannot be converted to a [`usize`].
-// #[derive(Clone, Debug, thiserror::Error)]
-// #[error("{0} is too large for the current platform")]
-// pub struct SizeConversionError(integer::VarU28);
 
 /// Trait implemented by types representing bit flags or tags.
 trait FlagsValue: Sized {
@@ -60,45 +51,6 @@ flags_values! {
     symbol::Kind : u8, name = "symbol kind";
     symbol::TargetKind : u8, name = "symbol target";
 }
-
-// /// Error type used when some combination of flags is invalid.
-// #[derive(Clone, Debug, thiserror::Error)]
-// #[error("{value} is not a valid {name}")]
-// pub struct InvalidFlagsError {
-//     name: &'static str,
-//     value: String,
-// }
-
-// impl InvalidFlagsError {
-//     fn new<T: std::fmt::UpperHex>(name: &'static str, value: T) -> Self {
-//         Self {
-//             name,
-//             value: format!("{value:#02X}"),
-//         }
-//     }
-// }
-
-// #[derive(Clone, Debug, thiserror::Error)]
-// #[error("expected {:?} section to have a length of {expected} bytes, but {actual} bytes were parsed")]
-// pub struct SectionLengthError {
-//     section: section::SectionKind,
-//     expected: usize,
-//     actual: usize,
-// }
-
-// /// Error type used when a type is not valid for a reason other than being invalid (e.g. a float type was used when an integer type was
-// /// expected)
-// #[derive(Clone, Debug, thiserror::Error)]
-// pub struct UnsupportedTypeError {
-//     type_reference: type_system::Reference,
-//     context: &'static str,
-// }
-
-// impl Display for UnsupportedTypeError {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "unsupported type {}, {}", self.type_reference, self.context)
-//     }
-// }
 
 /// A specialized [`Result`] type returned by parser methods.
 ///
@@ -351,19 +303,165 @@ impl ReadFrom for function::Signature {
     }
 }
 
-impl ReadFrom for Section<'_> {
+impl ReadFrom for function::Instantiation {
     fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let template = parse_length(source).attach_printable("function instantiation template index")?;
+        let offset = source.file_offset();
+        let reserved = parse_length::<usize>(source).attach_printable("reserved")?;
+        if reserved != 0 {
+            return Err(Error::new(offset))
+                .report()
+                .attach_printable("expected reserved integer in function instantiation to be zero");
+        }
+
+        Ok(Self::with_template(template))
+    }
+}
+
+impl ReadFrom for function::Import<'_> {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        Ok(Self::new(
+            parse_length(source).attach_printable("function import module index")?,
+            Cow::Owned(Identifier::read_from(source).attach_printable("function import symbol")?),
+            parse_length(source).attach_printable("function import signature index")?,
+        ))
+    }
+}
+
+impl ReadFrom for function::Definition {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let signature = parse_length(source).attach_printable("function definition signature index")?;
+        let body = parse_length(source).attach_printable("function definition body index")?;
+
+        let offset = source.file_offset();
+        let reserved = parse_length::<usize>(source).attach_printable("reserved")?;
+        if reserved != 0 {
+            return Err(Error::new(offset))
+                .report()
+                .attach_printable("expected reserved integer in function definition to be zero");
+        }
+
+        Ok(Self::new(signature, body))
+    }
+}
+
+impl ReadFrom for instruction::value::Value {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        use instruction::value::{ConstantFloat, ConstantInteger, ConstantTag};
+
+        let offset = source.file_offset();
+        let tag = <integer::VarI28 as ReadFrom>::read_from(source).attach_printable("value tag")?;
+        if tag.get() >= 0 {
+            todo!("parsing of register index values is not yet supported")
+        } else {
+            Ok(
+                match ConstantTag::try_from(tag).report().change_context_lazy(|| Error::new(offset))? {
+                    ConstantTag::IntegerZero => ConstantInteger::Zero.into(),
+                    ConstantTag::IntegerOne => ConstantInteger::One.into(),
+                    ConstantTag::IntegerAll => ConstantInteger::All.into(),
+                    ConstantTag::IntegerSignedMaximum => ConstantInteger::SignedMaximum.into(),
+                    ConstantTag::IntegerSignedMinimum => ConstantInteger::SignedMinimum.into(),
+                    ConstantTag::IntegerInline8 => ConstantInteger::Byte(u8::read_from(source).attach_printable("constant byte")?).into(),
+                    ConstantTag::IntegerInline16 => {
+                        let mut bytes = [0u8; 2];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 16-bit integer")?;
+                        ConstantInteger::I16(bytes).into()
+                    }
+                    ConstantTag::IntegerInline32 => {
+                        let mut bytes = [0u8; 4];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 32-bit integer")?;
+                        ConstantInteger::I32(bytes).into()
+                    }
+                    ConstantTag::IntegerInline64 => {
+                        let mut bytes = [0u8; 8];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 64-bit integer")?;
+                        ConstantInteger::I64(bytes).into()
+                    }
+                    ConstantTag::IntegerInline128 => {
+                        let mut bytes = [0u8; 16];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 128-bit integer")?;
+                        ConstantInteger::I128(bytes).into()
+                    }
+                    ConstantTag::Float16 => {
+                        let mut bytes = [0u8; 2];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 16-bit float")?;
+                        ConstantFloat::Half(bytes).into()
+                    }
+                    ConstantTag::Float32 => {
+                        let mut bytes = [0u8; 4];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 32-bit float")?;
+                        ConstantFloat::Single(bytes).into()
+                    }
+                    ConstantTag::Float64 => {
+                        let mut bytes = [0u8; 8];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 64-bit float")?;
+                        ConstantFloat::Double(bytes).into()
+                    }
+                    ConstantTag::Float128 => {
+                        let mut bytes = [0u8; 16];
+                        source.fill_buffer(&mut bytes).attach_printable("constant 128-bit float")?;
+                        ConstantFloat::Quadruple(bytes).into()
+                    }
+                },
+            )
+        }
+    }
+}
+
+impl ReadFrom for instruction::Instruction {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        use instruction::{Instruction, Opcode};
+
+        let offset = source.file_offset();
+        let opcode = <integer::VarU28 as ReadFrom>::read_from(source).attach_printable("opcode")?;
+        Ok(
+            match Opcode::try_from(opcode).report().change_context_lazy(|| Error::new(offset))? {
+                Opcode::Unreachable => Instruction::Unreachable,
+                Opcode::Return => Instruction::Return(parse_many_length_encoded(source).attach_printable("return values")?),
+            },
+        )
+    }
+}
+
+impl ReadFrom for instruction::Block {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let input_count: usize = parse_length(source).attach_printable("block input count")?;
+        let temporary_count: usize = parse_length(source).attach_printable("block temporary count")?;
+        let types = type_system::Reference::read_many(source, input_count + temporary_count).attach_printable("block types")?;
+        let instructions = parse_many_length_encoded(source)?;
+        Ok(Self::from_types(types, input_count, instructions.into_vec()))
+    }
+}
+
+impl ReadFrom for function::Body {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        let result_types = parse_many_length_encoded(source).attach_printable("function body result types")?;
+        let other_block_count: usize = parse_length(source).attach_printable("function body other block count")?;
+        let entry_block = instruction::Block::read_from(source).attach_printable("entry block")?;
+        let other_blocks = instruction::Block::read_many(source, other_block_count).attach_printable("other blocks")?;
+        Ok(Self::new(result_types, entry_block, other_blocks))
+    }
+}
+
+impl ReadFrom for section::Section<'_> {
+    fn read_from<R: Read>(source: &mut Source<R>) -> Result<Self> {
+        use section::{Section, SectionKind};
+
         let expected_length = parse_length(source).attach_printable("section byte length")?;
         let start_offset = source.file_offset();
 
         let kind = parse_flags_value(source)?;
         let section = match kind {
-            section::SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
-            section::SectionKind::Symbol => Section::Symbol(parse_many_length_encoded(source)?.into_vec()),
-            section::SectionKind::Type => Section::Type(parse_many_length_encoded(source)?.into_vec()),
-            section::SectionKind::FunctionSignature => Section::FunctionSignature(parse_many_length_encoded(source)?.into_vec()),
-            #[allow(unreachable_patterns)]
-            _ => todo!(),
+            SectionKind::Metadata => Section::Metadata(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::Symbol => Section::Symbol(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::Type => Section::Type(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::FunctionSignature => Section::FunctionSignature(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::FunctionInstantiation => Section::FunctionInstantiation(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::FunctionImport => Section::FunctionImport(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::FunctionDefinition => Section::FunctionDefinition(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::Code => Section::Code(parse_many_length_encoded(source)?.into_vec()),
+            SectionKind::EntryPoint => Section::EntryPoint(parse_length(source).attach_printable("entry point index")?),
+            SectionKind::ModuleImport => Section::ModuleImport(parse_many_length_encoded(source)?.into_vec()),
         };
 
         let end_offset = source.file_offset();
@@ -394,7 +492,7 @@ impl<'data> ReadFrom for module::Module<'data> {
         }
 
         let format_version = crate::versioning::SupportedFormat::read_from(source)?;
-        let sections = parse_many_length_encoded::<Section<'data>, _>(source)?;
+        let sections = parse_many_length_encoded::<section::Section<'data>, _>(source)?;
         Ok(Self::with_format_version_and_sections(format_version, sections.into_vec()))
     }
 }

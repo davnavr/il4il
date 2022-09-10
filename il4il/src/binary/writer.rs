@@ -347,7 +347,8 @@ impl<'data> WriteTo for &function::Import<'data> {
 impl WriteTo for &function::Definition {
     fn write_to<W: Write>(self, out: &mut Destination<W>) -> Result {
         write_length(usize::from(self.signature), out)?;
-        write_length(usize::from(self.body), out)
+        write_length(usize::from(self.body), out)?;
+        write_length(0usize, out)
     }
 }
 
