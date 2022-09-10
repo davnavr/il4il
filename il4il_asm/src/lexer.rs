@@ -15,6 +15,8 @@ enum Tok<'src> {
     Semicolon,
     #[regex(r"\.[a-zA-Z][a-zA-Z_0-9]*", |lex| &lex.slice()[1..])]
     Directive(&'src str),
+    #[regex(r"[a-zA-Z][a-zA-Z_0-9]*")]
+    Word(&'src str),
     #[regex(r"\n|\r|(\r\n)")]
     Newline,
     #[error]
@@ -29,6 +31,7 @@ pub enum Token<'src> {
     CloseBracket,
     Semicolon,
     Directive(&'src str),
+    Word(&'src str),
     Unknown(&'src str),
 }
 
@@ -189,6 +192,7 @@ pub fn tokenize(source: &str) -> Output<'_> {
             Tok::CloseBracket => Token::CloseBracket,
             Tok::Semicolon => Token::Semicolon,
             Tok::Directive(name) => Token::Directive(name),
+            Tok::Word(word) => Token::Word(word),
             Tok::Newline => {
                 lexer.extras.new_line(offset.start);
                 continue;
