@@ -8,5 +8,5 @@ pub(super) fn parse<'src>(
     offsets: &crate::lexer::Offsets,
     errors: &mut Vec<Error>,
 ) -> tree::Root<'src> {
-    todo!()
+    todo!("{:?} {:?} {:?}", tree, offsets, errors);
 }

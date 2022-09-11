@@ -86,7 +86,7 @@ pub struct OffsetsBuilder {
     line_number: location::Number,
 }
 
-impl<'src> OffsetsBuilder {
+impl OffsetsBuilder {
     fn new(byte_length: usize) -> Self {
         Self {
             byte_length,

@@ -52,6 +52,10 @@ pub(super) fn parse<'src>(
     for (tok, byte_offsets) in tokens.into_iter() {
         if let Some(parent_node) = nodes.last_mut() {
             match tok {
+                Token::Unknown(unknown) => {
+                    let message = format!("unexpected '{unknown}'");
+                    errors.push(Error::new(offsets.get_location_range(byte_offsets), move |f| f.write_str(&message)));
+                }
                 Token::Semicolon => match &mut parent_node.contents {
                     ParentContents::Line(attributes) => {
                         let attributes = std::mem::take(attributes);
@@ -156,7 +160,7 @@ pub(super) fn parse<'src>(
         ));
 
         for parent_node in nodes {
-            todo!("complete the nodes")
+            todo!("complete the nodes {:?}", parent_node.kind)
         }
     }
 

@@ -17,6 +17,10 @@ impl<'src> Output<'src> {
     pub fn tree(&self) -> &syntax::tree::Root<'src> {
         &self.tree
     }
+
+    pub fn offsets(&self) -> &lexer::Offsets {
+        &self.offsets
+    }
 }
 
 pub fn parse<'src>(inputs: crate::lexer::Output<'src>, errors: &mut Vec<Error>) -> Output<'src> {
