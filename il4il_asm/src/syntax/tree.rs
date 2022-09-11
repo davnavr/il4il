@@ -4,10 +4,14 @@
 
 use crate::syntax::Located;
 
-pub enum TopLevelDirective {}
+#[derive(Clone, Debug)]
+pub enum TopLevelDirective<'src> {
+    Placeholder(&'src ()),
+}
 
 /// The root of the abstract syntax tree.
+#[derive(Clone, Debug)]
 #[non_exhaustive]
-pub struct Program {
-    pub directives: Box<[Located<TopLevelDirective>]>,
+pub struct Root<'src> {
+    pub directives: Box<[Located<TopLevelDirective<'src>>]>,
 }

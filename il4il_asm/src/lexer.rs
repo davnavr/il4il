@@ -146,8 +146,8 @@ impl Offsets {
 
 #[derive(Clone, Debug, Default)]
 pub struct Output<'src> {
-    tokens: Vec<(Token<'src>, Range<usize>)>,
-    offsets: Offsets,
+    pub(crate) tokens: Vec<(Token<'src>, Range<usize>)>,
+    pub(crate) offsets: Offsets,
 }
 
 impl<'src> Output<'src> {
