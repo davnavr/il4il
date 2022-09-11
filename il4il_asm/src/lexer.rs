@@ -35,6 +35,24 @@ pub enum Token<'src> {
     Unknown(&'src str),
 }
 
+impl std::fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write;
+
+        match self {
+            Self::OpenBracket => f.write_char('{'),
+            Self::CloseBracket => f.write_char('}'),
+            Self::Semicolon => f.write_char(';'),
+            Self::Directive(name) => {
+                f.write_char('.')?;
+                f.write_str(name)
+            }
+            Self::Word(word) => f.write_str(word),
+            Self::Unknown(contents) => f.write_str(contents),
+        }
+    }
+}
+
 /// Represents a line of source code.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Line {
@@ -137,6 +155,17 @@ impl Offsets {
             line.line_number(),
             location::Number::new(byte_offset - line.byte_offsets().start + 1).unwrap(),
         )
+    }
+
+    pub fn get_location_range(&self, byte_offsets: Range<usize>) -> Range<location::Location> {
+        Range {
+            start: self.get_location(byte_offsets.start),
+            end: self.get_location(byte_offsets.end),
+        }
+    }
+
+    pub fn last_location(&self) -> location::Location {
+        self.get_location(self.byte_length)
     }
 
     pub fn locations(&self) -> impl std::iter::ExactSizeIterator<Item = location::Location> + '_ {

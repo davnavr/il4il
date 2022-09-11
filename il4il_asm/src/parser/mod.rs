@@ -22,7 +22,7 @@ impl<'src> Output<'src> {
 pub fn parse<'src>(inputs: crate::lexer::Output<'src>, errors: &mut Vec<Error>) -> Output<'src> {
     let tokens = inputs.tokens;
     let offsets = inputs.offsets;
-    let structure = node_parser::parse(&tokens, &offsets, errors);
+    let structure = node_parser::parse(tokens, &offsets, errors);
     Output {
         tree: tree_parser::parse(structure, &offsets, errors),
         offsets,

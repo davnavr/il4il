@@ -2,34 +2,37 @@
 
 use crate::syntax::Located;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum NodeKind<'src> {
     Word(&'src str),
     Directive(&'src str),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Atom<'src> {
+#[derive(Debug, Eq, PartialEq)]
+pub enum Attribute<'src> {
     Word(&'src str),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum NodeContents<'src> {
-    Line(Vec<Located<Atom<'src>>>),
+    Line(Vec<Located<Attribute<'src>>>),
+    /// A block containing content surrounded by curly brackets ('{' and '}').
     Block {
-        attributes: Vec<Located<Atom<'src>>>,
+        attributes: Vec<Located<Attribute<'src>>>,
         nodes: Vec<Located<Node<'src>>>,
     },
+    ///// A comma-separated list of items surrounded by square brackets ('[' and ']').
+    //List
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Node<'src> {
     pub kind: Located<NodeKind<'src>>,
     pub contents: NodeContents<'src>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Tree<'src> {
     pub contents: Vec<Located<Node<'src>>>,
