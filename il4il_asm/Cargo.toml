@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 il4il = { path = "../il4il" }
-logos = "0.12.1"
+rustc-hash = "1.1.0"
+typed-arena = "2.0.1"
