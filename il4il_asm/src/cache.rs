@@ -1,12 +1,12 @@
 //! Module for caching data.
 
 /// Provides ownership of strings.
-pub struct StringCache<'a> {
-    lookup: std::cell::RefCell<rustc_hash::FxHashMap<&'a str, ()>>,
+pub struct StringCache<'cache> {
+    lookup: std::cell::RefCell<rustc_hash::FxHashMap<&'cache str, ()>>,
     strings: typed_arena::Arena<u8>,
 }
 
-impl<'a> StringCache<'a> {
+impl<'cache> StringCache<'cache> {
     pub fn new() -> Self {
         Self {
             lookup: Default::default(),
@@ -14,7 +14,7 @@ impl<'a> StringCache<'a> {
         }
     }
 
-    pub(crate) fn get_or_insert(&'a self, buffer: &mut String) -> &'a str {
+    pub(crate) fn get_or_insert(&'cache self, buffer: &mut String) -> &'cache str {
         let entry = match buffer.as_str() {
             "format" => "format",
             "metadata" => "metadata",
@@ -23,7 +23,7 @@ impl<'a> StringCache<'a> {
                 if let Some((entry, _)) = lookup.get_key_value(s) {
                     *entry
                 } else {
-                    let entry: &'a str = self.strings.alloc_str(s);
+                    let entry: &'cache str = self.strings.alloc_str(s);
                     lookup.insert(entry, ());
                     entry
                 }

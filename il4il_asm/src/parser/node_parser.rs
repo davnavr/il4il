@@ -170,11 +170,13 @@ pub(super) fn parse<'src>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cache::StringCache;
     use crate::lexer;
 
     #[test]
     fn directive_test() {
-        let tokens = lexer::tokenize(".example word;\n");
+        let strings = StringCache::new();
+        let tokens = lexer::tokenize(".example word;\n", &strings).unwrap();
         let mut errors = Vec::new();
         let output = parse(tokens.tokens, &tokens.offsets, &mut errors);
         crate::error::assert_ok(errors.iter());

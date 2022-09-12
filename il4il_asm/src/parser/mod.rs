@@ -1,5 +1,6 @@
 //! Module for parsing IL4IL assembly.
 
+use crate::cache::StringCache;
 use crate::error::Error;
 use crate::lexer;
 use crate::syntax;
@@ -8,13 +9,14 @@ mod node_parser;
 mod tree_parser;
 
 #[derive(Debug)]
-pub struct Output<'src> {
+pub struct Output<'cache> {
     pub(crate) offsets: lexer::Offsets,
-    pub(crate) tree: syntax::tree::Root<'src>,
+    pub(crate) strings: &'cache StringCache<'cache>,
+    pub(crate) tree: syntax::tree::Root<'cache>,
 }
 
-impl<'src> Output<'src> {
-    pub fn tree(&self) -> &syntax::tree::Root<'src> {
+impl<'cache> Output<'cache> {
+    pub fn tree(&self) -> &syntax::tree::Root<'cache> {
         &self.tree
     }
 
@@ -23,12 +25,13 @@ impl<'src> Output<'src> {
     }
 }
 
-pub fn parse<'src>(inputs: crate::lexer::Output<'src>, errors: &mut Vec<Error>) -> Output<'src> {
+pub fn parse<'cache>(inputs: crate::lexer::Output<'cache>, errors: &mut Vec<Error>) -> Output<'cache> {
     let tokens = inputs.tokens;
     let offsets = inputs.offsets;
     let structure = node_parser::parse(tokens, &offsets, errors);
     Output {
         tree: tree_parser::parse(structure, &offsets, errors),
+        strings: inputs.strings,
         offsets,
     }
 }
