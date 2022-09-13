@@ -307,14 +307,14 @@ pub fn tokenize<'cache, I: input::IntoInput>(
         // TODO: Define helper method to commit a buffer containing unknown chars.
         match c {
             '\r' | '\n' => {
+                let offset = input.offset() - 1;
                 tokens.skip_char(c);
                 if c == '\r' {
                     if let Some(n) = input.next_if(|c| c == '\n')? {
                         tokens.skip_char(n);
                     }
                 }
-                dbg!(input.offset());
-                offsets.new_line(input.offset());
+                offsets.new_line(offset);
             }
             '{' => tokens.commit(Token::OpenBracket, input.offset()),
             '}' => tokens.commit(Token::CloseBracket, input.offset()),
