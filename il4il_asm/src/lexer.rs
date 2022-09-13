@@ -7,13 +7,13 @@ use std::ops::Range;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// The type of tokens used by the IL4IL assembler.
-pub enum Token<'src> {
+pub enum Token<'cache> {
     OpenBracket,
     CloseBracket,
     Semicolon,
-    Directive(&'src str),
-    Word(&'src str),
-    Unknown(&'src str),
+    Directive(&'cache str),
+    Word(&'cache str),
+    Unknown(&'cache str),
 }
 
 impl std::fmt::Display for Token<'_> {
@@ -169,6 +169,99 @@ impl<'cache> Output<'cache> {
     }
 }
 
+struct Characters<I: Input> {
+    input: I,
+    offset: usize,
+    peeked: Option<Result<Option<char>, I::Error>>,
+}
+
+impl<I: Input> Characters<I> {
+    fn new(input: I) -> Self {
+        Self {
+            input,
+            offset: 0,
+            peeked: None,
+        }
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
+    }
+
+    fn next(&mut self) -> Result<Option<char>, I::Error> {
+        if let Some(peeked) = self.peeked.take() {
+            return peeked;
+        }
+
+        let result = self.input.next();
+        if let Ok(Some(c)) = result {
+            self.offset += c.len_utf8();
+        }
+        result
+    }
+
+    fn peek(&mut self) -> &Result<Option<char>, I::Error> {
+        match self.peeked {
+            Some(ref existing) => existing,
+            None => {
+                let next = self.next();
+                self.peeked.insert(next)
+            }
+        }
+    }
+
+    fn next_if<F: FnOnce(char) -> bool>(&mut self, predicate: F) -> Result<Option<char>, I::Error> {
+        match self.peek() {
+            Ok(Some(c)) if predicate(*c) => {
+                let c = *c;
+                self.next()?;
+                Ok(Some(c))
+            }
+            _ => Ok(None),
+        }
+    }
+}
+
+struct TokenBuilder<'cache> {
+    string_cache: &'cache StringCache<'cache>,
+    previous_offset: usize,
+    tokens: Vec<(Token<'cache>, Range<usize>)>,
+    unknown_buffer: String,
+}
+
+impl<'cache> TokenBuilder<'cache> {
+    fn new(string_cache: &'cache StringCache<'cache>) -> Self {
+        Self {
+            string_cache,
+            previous_offset: 0,
+            tokens: Vec::new(),
+            unknown_buffer: String::new(),
+        }
+    }
+
+    fn append_unknown(&mut self, c: char) {
+        self.unknown_buffer.push(c);
+    }
+
+    fn commit_unknown(&mut self) {
+        if !self.unknown_buffer.is_empty() {
+            let length = self.unknown_buffer.len();
+            let start_offset = self.previous_offset;
+            self.previous_offset += length;
+            self.tokens.push((
+                Token::Unknown(self.string_cache.store(&mut self.unknown_buffer)),
+                start_offset..self.previous_offset,
+            ));
+        }
+    }
+
+    fn commit(&mut self, token: Token<'cache>, offset: usize) {
+        debug_assert!(offset >= self.previous_offset);
+        self.tokens.push((token, self.previous_offset..offset));
+        self.previous_offset = offset;
+    }
+}
+
 /// Produces a sequence of tokens from a string.
 ///
 /// # Examples
@@ -189,34 +282,35 @@ pub fn tokenize<'cache, I: input::IntoInput>(
     source: I,
     string_cache: &'cache StringCache<'cache>,
 ) -> Result<Output<'cache>, <I::Source as Input>::Error> {
-    let mut input = source.into_input();
-    let mut tokens = Vec::new();
+    let mut input = Characters::new(source.into_input());
+    let mut tokens = TokenBuilder::new(string_cache);
     let mut offsets = OffsetsBuilder::new();
-    let mut byte_length = 0;
 
-    // while let Some(tok) = lexer.next() {
-    //     let offset = lexer.span();
+    // Read a UTF-8 BOM if it is present
+    input.next_if(|c| c == '\u{FEFF}')?;
 
-    //     let actual_token = match tok {
-    //         Tok::OpenBracket => Token::OpenBracket,
-    //         Tok::CloseBracket => Token::CloseBracket,
-    //         Tok::Semicolon => Token::Semicolon,
-    //         Tok::Directive(name) => Token::Directive(name),
-    //         Tok::Word(word) => Token::Word(word),
-    //         Tok::Newline => {
-    //             lexer.extras.new_line(offset.start);
-    //             continue;
-    //         }
-    //         Tok::Unknown => Token::Unknown(&source[offset.clone()]),
-    //     };
+    while let Some(c) = input.next()? {
+        // TODO: Define helper method to commit a buffer containing unknown chars.
+        match c {
+            '\r' | '\n' => {
+                let offset = input.offset();
+                if c == '\r' {
+                    input.next_if(|c| c == '\n')?;
+                }
+                offsets.new_line(offset);
+            }
+            '{' => tokens.commit(Token::OpenBracket, input.offset()),
+            '}' => tokens.commit(Token::CloseBracket, input.offset()),
+            _ => tokens.append_unknown(c),
+        }
+    }
 
-    //     tokens.push((actual_token, offset));
-    // }
+    tokens.commit_unknown();
 
     Ok(Output {
-        tokens,
+        tokens: tokens.tokens,
         strings: string_cache,
-        offsets: offsets.finish(byte_length),
+        offsets: offsets.finish(input.offset()),
     })
 }
 

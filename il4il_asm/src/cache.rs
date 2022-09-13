@@ -14,6 +14,14 @@ impl<'cache> StringCache<'cache> {
         }
     }
 
+    /// Allocates a string in this cache without storing it in the lookup.
+    pub(crate) fn store(&'cache self, buffer: &mut String) -> &'cache str {
+        let entry = self.strings.alloc_str(buffer.as_str());
+        buffer.clear();
+        entry
+    }
+
+    /// Inserts a string, or retrieves an equivalent cached string.
     pub(crate) fn get_or_insert(&'cache self, buffer: &mut String) -> &'cache str {
         let entry = match buffer.as_str() {
             "format" => "format",
