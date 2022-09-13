@@ -155,7 +155,6 @@ impl Offsets {
 #[derive(Clone, Debug)]
 pub struct Output<'cache> {
     pub(crate) tokens: Vec<(Token<'cache>, Range<usize>)>,
-    pub(crate) strings: &'cache StringCache<'cache>,
     pub(crate) offsets: Offsets,
 }
 
@@ -352,7 +351,6 @@ pub fn tokenize<'cache, I: input::IntoInput>(
 
     Ok(Output {
         tokens: tokens.tokens,
-        strings: string_cache,
         offsets: offsets.finish(input.offset()),
     })
 }

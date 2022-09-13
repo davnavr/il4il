@@ -11,7 +11,6 @@ mod tree_parser;
 #[derive(Debug)]
 pub struct Output<'cache> {
     pub(crate) offsets: lexer::Offsets,
-    pub(crate) strings: &'cache StringCache<'cache>,
     pub(crate) tree: syntax::tree::Root<'cache>,
 }
 
@@ -31,7 +30,6 @@ pub fn parse<'cache>(inputs: crate::lexer::Output<'cache>, errors: &mut Vec<Erro
     let structure = node_parser::parse(tokens, &offsets, errors);
     Output {
         tree: tree_parser::parse(structure, &offsets, errors),
-        strings: inputs.strings,
         offsets,
     }
 }
