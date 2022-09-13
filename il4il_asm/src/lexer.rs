@@ -280,10 +280,13 @@ impl<'cache> TokenBuilder<'cache> {
 /// # Examples
 ///
 /// ```
+/// use il4il_asm::cache::StringCache;
 /// use il4il_asm::lexer::{self, Token};
 ///
+/// let strings = StringCache::new();
+///
 /// assert_eq!(
-///     lexer::tokenize(".metadata {}").tokens(),
+///     lexer::tokenize(".metadata {}", &strings).unwrap().tokens(),
 ///     &[
 ///         (Token::Directive("metadata"), 0..9),
 ///         (Token::OpenBracket, 10..11),
@@ -331,6 +334,14 @@ pub fn tokenize<'cache, I: input::IntoInput>(
                 } else {
                     tokens.append_unknown(c);
                 }
+            }
+            _ if c.is_alphabetic() => {
+                buffer.push(c);
+                while let Some(l) = input.next_if(char::is_alphanumeric)? {
+                    buffer.push(l);
+                }
+
+                tokens.commit(Token::Word(string_cache.get_or_insert(&mut buffer)), input.offset())
             }
             _ if c.is_whitespace() => tokens.skip_char(c),
             _ => tokens.append_unknown(c),
