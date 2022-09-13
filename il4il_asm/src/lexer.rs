@@ -255,7 +255,13 @@ impl<'cache> TokenBuilder<'cache> {
         }
     }
 
+    fn skip_char(&mut self, c: char) {
+        self.commit_unknown();
+        self.previous_offset += c.len_utf8();
+    }
+
     fn commit(&mut self, token: Token<'cache>, offset: usize) {
+        self.commit_unknown();
         debug_assert!(offset >= self.previous_offset);
         self.tokens.push((token, self.previous_offset..offset));
         self.previous_offset = offset;
@@ -293,14 +299,18 @@ pub fn tokenize<'cache, I: input::IntoInput>(
         // TODO: Define helper method to commit a buffer containing unknown chars.
         match c {
             '\r' | '\n' => {
+                tokens.skip_char(c);
                 let offset = input.offset();
                 if c == '\r' {
-                    input.next_if(|c| c == '\n')?;
+                    if let Some(n) = input.next_if(|c| c == '\n')? {
+                        tokens.skip_char(n);
+                    }
                 }
                 offsets.new_line(offset);
             }
             '{' => tokens.commit(Token::OpenBracket, input.offset()),
             '}' => tokens.commit(Token::CloseBracket, input.offset()),
+            _ if c.is_whitespace() => tokens.skip_char(c),
             _ => tokens.append_unknown(c),
         }
     }
