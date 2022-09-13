@@ -172,6 +172,7 @@ impl<'cache> Output<'cache> {
 struct Characters<I: Input> {
     input: I,
     offset: usize,
+    peeked_offset: usize,
     peeked: Option<Result<Option<char>, I::Error>>,
 }
 
@@ -180,22 +181,28 @@ impl<I: Input> Characters<I> {
         Self {
             input,
             offset: 0,
+            peeked_offset: 0,
             peeked: None,
         }
     }
 
     fn offset(&self) -> usize {
-        self.offset
+        if self.peeked.is_some() {
+            self.offset
+        } else {
+            self.peeked_offset
+        }
     }
 
     fn next(&mut self) -> Result<Option<char>, I::Error> {
         if let Some(peeked) = self.peeked.take() {
+            self.offset = self.peeked_offset;
             return peeked;
         }
 
         let result = self.input.next();
         if let Ok(Some(c)) = result {
-            self.offset += c.len_utf8();
+            self.peeked_offset += c.len_utf8();
         }
         result
     }
@@ -291,6 +298,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
     let mut input = Characters::new(source.into_input());
     let mut tokens = TokenBuilder::new(string_cache);
     let mut offsets = OffsetsBuilder::new();
+    let mut buffer = String::new();
 
     // Read a UTF-8 BOM if it is present
     input.next_if(|c| c == '\u{FEFF}')?;
@@ -300,16 +308,30 @@ pub fn tokenize<'cache, I: input::IntoInput>(
         match c {
             '\r' | '\n' => {
                 tokens.skip_char(c);
-                let offset = input.offset();
                 if c == '\r' {
                     if let Some(n) = input.next_if(|c| c == '\n')? {
                         tokens.skip_char(n);
                     }
                 }
-                offsets.new_line(offset);
+                dbg!(input.offset());
+                offsets.new_line(input.offset());
             }
             '{' => tokens.commit(Token::OpenBracket, input.offset()),
             '}' => tokens.commit(Token::CloseBracket, input.offset()),
+            ';' => tokens.commit(Token::Semicolon, input.offset()),
+            '.' => {
+                let mut has_chars = false;
+                while let Some(l) = input.next_if(char::is_alphabetic)? {
+                    buffer.push(l);
+                    has_chars = true;
+                }
+
+                if has_chars {
+                    tokens.commit(Token::Directive(string_cache.get_or_insert(&mut buffer)), input.offset());
+                } else {
+                    tokens.append_unknown(c);
+                }
+            }
             _ if c.is_whitespace() => tokens.skip_char(c),
             _ => tokens.append_unknown(c),
         }
