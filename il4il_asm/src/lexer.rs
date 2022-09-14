@@ -3,6 +3,8 @@
 use crate::cache::StringCache;
 use crate::input::{self, Input};
 use crate::location;
+use crate::syntax::literal;
+use std::fmt::Display;
 use std::ops::Range;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -13,10 +15,11 @@ pub enum Token<'cache> {
     Semicolon,
     Directive(&'cache str),
     Word(&'cache str),
+    Integer(literal::Integer<'cache>),
     Unknown(&'cache str),
 }
 
-impl std::fmt::Display for Token<'_> {
+impl Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use std::fmt::Write;
 
@@ -29,6 +32,7 @@ impl std::fmt::Display for Token<'_> {
                 f.write_str(name)
             }
             Self::Word(word) => f.write_str(word),
+            Self::Integer(i) => Display::fmt(i, f),
             Self::Unknown(contents) => f.write_str(contents),
         }
     }
@@ -285,11 +289,12 @@ impl<'cache> TokenBuilder<'cache> {
 /// let strings = StringCache::new();
 ///
 /// assert_eq!(
-///     lexer::tokenize(".metadata {}", &strings).unwrap().tokens(),
+///     lexer::tokenize(".section metadata {}", &strings).unwrap().tokens(),
 ///     &[
-///         (Token::Directive("metadata"), 0..9),
-///         (Token::OpenBracket, 10..11),
-///         (Token::CloseBracket, 11..12),
+///         (Token::Directive("section"), 0..8),
+///         (Token::Word("metadata"), 9..17),
+///         (Token::OpenBracket, 18..19),
+///         (Token::CloseBracket, 19..20),
 ///     ]
 /// );
 /// ```
@@ -323,7 +328,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
             ';' => tokens.commit(Token::Semicolon, input.offset()),
             '.' => {
                 let mut has_chars = false;
-                while let Some(l) = input.next_if(char::is_alphabetic)? {
+                while let Some(l) = input.next_if(|c| c.is_ascii_alphabetic())? {
                     buffer.push(l);
                     has_chars = true;
                 }
@@ -334,13 +339,33 @@ pub fn tokenize<'cache, I: input::IntoInput>(
                     tokens.append_unknown(c);
                 }
             }
-            _ if c.is_alphabetic() => {
+            'a'..='z' | 'A'..='Z' => {
                 buffer.push(c);
                 while let Some(l) = input.next_if(char::is_alphanumeric)? {
                     buffer.push(l);
                 }
 
                 tokens.commit(Token::Word(string_cache.get_or_insert(&mut buffer)), input.offset())
+            }
+            '0'..='9' => {
+                let base = if c == '0' {
+                    input.next_if(|c| c.is_ascii_alphabetic())?
+                } else {
+                    None
+                };
+
+                if base.is_none() {
+                    buffer.push(c);
+                }
+
+                while let Some(digit) = input.next_if(|c| c.is_ascii_alphanumeric() || c == '_')? {
+                    buffer.push(digit);
+                }
+
+                tokens.commit(
+                    Token::Integer(literal::Integer::new(base, string_cache.get_or_insert(&mut buffer))),
+                    input.offset(),
+                )
             }
             _ if c.is_whitespace() => tokens.skip_char(c),
             _ => tokens.append_unknown(c),
@@ -359,6 +384,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
 mod tests {
     use super::*;
     use crate::location;
+    use crate::syntax::literal;
 
     #[test]
     fn simple_directive_produces_correct_output() {
@@ -424,5 +450,22 @@ mod tests {
                 Line::new(2..10, location::Number::new(3).unwrap()),
             ]
         );
+    }
+
+    #[test]
+    fn integer_literals_are_supported() {
+        let cache = StringCache::new();
+        let output = tokenize("42 0XCAFE_BABE 0xFF 0b1001 0B0____0", &cache).unwrap();
+
+        assert_eq!(
+            output.tokens(),
+            &[
+                (Token::Integer(literal::Integer::new(None, "42")), 0..2),
+                (Token::Integer(literal::Integer::new(Some('X'), "CAFE_BABE")), 3..14),
+                (Token::Integer(literal::Integer::new(Some('x'), "FF")), 15..19),
+                (Token::Integer(literal::Integer::new(Some('b'), "1001")), 20..26),
+                (Token::Integer(literal::Integer::new(Some('B'), "0____0")), 27..35),
+            ]
+        )
     }
 }
