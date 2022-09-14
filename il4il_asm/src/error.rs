@@ -7,6 +7,7 @@ use std::ops::Range;
 type Message = dyn Fn(&mut std::fmt::Formatter<'_>) -> std::fmt::Result;
 
 /// Represents an error encountered while parsing or assembling an IL4IL module.
+#[must_use]
 pub struct Error {
     location: Range<Location>,
     message: Box<Message>,
@@ -18,6 +19,14 @@ impl Error {
             location,
             message: Box::new(message),
         }
+    }
+
+    pub fn from_str(location: Range<Location>, message: &'static str) -> Self {
+        Self::new(location, |f| f.write_str(message))
+    }
+
+    pub fn from_string(location: Range<Location>, message: String) -> Self {
+        Self::new(location, move |f| f.write_str(message.as_str()))
     }
 
     pub fn location(&self) -> &Range<Location> {

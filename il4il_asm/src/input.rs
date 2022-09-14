@@ -71,7 +71,7 @@ impl<R: std::io::Read> Input for ReadInput<R> {
             _ => 4,
         };
 
-        std::str::from_utf8(&mut buffer[0..last_offset])
+        std::str::from_utf8(&buffer[0..last_offset])
             .map(|s| s.chars().next())
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }

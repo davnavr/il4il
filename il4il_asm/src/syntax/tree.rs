@@ -4,14 +4,26 @@
 
 use crate::syntax::Located;
 
+pub use il4il::module::ModuleName;
+
+#[derive(Clone, Debug)]
+pub enum MetadataDirective<'src> {
+    Name(ModuleName<'src>),
+}
+
+#[derive(Clone, Debug)]
+pub enum SectionDefinition<'src> {
+    Metadata(Vec<MetadataDirective<'src>>),
+}
+
 #[derive(Clone, Debug)]
 pub enum TopLevelDirective<'src> {
-    Placeholder(&'src ()),
+    Section(SectionDefinition<'src>),
 }
 
 /// The root of the abstract syntax tree.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct Root<'src> {
-    pub directives: Box<[Located<TopLevelDirective<'src>>]>,
+    pub directives: Vec<Located<TopLevelDirective<'src>>>,
 }

@@ -1,6 +1,5 @@
 //! Module for parsing IL4IL assembly.
 
-use crate::cache::StringCache;
 use crate::error::Error;
 use crate::lexer;
 use crate::syntax;
