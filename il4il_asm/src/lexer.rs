@@ -16,6 +16,7 @@ pub enum Token<'cache> {
     Directive(&'cache str),
     Word(&'cache str),
     Integer(literal::Integer<'cache>),
+    String(literal::String<'cache>),
     Unknown(&'cache str),
 }
 
@@ -33,6 +34,7 @@ impl Display for Token<'_> {
             }
             Self::Word(word) => f.write_str(word),
             Self::Integer(i) => Display::fmt(i, f),
+            Self::String(s) => Display::fmt(s, f),
             Self::Unknown(contents) => f.write_str(contents),
         }
     }
@@ -249,8 +251,13 @@ impl<'cache> TokenBuilder<'cache> {
         }
     }
 
-    fn append_unknown(&mut self, c: char) {
+    fn push_unknown(&mut self, c: char) {
         self.unknown_buffer.push(c);
+    }
+
+    fn append_unknown(&mut self, buffer: &mut String) {
+        self.unknown_buffer.push_str(&buffer);
+        buffer.clear();
     }
 
     fn commit_unknown(&mut self) {
@@ -336,7 +343,27 @@ pub fn tokenize<'cache, I: input::IntoInput>(
                 if has_chars {
                     tokens.commit(Token::Directive(string_cache.get_or_insert(&mut buffer)), input.offset());
                 } else {
-                    tokens.append_unknown(c);
+                    tokens.push_unknown(c);
+                }
+            }
+            '"' => {
+                while let Some(l) = input.next_if(|c| !matches!(c, '\r' | '\n' | '"'))? {
+                    buffer.push(l);
+                    if l == '\\' {
+                        if let Some(d) = input.next_if(|c| c == '"')? {
+                            buffer.push(d);
+                        }
+                    }
+                }
+
+                if input.next_if(|c| c == '"')?.is_some() {
+                    tokens.commit(
+                        Token::String(literal::String::new(string_cache.get_or_insert(&mut buffer))),
+                        input.offset(),
+                    );
+                } else {
+                    tokens.push_unknown(c);
+                    tokens.append_unknown(&mut buffer)
                 }
             }
             'a'..='z' | 'A'..='Z' => {
@@ -368,7 +395,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
                 )
             }
             _ if c.is_whitespace() => tokens.skip_char(c),
-            _ => tokens.append_unknown(c),
+            _ => tokens.push_unknown(c),
         }
     }
 
@@ -467,5 +494,22 @@ mod tests {
                 (Token::Integer(literal::Integer::new(Some('B'), "0____0")), 27..35),
             ]
         )
+    }
+
+    #[test]
+    fn string_literals_are_supported() {
+        let cache = StringCache::new();
+        let output = tokenize(r#""" "a" "b\"c" "d\"" "e\n""#, &cache).unwrap();
+
+        assert_eq!(
+            output.tokens(),
+            &[
+                (Token::String(literal::String::new("")), 0..2),
+                (Token::String(literal::String::new("a")), 3..6),
+                (Token::String(literal::String::new("b\\\"c")), 7..13),
+                (Token::String(literal::String::new("d\\\"")), 14..19),
+                (Token::String(literal::String::new("e\\n")), 20..25)
+            ]
+        );
     }
 }
