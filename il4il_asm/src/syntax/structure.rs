@@ -1,6 +1,7 @@
 //! Contains types modelling a low-level view of an IL4IL program.
 
 use crate::syntax::Located;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum NodeKind<'src> {
@@ -11,6 +12,14 @@ pub enum NodeKind<'src> {
 #[derive(Debug, Eq, PartialEq)]
 pub enum Attribute<'src> {
     Word(&'src str),
+}
+
+impl Display for Attribute<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Word(word) => f.write_str(word),
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]

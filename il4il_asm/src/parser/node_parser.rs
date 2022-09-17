@@ -3,6 +3,7 @@
 use crate::error::Error;
 use crate::lexer::{self, Token};
 use crate::syntax::{structure, Located};
+use std::fmt::Formatter;
 use std::ops::Range;
 
 type AttributeList<'src> = Vec<Located<structure::Attribute<'src>>>;
@@ -52,7 +53,7 @@ pub(super) fn parse<'src>(
         if let Some(parent_node) = nodes.last_mut() {
             match tok {
                 Token::Unknown(unknown) => {
-                    context.push_error_string_at(byte_offsets, format!("unexpected '{unknown}'"));
+                    context.push_error_at(byte_offsets, format!("unexpected '{unknown}'"));
                 }
                 Token::Semicolon => match &mut parent_node.contents {
                     ParentContents::Line(attributes) => {
@@ -86,7 +87,7 @@ pub(super) fn parse<'src>(
                         let attributes = std::mem::take(attributes);
                         parent_node.contents = ParentContents::Blocks(attributes, Vec::new());
                     }
-                    ParentContents::Blocks(_, _) => context.push_error_str_at(byte_offsets, "unexpected opening bracket in block"),
+                    ParentContents::Blocks(_, _) => context.push_error_at(byte_offsets, "unexpected opening bracket in block"),
                 },
                 Token::CloseBracket => match &mut parent_node.contents {
                     ParentContents::Blocks(attributes, children) => {
@@ -137,7 +138,10 @@ pub(super) fn parse<'src>(
                     nodes.push(ParentNode::new(structure::NodeKind::Directive(name), byte_offsets));
                 }
                 _ => {
-                    context.push_error_string_at(byte_offsets, format!("unexpected '{}', expected directive or word", tok));
+                    let tok = tok.to_string();
+                    context.push_error_at(byte_offsets, move |f: &mut Formatter| {
+                        write!(f, "unexpected '{tok}', expected directive or word")
+                    });
                 }
             }
         }
@@ -151,7 +155,7 @@ pub(super) fn parse<'src>(
                 start: last_location,
                 end: last_location,
             },
-            move |f| write!(f, "expected {nesting_level} closing brackets"),
+            move |f: &mut Formatter| write!(f, "expected {nesting_level} closing brackets"),
         ));
 
         for parent_node in nodes {

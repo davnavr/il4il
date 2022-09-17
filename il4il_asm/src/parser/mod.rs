@@ -1,6 +1,6 @@
 //! Module for parsing IL4IL assembly.
 
-use crate::error::Error;
+use crate::error::{self, Error};
 use crate::lexer;
 use crate::syntax;
 use std::ops::Range;
@@ -39,16 +39,18 @@ impl<'a> Context<'a> {
         self.errors.push(error);
     }
 
-    fn push_error_at<F: Fn(&mut std::fmt::Formatter<'_>) -> std::fmt::Result + 'static>(&mut self, offsets: Range<usize>, message: F) {
+    fn push_error_at<M: error::Message>(&mut self, offsets: Range<usize>, message: M) {
         self.push_error(Error::new(self.offsets.get_location_range(offsets), message))
     }
 
-    fn push_error_string_at(&mut self, offsets: Range<usize>, message: String) {
-        self.push_error(Error::from_string(self.offsets.get_location_range(offsets), message))
-    }
-
-    fn push_error_str_at(&mut self, offsets: Range<usize>, message: &'static str) {
-        self.push_error(Error::from_str(self.offsets.get_location_range(offsets), message))
+    fn report_error<T>(&mut self, result: error::Result<T>) -> Option<T> {
+        match result {
+            Ok(value) => Some(value),
+            Err(e) => {
+                self.push_error(e);
+                None
+            }
+        }
     }
 }
 

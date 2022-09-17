@@ -4,29 +4,49 @@ use crate::location::Location;
 use std::fmt::{Formatter, Write};
 use std::ops::Range;
 
-type Message = dyn Fn(&mut std::fmt::Formatter<'_>) -> std::fmt::Result;
+/// Trait for error messages.
+pub(crate) trait Message: 'static {
+    fn message(&self, f: &mut Formatter<'_>) -> std::fmt::Result;
+}
+
+impl Message for Box<dyn Message> {
+    fn message(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let m: &dyn Message = self.as_ref();
+        m.message(f)
+    }
+}
+
+impl Message for &'static str {
+    fn message(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self)
+    }
+}
+
+impl Message for String {
+    fn message(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl<F: Fn(&mut Formatter<'_>) -> std::fmt::Result + 'static> Message for F {
+    fn message(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        (self)(f)
+    }
+}
 
 /// Represents an error encountered while parsing or assembling an IL4IL module.
 #[must_use]
 pub struct Error {
     location: Range<Location>,
-    message: Box<Message>,
+    message: Box<dyn Message>,
 }
 
 impl Error {
-    pub fn new<F: Fn(&mut std::fmt::Formatter<'_>) -> std::fmt::Result + 'static>(location: Range<Location>, message: F) -> Self {
+    pub(crate) fn new<M: Message>(location: Range<Location>, message: M) -> Self {
         Self {
             location,
             message: Box::new(message),
         }
-    }
-
-    pub fn from_str(location: Range<Location>, message: &'static str) -> Self {
-        Self::new(location, |f| f.write_str(message))
-    }
-
-    pub fn from_string(location: Range<Location>, message: String) -> Self {
-        Self::new(location, move |f| f.write_str(message.as_str()))
     }
 
     pub fn location(&self) -> &Range<Location> {
@@ -34,19 +54,19 @@ impl Error {
     }
 
     pub fn format_message(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        (self.message)(f)
+        self.message.message(f)
     }
 }
 
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         #[repr(transparent)]
-        struct MessageDebug<'a>(&'a Message);
+        struct MessageDebug<'a>(&'a dyn Message);
 
         impl std::fmt::Debug for MessageDebug<'_> {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 f.write_char('\'')?;
-                (self.0)(f)?;
+                self.0.message(f)?;
                 f.write_char('\'')
             }
         }
@@ -61,9 +81,11 @@ impl std::fmt::Debug for Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{} - ", self.location.start.line, self.location.start.column)?;
-        (self.message)(f)
+        self.message.message(f)
     }
 }
+
+pub(crate) type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
 pub(crate) fn assert_ok<'a, E>(errors: E)
