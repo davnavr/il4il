@@ -1,13 +1,8 @@
 //! Turns a tree containing nodes into an abstract syntax tree which is the final output of the parsing process.
 
-use crate::error::Error;
 use crate::syntax::{structure, tree, Located};
 
-pub(super) fn parse<'src>(
-    tree: crate::syntax::structure::Tree<'src>,
-    offsets: &crate::lexer::Offsets,
-    errors: &mut Vec<Error>,
-) -> tree::Root<'src> {
+pub(super) fn parse<'src>(tree: crate::syntax::structure::Tree<'src>, context: &mut crate::parser::Context<'_>) -> tree::Root<'src> {
     let mut directives = Vec::with_capacity(tree.contents.len());
     for top_node in tree.contents.into_iter() {
         match top_node.node.kind.node {
@@ -33,37 +28,46 @@ pub(super) fn parse<'src>(
                             offsets: location,
                         }) => match kind {
                             "metadata" => {
-                                todo!("parse metadata")
+                                let mut metadata = Vec::new();
+                                for content_node in contents {
+                                    match content_node.node.kind.node {
+                                        structure::NodeKind::Directive("name") => {
+                                            todo!()
+                                        }
+                                        _ => todo!(),
+                                    }
+                                }
+
+                                directives.push(Located::new(
+                                    tree::TopLevelDirective::Section(tree::SectionDefinition::Metadata(metadata)),
+                                    top_node.offsets,
+                                ))
                             }
-                            _ => errors.push(Error::from_string(
-                                offsets.get_location_range(location),
-                                format!("\"{kind}\" is not a valid section kind"),
-                            )),
+                            _ => {
+                                let kind = kind.to_string();
+                                context.push_error_at(location, move |f| write!(f, "\"{kind}\" is not a valid section kind"))
+                            }
                         },
                         kind => {
-                            errors.push(Error::from_str(
-                                offsets.get_location_range(kind.map(|n| n.offsets).unwrap_or(top_node.node.kind.offsets)),
+                            context.push_error_str_at(
+                                kind.map(|n| n.offsets).unwrap_or(top_node.node.kind.offsets),
                                 "expected section kind",
-                            ));
+                            );
                         }
                     };
 
                     for Located { offsets: location, .. } in attributes {
-                        errors.push(Error::from_str(
-                            offsets.get_location_range(location),
-                            "unexpected section attribute",
-                        ));
+                        context.push_error_str_at(location, "unexpected section attribute");
                     }
                 }
-                _ => errors.push(Error::from_string(
-                    offsets.get_location_range(top_node.node.kind.offsets),
+                _ => context.push_error_string_at(
+                    top_node.node.kind.offsets,
                     format!("unknown directive \"{directive}\", expected \".section\""),
-                )),
+                ),
             },
-            structure::NodeKind::Word(word) => errors.push(Error::from_string(
-                offsets.get_location_range(top_node.offsets),
-                format!("unexpected word {word}, expected directive"),
-            )),
+            structure::NodeKind::Word(word) => {
+                context.push_error_string_at(top_node.offsets, format!("unexpected word {word}, expected directive"))
+            }
         }
     }
 

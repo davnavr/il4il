@@ -41,8 +41,7 @@ impl<'src> ParentNode<'src> {
 
 pub(super) fn parse<'src>(
     tokens: Vec<(lexer::Token<'src>, Range<usize>)>,
-    offsets: &lexer::Offsets,
-    errors: &mut Vec<Error>,
+    context: &mut crate::parser::Context<'_>,
 ) -> structure::Tree<'src> {
     let mut contents = Vec::new();
 
@@ -53,8 +52,7 @@ pub(super) fn parse<'src>(
         if let Some(parent_node) = nodes.last_mut() {
             match tok {
                 Token::Unknown(unknown) => {
-                    let message = format!("unexpected '{unknown}'");
-                    errors.push(Error::new(offsets.get_location_range(byte_offsets), move |f| f.write_str(&message)));
+                    context.push_error_string_at(byte_offsets, format!("unexpected '{unknown}'"));
                 }
                 Token::Semicolon => match &mut parent_node.contents {
                     ParentContents::Line(attributes) => {
@@ -88,9 +86,7 @@ pub(super) fn parse<'src>(
                         let attributes = std::mem::take(attributes);
                         parent_node.contents = ParentContents::Blocks(attributes, Vec::new());
                     }
-                    ParentContents::Blocks(_, _) => errors.push(Error::new(offsets.get_location_range(byte_offsets), |f| {
-                        f.write_str("unexpected opening bracket in block")
-                    })),
+                    ParentContents::Blocks(_, _) => context.push_error_str_at(byte_offsets, "unexpected opening bracket in block"),
                 },
                 Token::CloseBracket => match &mut parent_node.contents {
                     ParentContents::Blocks(attributes, children) => {
@@ -141,8 +137,7 @@ pub(super) fn parse<'src>(
                     nodes.push(ParentNode::new(structure::NodeKind::Directive(name), byte_offsets));
                 }
                 _ => {
-                    let message = format!("unexpected '{}', expected directive or word", tok);
-                    errors.push(Error::new(offsets.get_location_range(byte_offsets), move |f| f.write_str(&message)));
+                    context.push_error_string_at(byte_offsets, format!("unexpected '{}', expected directive or word", tok));
                 }
             }
         }
@@ -150,8 +145,8 @@ pub(super) fn parse<'src>(
 
     if !nodes.is_empty() {
         let nesting_level = nodes.len();
-        let last_location = offsets.last_location();
-        errors.push(Error::new(
+        let last_location = context.offsets().last_location();
+        context.push_error(Error::new(
             Range {
                 start: last_location,
                 end: last_location,
@@ -178,7 +173,14 @@ mod tests {
         let strings = StringCache::new();
         let tokens = lexer::tokenize(".example word;\n", &strings).unwrap();
         let mut errors = Vec::new();
-        let output = parse(tokens.tokens, &tokens.offsets, &mut errors);
+        let output = parse(
+            tokens.tokens,
+            &mut crate::parser::Context {
+                offsets: &tokens.offsets,
+                errors: &mut errors,
+            },
+        );
+
         crate::error::assert_ok(errors.iter());
         assert_eq!(
             output,
