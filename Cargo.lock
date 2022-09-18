@@ -169,6 +169,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "il4il-playground"
+version = "0.1.0"
+dependencies = [
+ "il4il_asm",
+]
+
+[[package]]
 name = "il4il-run"
 version = "0.1.0"
 dependencies = [
