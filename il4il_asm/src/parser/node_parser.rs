@@ -129,6 +129,13 @@ pub(super) fn parse<'src>(
 
                     attributes.push(Located::new(structure::Attribute::Word(word), byte_offsets));
                 }
+                Token::String(s) => {
+                    let attributes = match &mut parent_node.contents {
+                        ParentContents::Line(attrs) | ParentContents::Blocks(attrs, _) => attrs,
+                    };
+
+                    attributes.push(Located::new(structure::Attribute::String(s), byte_offsets));
+                }
                 _ => todo!("{:?}", tok),
             }
         } else {
@@ -140,7 +147,7 @@ pub(super) fn parse<'src>(
                 _ => {
                     let tok = tok.to_string();
                     context.push_error_at(byte_offsets, move |f: &mut Formatter| {
-                        write!(f, "unexpected '{tok}', expected directive or word")
+                        write!(f, "unexpected '{tok}', expected directive")
                     });
                 }
             }

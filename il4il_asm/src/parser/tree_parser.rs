@@ -3,7 +3,7 @@
 use crate::error::{Error, Result};
 use crate::lexer::Offsets;
 use crate::parser::Context;
-use crate::syntax::{structure, tree, Located};
+use crate::syntax::{literal, structure, tree, Located};
 use std::fmt::Formatter;
 use std::ops::Range;
 
@@ -47,6 +47,19 @@ impl<'src> AttributeParser<'src> {
         }
     }
 
+    fn expect_literal_string(&mut self, offsets: &Offsets, default_offset: &Range<usize>) -> Result<Located<literal::String<'src>>> {
+        let node = self.expect_any(offsets, default_offset, "expected literal string")?;
+        match node.node {
+            structure::Attribute::String(s) => Ok(Located::new(s, node.offsets)),
+            bad => {
+                let s = bad.to_string();
+                Err(Error::new(offsets.get_location_range(node.offsets), move |f: &mut Formatter| {
+                    write!(f, "expected literal string, but got \"{s}\"")
+                }))
+            }
+        }
+    }
+
     fn expect_end(self, context: &mut Context<'_>) {
         self.attributes.for_each(|bad| error_unexpected(bad, context))
     }
@@ -54,12 +67,18 @@ impl<'src> AttributeParser<'src> {
 
 enum ContentKind {
     Empty,
-    Block,
+    Block, // (std::vec::IntoIter),
 }
 
 struct ContentParser<'src> {
     kind: ContentKind,
     contents: std::vec::IntoIter<Located<structure::Node<'src>>>,
+}
+
+impl<'src> ContentParser<'src> {
+    fn expect_empty(self, context: &mut Context<'_>) {
+        self.contents.for_each(|bad| error_unexpected(bad.node.kind, context))
+    }
 }
 
 fn parse_node_contents(node: structure::NodeContents) -> (AttributeParser, ContentParser) {
@@ -94,11 +113,56 @@ fn parse_node_contents(node: structure::NodeContents) -> (AttributeParser, Conte
 fn parse_section<'src>(
     location: &Range<usize>,
     mut attributes: AttributeParser<'src>,
-    mut contents: ContentParser<'src>,
+    contents: ContentParser<'src>,
     context: &mut Context<'_>,
 ) -> Result<tree::SectionDefinition<'src>> {
     let kind: Located<&'src str> = attributes.expect_word(context.offsets(), location, "expected section kind")?;
-    match kind {
+
+    attributes.expect_end(context);
+
+    match kind.node {
+        "metadata" => {
+            let mut metadata = Vec::with_capacity(contents.contents.len());
+            for node in contents.contents {
+                match node.node.kind.node {
+                    structure::NodeKind::Directive("name") => {
+                        let (mut attributes, contents) = parse_node_contents(node.node.contents);
+
+                        let name = attributes.expect_literal_string(context.offsets(), &node.node.kind.offsets);
+                        if let Some(name) = context.report_error(name) {
+                            let name_offsets = name.offsets.clone();
+                            metadata.push(Located::new(
+                                tree::MetadataDirective::Name(Located::new(
+                                    il4il::module::ModuleName::from_name(
+                                        il4il::identifier::Id::new(name.node.contents())
+                                            .expect("TODO: Translate string literal to ID, with escape sequences"),
+                                    ),
+                                    name_offsets,
+                                )),
+                                node.offsets.start..name.offsets.end,
+                            ));
+                            attributes.expect_end(context);
+                        }
+
+                        contents.expect_empty(context);
+                    }
+                    structure::NodeKind::Directive(bad) => {
+                        let bad = bad.to_string();
+                        context.push_error_at(node.node.kind.offsets, move |f: &mut Formatter| {
+                            write!(f, "unknown metadata directive \".{bad}\"")
+                        })
+                    }
+                    structure::NodeKind::Word(word) => {
+                        let word = word.to_string();
+                        context.push_error_at(node.node.kind.offsets, move |f: &mut Formatter| {
+                            write!(f, "expected metadata directive, but got \"{word}\"")
+                        })
+                    }
+                }
+            }
+
+            Ok(tree::SectionDefinition::Metadata(metadata))
+        }
         _ => {
             let s = kind.node.to_string();
             Err(Error::new(
@@ -121,62 +185,11 @@ pub(super) fn parse<'src>(tree: structure::Tree<'src>, context: &mut Context<'_>
                         if let Some(section) = context.report_error(r) {
                             directives.push(Located::new(tree::TopLevelDirective::Section(section), top_node.offsets))
                         }
-                        // let mut attributes;
-                        // let contents;
-
-                        // match top_node.node.contents {
-                        //     structure::NodeContents::Line(attrs) => {
-                        //         attributes = attrs.into_iter();
-                        //         contents = Vec::default().into_iter();
-                        //     }
-                        //     structure::NodeContents::Block { attributes: attrs, nodes } => {
-                        //         attributes = attrs.into_iter();
-                        //         contents = nodes.into_iter();
-                        //     }
-                        // }
-
-                        // match attributes.next() {
-                        //     Some(Located {
-                        //         node: structure::Attribute::Word(kind),
-                        //         offsets: location,
-                        //     }) => match kind {
-                        //         "metadata" => {
-                        //             let mut metadata = Vec::new();
-                        //             for content_node in contents {
-                        //                 match content_node.node.kind.node {
-                        //                     structure::NodeKind::Directive("name") => {
-                        //                         todo!()
-                        //                     }
-                        //                     _ => todo!(),
-                        //                 }
-                        //             }
-
-                        //             directives.push(Located::new(
-                        //                 tree::TopLevelDirective::Section(tree::SectionDefinition::Metadata(metadata)),
-                        //                 top_node.offsets,
-                        //             ))
-                        //         }
-                        //         _ => {
-                        //             let kind = kind.to_string();
-                        //             context.push_error_at(location, move |f| write!(f, "\"{kind}\" is not a valid section kind"))
-                        //         }
-                        //     },
-                        //     kind => {
-                        //         context.push_error_str_at(
-                        //             kind.map(|n| n.offsets).unwrap_or(top_node.node.kind.offsets),
-                        //             "expected section kind",
-                        //         );
-                        //     }
-                        // };
-
-                        // for Located { offsets: location, .. } in attributes {
-                        //     context.push_error_str_at(location, "unexpected section attribute");
-                        // }
                     }
                     _ => {
                         let directive = directive.to_string();
                         context.push_error_at(top_node.node.kind.offsets, move |f: &mut Formatter| {
-                            write!(f, "unknown directive \"{directive}\", expected \".section\"")
+                            write!(f, "unknown directive \".{directive}\", expected \".section\"")
                         })
                     }
                 }

@@ -8,12 +8,12 @@ pub use il4il::module::ModuleName;
 
 #[derive(Clone, Debug)]
 pub enum MetadataDirective<'src> {
-    Name(ModuleName<'src>),
+    Name(Located<ModuleName<'src>>),
 }
 
 #[derive(Clone, Debug)]
 pub enum SectionDefinition<'src> {
-    Metadata(Vec<MetadataDirective<'src>>),
+    Metadata(Vec<Located<MetadataDirective<'src>>>),
 }
 
 #[derive(Clone, Debug)]
