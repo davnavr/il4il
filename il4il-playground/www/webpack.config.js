@@ -3,12 +3,17 @@ const path = require('path');
 
 module.exports = {
     mode: "development",
-    entry: "./init.js",
+    entry: "./index.js",
     output: {
       path: path.resolve(__dirname, "dist"),
-      filename: "init.js",
+      filename: "index.js",
     },
     plugins: [
-        new CopyWebpackPlugin(['index.html']),
+        new CopyWebpackPlugin({
+            patterns: [
+                "index.html",
+                "style.css",
+            ]
+        }),
     ]
 };
