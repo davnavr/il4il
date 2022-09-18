@@ -1,4 +1,15 @@
 {
     "name": "il4il-playground",
-    "private": true
+    "private": true,
+    "main": "index.js",
+    "scripts": {
+        "start": "webpack-dev-server"
+    },
+    "dependencies": {
+        "codemirror": "^6.0.1",
+        "copy-webpack-plugin": "^11.0.0",
+        "webpack": "^5.49.0",
+        "webpack-cli": "^4.7.2",
+        "webpack-dev-server": "^3.11.2"
+    }
 }
