@@ -256,7 +256,7 @@ impl<'cache> TokenBuilder<'cache> {
     }
 
     fn append_unknown(&mut self, buffer: &mut String) {
-        self.unknown_buffer.push_str(&buffer);
+        self.unknown_buffer.push_str(buffer);
         buffer.clear();
     }
 

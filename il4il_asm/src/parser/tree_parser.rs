@@ -35,7 +35,7 @@ impl<'src> AttributeParser<'src> {
     }
 
     fn expect_word(&mut self, offsets: &Offsets, default_offset: &Range<usize>, error: &'static str) -> Result<Located<&'src str>> {
-        let node = self.expect_any(offsets, default_offset, &error)?;
+        let node = self.expect_any(offsets, default_offset, error)?;
         match node.node {
             structure::Attribute::Word(word) => Ok(Located::new(word, node.offsets)),
             bad => {
