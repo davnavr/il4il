@@ -7,5 +7,6 @@ members = [
     "il4il_vm",
     "il4il_c",
     "il4il_asm",
-    "il4il-run"
+    "il4il-run",
+    "il4il-as"
 ]
