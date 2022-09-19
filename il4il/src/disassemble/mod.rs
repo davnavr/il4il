@@ -108,7 +108,7 @@ mod tests {
             ))]));
 
         assert_eq!(
-            ".format {\n    .major 0;\n    .minor 1;\n}\n\n.section metdata {\n    .name \"Hello\";\n}",
+            ".format {\n    .major 0;\n    .minor 1;\n}\n.section metadata {\n    .name \"Hello\";\n}",
             disassembly_to_string(module)
         )
     }

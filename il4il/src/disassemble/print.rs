@@ -354,8 +354,8 @@ impl<'a, 'b, P: Print> PrintBlock<'a, 'b, P> {
         std::mem::replace(&mut self.0.result, Ok(()))?;
         self.0.printer.dedent();
         self.0.printer.print_new_line()?;
-        self.0.printer.destination.print_char('}')?;
-        self.0.printer.print_new_line()
+        self.0.printer.flush_indentation()?;
+        self.0.printer.destination.print_char('}')
     }
 }
 
