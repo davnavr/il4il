@@ -322,9 +322,9 @@ impl<'a, 'b, P: Print> PrintContent<'a, 'b, P> {
         self
     }
 
-    pub fn block(self) -> PrintBlock<'a, 'b, P> {
+    pub fn block(&mut self) -> PrintBlock<'a, '_, P> {
         PrintBlock(PrintHelper {
-            result: self.0.result.and_then(|_| {
+            result: std::mem::replace(&mut self.0.result, Ok(())).and_then(|_| {
                 self.0.printer.destination.print_str(" {")?;
                 self.0.printer.print_new_line()?;
                 self.0.printer.indent();
@@ -363,8 +363,12 @@ impl<'a, 'b, P: Print> PrintBlock<'a, 'b, P> {
 pub(super) struct PrintAttributes<'a, 'b, P: Print>(&'b mut Printer<'a, P>);
 
 impl<P: Print> PrintAttributes<'_, '_, P> {
-    pub fn print_display<D: std::fmt::Display>(&mut self, item: D) -> Result {
+    pub(super) fn with_print<F: FnOnce(&mut P) -> Result>(&mut self, f: F) -> Result {
         self.0.destination.print_char(' ')?;
-        self.0.destination.print_fmt(format_args!("{item}"))
+        f(&mut self.0.destination)
+    }
+
+    pub fn print_display<D: std::fmt::Display>(&mut self, item: D) -> Result {
+        self.with_print(|destination| destination.print_fmt(format_args!("{item}")))
     }
 }
