@@ -6,6 +6,18 @@ body {
     height: 100vh;
 }
 
-#header {
+header {
     height: 50px;
+    margin: 5px;
+}
+
+main {
+    display: block;
+    flex: 1;
+    position: relative;
+}
+
+#grid {
+    height: 100%;
+    position: absolute;
 }
