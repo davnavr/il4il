@@ -1,5 +1,5 @@
 {
-    "name": "il4il-playground",
+    "name": "il4il-web-playground",
     "private": true,
     "main": "index.js",
     "scripts": {
@@ -7,6 +7,7 @@
         "build": "webpack build"
     },
     "dependencies": {
+        "il4il-playground": "file:../pkg",
         "codemirror": "^6.0.1",
         "copy-webpack-plugin": "^11.0.0",
         "webpack": "^5.49.0",

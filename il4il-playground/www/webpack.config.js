@@ -5,8 +5,11 @@ module.exports = {
     mode: "development",
     entry: "./index.js",
     output: {
-      path: path.resolve(__dirname, "dist"),
-      filename: "index.js",
+        path: path.resolve(__dirname, "dist"),
+        filename: "index.js",
+    },
+    experiments: {
+        asyncWebAssembly: true,
     },
     plugins: [
         new CopyWebpackPlugin({

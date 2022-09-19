@@ -1,6 +1,8 @@
 [package]
 name = "il4il-playground"
 version = "0.1.0"
+description = "IL4IL interactive assembly for WASM"
+license = "Apache-2.0"
 edition = "2021"
 
 [lib]
@@ -8,3 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 il4il_asm = { path = "../il4il_asm" }
+wasm-bindgen = "0.2.83"
