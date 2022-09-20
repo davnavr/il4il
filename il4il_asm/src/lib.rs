@@ -20,6 +20,15 @@ pub enum FullError<E> {
     AssemblyFailed(Vec<error::Error>),
 }
 
+impl FullError<std::convert::Infallible> {
+    pub fn into_assembly_error(self) -> Vec<error::Error> {
+        match self {
+            Self::AssemblyFailed(errors) => errors,
+            Self::InvalidInput(_) => unreachable!(),
+        }
+    }
+}
+
 impl<E: std::fmt::Display> std::fmt::Display for FullError<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

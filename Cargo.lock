@@ -178,6 +178,7 @@ dependencies = [
 name = "il4il-playground"
 version = "0.1.0"
 dependencies = [
+ "il4il",
  "il4il_asm",
  "wasm-bindgen",
 ]

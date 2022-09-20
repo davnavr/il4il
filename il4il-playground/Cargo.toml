@@ -9,5 +9,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+il4il = { path = "../il4il" }
 il4il_asm = { path = "../il4il_asm" }
 wasm-bindgen = "0.2.83"
