@@ -1,4 +1,5 @@
 import * as playground from "il4il-playground"
+import * as codemirror from "codemirror"
 
 /**
  * @type {{ name: string; content: (tab: HTMLElement) => void }[]}
@@ -7,8 +8,17 @@ const TABS = [
     {
         name: "IL4IL",
         content: (tab) => {
-
+            const editor = new codemirror.EditorView({
+                extensions: [ codemirror.basicSetup ],
+                parent: tab
+            });
         },
+    },
+    {
+        name: "Binary",
+        content: (tab) => {
+
+        }
     }
 ];
 
@@ -40,7 +50,9 @@ function initialize_tabs() {
         button.classList.add("tab-button");
         button.innerText = tab.name;
 
-        section.classList.add("hidden");
+        section.classList.add("tab", "hidden");
+
+        let initialized = false;
 
         button.addEventListener("click", () => {
             if (active_tab !== null) {
@@ -51,9 +63,12 @@ function initialize_tabs() {
             section.classList.remove("hidden");
             button.disabled = true;
             active_tab = { tab: section, button };
-        });
 
-        tab.content(section);
+            if (!initialized) {
+                initialized = true;
+                tab.content(section);
+            }
+        });
     });
 
     first_tab.click();
