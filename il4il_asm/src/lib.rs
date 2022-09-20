@@ -45,12 +45,17 @@ impl<E: std::error::Error> std::error::Error for FullError<E> {}
 /// # Errors
 ///
 /// Any errors encountered during assembly are collected and returned.
-pub fn assemble<'cache, I: input::IntoInput>(
+pub fn assemble<'cache, 'str, I, S>(
     input: I,
-    string_cache: &'cache cache::StringCache<'cache>,
-) -> Result<assembler::Output<'cache>, FullError<<I::Source as input::Input>::Error>> {
+    string_cache: &'cache S,
+) -> Result<assembler::Output<'str>, FullError<<I::Source as input::Input>::Error>>
+where
+    'str: 'cache,
+    I: input::IntoInput,
+    S: cache::StringCache<'cache, 'str>,
+{
     let mut errors = Vec::new();
-    let tokens = lexer::tokenize(input, string_cache).map_err(FullError::InvalidInput)?;
+    let tokens = lexer::tokenize::<'cache, 'str, I, S>(input, string_cache).map_err(FullError::InvalidInput)?;
     let tree = parser::parse(tokens, &mut errors);
     let output = assembler::assemble(tree, &mut errors);
     if errors.is_empty() {

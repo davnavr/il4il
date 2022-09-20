@@ -24,6 +24,9 @@ const TABS = [
                     buffer += line + '\n';
                 }
                 const errors = state.assemble(buffer);
+                for (let i = 0; i < errors.count(); i++) {
+                    console.error(errors.get(i));
+                }
             });
         },
     },

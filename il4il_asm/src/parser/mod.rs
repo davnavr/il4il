@@ -9,13 +9,13 @@ mod node_parser;
 mod tree_parser;
 
 #[derive(Debug)]
-pub struct Output<'cache> {
+pub struct Output<'src> {
     pub(crate) offsets: lexer::Offsets,
-    pub(crate) tree: syntax::tree::Root<'cache>,
+    pub(crate) tree: syntax::tree::Root<'src>,
 }
 
-impl<'cache> Output<'cache> {
-    pub fn tree(&self) -> &syntax::tree::Root<'cache> {
+impl<'src> Output<'src> {
+    pub fn tree(&self) -> &syntax::tree::Root<'src> {
         &self.tree
     }
 
@@ -54,7 +54,7 @@ impl<'a> Context<'a> {
     }
 }
 
-pub fn parse<'cache>(inputs: crate::lexer::Output<'cache>, errors: &mut Vec<Error>) -> Output<'cache> {
+pub fn parse<'str, S: crate::cache::StringRef<'str>>(inputs: crate::lexer::Output<S>, errors: &mut Vec<Error>) -> Output<'str> {
     let tokens = inputs.tokens;
     let mut context = Context {
         offsets: &inputs.offsets,

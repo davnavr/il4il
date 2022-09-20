@@ -1,27 +1,28 @@
 //! Low-level syntax node parser.
 
+use crate::cache::StringRef;
 use crate::error::Error;
 use crate::lexer::{self, Token};
 use crate::syntax::{structure, Located};
 use std::fmt::Formatter;
-use std::ops::Range;
+use std::ops::{Deref, Range};
 
-type AttributeList<'src> = Vec<Located<structure::Attribute<'src>>>;
+type AttributeList<S> = Vec<Located<structure::Attribute<S>>>;
 
-type NodeList<'src> = Vec<Located<structure::Node<'src>>>;
+type NodeList<S> = Vec<Located<structure::Node<S>>>;
 
-enum ParentContents<'src> {
-    Line(AttributeList<'src>),
-    Blocks(AttributeList<'src>, NodeList<'src>),
+enum ParentContents<S: Deref<Target = str>> {
+    Line(AttributeList<S>),
+    Blocks(AttributeList<S>, NodeList<S>),
 }
 
-struct ParentNode<'src> {
-    kind: Located<structure::NodeKind<'src>>,
-    contents: ParentContents<'src>,
+struct ParentNode<S: Deref<Target = str>> {
+    kind: Located<structure::NodeKind<S>>,
+    contents: ParentContents<S>,
 }
 
-impl<'src> ParentNode<'src> {
-    fn new(kind: structure::NodeKind<'src>, offsets: Range<usize>) -> Self {
+impl<'str, S: StringRef<'str>> ParentNode<S> {
+    fn new(kind: structure::NodeKind<S>, offsets: Range<usize>) -> Self {
         Self {
             kind: Located::new(kind, offsets),
             contents: ParentContents::Line(AttributeList::new()),
@@ -40,20 +41,20 @@ impl<'src> ParentNode<'src> {
 //     top_level_nodes: NodeList<'src>,
 // }
 
-pub(super) fn parse<'src>(
-    tokens: Vec<(lexer::Token<'src>, Range<usize>)>,
+pub(super) fn parse<'str, S: StringRef<'str>>(
+    tokens: Vec<(lexer::Token<S>, Range<usize>)>,
     context: &mut crate::parser::Context<'_>,
-) -> structure::Tree<'src> {
+) -> structure::Tree<S> {
     let mut contents = Vec::new();
 
     // NOTE: Currently, all nodes that are NOT the top of this stack are expected/guaranteed to be Blocks
-    let mut nodes = Vec::<ParentNode<'src>>::new();
+    let mut nodes = Vec::<ParentNode<S>>::new();
 
     for (tok, byte_offsets) in tokens.into_iter() {
         if let Some(parent_node) = nodes.last_mut() {
             match tok {
                 Token::Unknown(unknown) => {
-                    context.push_error_at(byte_offsets, format!("unexpected '{unknown}'"));
+                    context.push_error_at(byte_offsets, format!("unexpected '{}'", unknown.deref()));
                 }
                 Token::Semicolon => match &mut parent_node.contents {
                     ParentContents::Line(attributes) => {
@@ -176,12 +177,12 @@ pub(super) fn parse<'src>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cache::StringCache;
+    use crate::cache::StringArena;
     use crate::lexer;
 
     #[test]
     fn directive_test() {
-        let strings = StringCache::new();
+        let strings = StringArena::new();
         let tokens = lexer::tokenize(".example word;\n", &strings).unwrap();
         let mut errors = Vec::new();
         let output = parse(

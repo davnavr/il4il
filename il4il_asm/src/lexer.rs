@@ -1,26 +1,26 @@
 //! The IL4IL assembly lexer.
 
-use crate::cache::StringCache;
+use crate::cache::{StringCache, StringRef};
 use crate::input::{self, Input};
 use crate::location;
 use crate::syntax::literal;
 use std::fmt::Display;
-use std::ops::Range;
+use std::ops::{Deref, Range};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// The type of tokens used by the IL4IL assembler.
-pub enum Token<'cache> {
+pub enum Token<S: Deref<Target = str>> {
     OpenBracket,
     CloseBracket,
     Semicolon,
-    Directive(&'cache str),
-    Word(&'cache str),
-    Integer(literal::Integer<'cache>),
-    String(literal::String<'cache>),
-    Unknown(&'cache str),
+    Directive(S),
+    Word(S),
+    Integer(literal::Integer<S>),
+    String(literal::String<S>),
+    Unknown(S),
 }
 
-impl Display for Token<'_> {
+impl<'str, S: StringRef<'str>> Display for Token<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use std::fmt::Write;
 
@@ -159,13 +159,13 @@ impl Offsets {
 }
 
 #[derive(Clone, Debug)]
-pub struct Output<'cache> {
-    pub(crate) tokens: Vec<(Token<'cache>, Range<usize>)>,
+pub struct Output<S: Deref<Target = str>> {
+    pub(crate) tokens: Vec<(Token<S>, Range<usize>)>,
     pub(crate) offsets: Offsets,
 }
 
-impl<'cache> Output<'cache> {
-    pub fn tokens(&self) -> &[(Token<'cache>, Range<usize>)] {
+impl<'str, S: StringRef<'str>> Output<S> {
+    pub fn tokens(&self) -> &[(Token<S>, Range<usize>)] {
         &self.tokens
     }
 
@@ -234,15 +234,15 @@ impl<I: Input> Characters<I> {
     }
 }
 
-struct TokenBuilder<'cache> {
-    string_cache: &'cache StringCache<'cache>,
+struct TokenBuilder<'cache, 'str: 'cache, S: StringCache<'cache, 'str>> {
+    string_cache: &'cache S,
     previous_offset: usize,
-    tokens: Vec<(Token<'cache>, Range<usize>)>,
+    tokens: Vec<(Token<S::Ref>, Range<usize>)>,
     unknown_buffer: String,
 }
 
-impl<'cache> TokenBuilder<'cache> {
-    fn new(string_cache: &'cache StringCache<'cache>) -> Self {
+impl<'cache, 'str: 'cache, S: StringCache<'cache, 'str>> TokenBuilder<'cache, 'str, S> {
+    fn new(string_cache: &'cache S) -> Self {
         Self {
             string_cache,
             previous_offset: 0,
@@ -277,7 +277,7 @@ impl<'cache> TokenBuilder<'cache> {
         self.previous_offset += c.len_utf8();
     }
 
-    fn commit(&mut self, token: Token<'cache>, offset: usize) {
+    fn commit(&mut self, token: Token<S::Ref>, offset: usize) {
         self.commit_unknown();
         debug_assert!(offset >= self.previous_offset);
         self.tokens.push((token, self.previous_offset..offset));
@@ -290,10 +290,10 @@ impl<'cache> TokenBuilder<'cache> {
 /// # Examples
 ///
 /// ```
-/// use il4il_asm::cache::StringCache;
+/// use il4il_asm::cache::StringArena;
 /// use il4il_asm::lexer::{self, Token};
 ///
-/// let strings = StringCache::new();
+/// let strings = StringArena::new();
 ///
 /// assert_eq!(
 ///     lexer::tokenize(".section metadata {}", &strings).unwrap().tokens(),
@@ -305,12 +305,12 @@ impl<'cache> TokenBuilder<'cache> {
 ///     ]
 /// );
 /// ```
-pub fn tokenize<'cache, I: input::IntoInput>(
+pub fn tokenize<'cache, 'str: 'cache, I: input::IntoInput, S: StringCache<'cache, 'str>>(
     source: I,
-    string_cache: &'cache StringCache<'cache>,
-) -> Result<Output<'cache>, <I::Source as Input>::Error> {
+    string_cache: &'cache S,
+) -> Result<Output<S::Ref>, <I::Source as Input>::Error> {
     let mut input = Characters::new(source.into_input());
-    let mut tokens = TokenBuilder::new(string_cache);
+    let mut tokens = TokenBuilder::<'cache, 'str, S>::new(string_cache);
     let mut offsets = OffsetsBuilder::new();
     let mut buffer = String::new();
 
@@ -341,7 +341,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
                 }
 
                 if has_chars {
-                    tokens.commit(Token::Directive(string_cache.get_or_insert(&mut buffer)), input.offset());
+                    tokens.commit(Token::Directive(string_cache.get_or_store(&mut buffer)), input.offset());
                 } else {
                     tokens.push_unknown(c);
                 }
@@ -358,7 +358,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
 
                 if input.next_if(|c| c == '"')?.is_some() {
                     tokens.commit(
-                        Token::String(literal::String::new(string_cache.get_or_insert(&mut buffer))),
+                        Token::String(literal::String::new(string_cache.get_or_store(&mut buffer))),
                         input.offset(),
                     );
                 } else {
@@ -372,7 +372,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
                     buffer.push(l);
                 }
 
-                tokens.commit(Token::Word(string_cache.get_or_insert(&mut buffer)), input.offset())
+                tokens.commit(Token::Word(string_cache.get_or_store(&mut buffer)), input.offset())
             }
             '0'..='9' => {
                 let base = if c == '0' {
@@ -390,7 +390,7 @@ pub fn tokenize<'cache, I: input::IntoInput>(
                 }
 
                 tokens.commit(
-                    Token::Integer(literal::Integer::new(base, string_cache.get_or_insert(&mut buffer))),
+                    Token::Integer(literal::Integer::new(base, string_cache.get_or_store(&mut buffer))),
                     input.offset(),
                 )
             }
@@ -410,12 +410,13 @@ pub fn tokenize<'cache, I: input::IntoInput>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cache::StringArena;
     use crate::location;
     use crate::syntax::literal;
 
     #[test]
     fn simple_directive_produces_correct_output() {
-        let cache = StringCache::new();
+        let cache = StringArena::new();
         let output = tokenize("\n.section {\n}\n", &cache).unwrap();
 
         assert_eq!(
@@ -459,7 +460,7 @@ mod tests {
 
     #[test]
     fn lines_are_correct_for_input_with_newline_only() {
-        let cache = StringCache::new();
+        let cache = StringArena::new();
         assert_eq!(
             tokenize("\n", &cache).unwrap().offsets().lines(),
             &[Line::new(0..0, location::Number::new(1).unwrap()),]
@@ -468,7 +469,7 @@ mod tests {
 
     #[test]
     fn lines_are_correct_when_no_trailing_newline() {
-        let cache = StringCache::new();
+        let cache = StringArena::new();
         assert_eq!(
             tokenize("\n\n.section", &cache).unwrap().offsets().lines(),
             &[
@@ -481,7 +482,7 @@ mod tests {
 
     #[test]
     fn integer_literals_are_supported() {
-        let cache = StringCache::new();
+        let cache = StringArena::new();
         let output = tokenize("42 0XCAFE_BABE 0xFF 0b1001 0B0____0", &cache).unwrap();
 
         assert_eq!(
@@ -498,7 +499,7 @@ mod tests {
 
     #[test]
     fn string_literals_are_supported() {
-        let cache = StringCache::new();
+        let cache = StringArena::new();
         let output = tokenize(r#""" "a" "b\"c" "d\"" "e\n""#, &cache).unwrap();
 
         assert_eq!(

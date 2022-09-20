@@ -2,6 +2,12 @@
 
 use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen(start)]
+pub fn start() {
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
+}
+
 #[derive(Default)]
 #[wasm_bindgen]
 pub struct Errors {
@@ -19,44 +25,30 @@ impl Errors {
     }
 }
 
+/// Encapsulates all IL4IL playground state.
 #[derive(Default)]
-pub struct Assembler<'a> {
-    string_cache: il4il_asm::cache::StringCache<'a>,
-    module: il4il::module::Module<'a>,
-}
-
-impl<'a> Assembler<'a> {
-    pub fn assemble(&'a mut self, s: &str) -> Errors {
-        match il4il_asm::assemble(s, &self.string_cache) {
-            Ok(module) => {
-                self.module = module;
-                Default::default()
-            }
-            Err(errors) => Errors {
-                errors: errors.into_assembly_error(),
-            },
-        }
-    }
-}
-
-/// Encapsulates all IL4IL assembler state.
 #[wasm_bindgen]
 pub struct Playground {
-    assembler: Assembler<'static>,
+    strings: il4il_asm::cache::RcStringCache,
+    module: il4il::module::Module<'static>,
 }
 
 #[wasm_bindgen]
 impl Playground {
     pub fn new() -> Self {
-        Self {
-            assembler: Default::default(),
-        }
+        Default::default()
     }
 
     // TODO: Avoid string copying!
-    pub fn assemble(&mut self, s: &str) -> Errors {
-        // let e: &mut Assembler<'_> = unsafe { std::mem::transmute(&mut self.assembler) };
-        // e.assemble(s)
-        Default::default()
+    pub fn assemble(&mut self, input: &str) -> Errors {
+        match il4il_asm::assemble(input, &self.strings) {
+            Ok(module) => {
+                self.module = module;
+                Default::default()
+            }
+            Err(e) => Errors {
+                errors: e.into_assembly_error(),
+            },
+        }
     }
 }
