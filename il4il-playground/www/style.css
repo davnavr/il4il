@@ -26,6 +26,8 @@ main {
 
 #tabs-nav {
     height: 20px;
+    display: flex;
+    flex-direction: row;
 }
 
 #tabs-div {
@@ -44,6 +46,7 @@ main {
 }
 
 .tab-button {
+    flex: 1;
     height: 100%;
 }
 
