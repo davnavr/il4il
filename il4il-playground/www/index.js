@@ -1,5 +1,6 @@
 import * as playground from "il4il-playground"
 import * as codemirror from "codemirror"
+import {il4il} from "./mode-il4il"
 
 /**
  * @type {{ name: string; content: (tab: HTMLElement) => void }[]}
@@ -9,7 +10,7 @@ const TABS = [
         name: "IL4IL",
         content: (tab) => {
             const editor = new codemirror.EditorView({
-                extensions: [ codemirror.basicSetup ],
+                extensions: [ codemirror.basicSetup, il4il() ],
                 parent: tab,
                 doc: ".section metadata {\n  .name \"MyModule\";\n}\n",
             });

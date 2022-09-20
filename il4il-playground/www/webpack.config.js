@@ -11,6 +11,16 @@ module.exports = {
     experiments: {
         asyncWebAssembly: true,
     },
+    module: {
+        rules: [
+            {
+                test: /\.grammar$/,
+                use: {
+                    loader: path.resolve("./lezer-loader.js"),
+                },
+            }
+        ]
+    },
     plugins: [
         new CopyWebpackPlugin({
             patterns: [
