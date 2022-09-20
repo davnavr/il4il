@@ -27,6 +27,7 @@ const TABS = [
                 for (let i = 0; i < errors.count(); i++) {
                     console.error(errors.get(i));
                 }
+                console.log(state.to_debug_string());
             });
         },
     },

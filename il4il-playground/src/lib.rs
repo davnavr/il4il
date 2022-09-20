@@ -47,4 +47,8 @@ impl Playground {
             },
         }
     }
+
+    pub fn to_debug_string(&self) -> String {
+        format!("{:?}", self.module)
+    }
 }
