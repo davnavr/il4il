@@ -137,6 +137,9 @@ pub(super) fn parse<'str, S: StringRef<'str>>(
 
                     attributes.push(Located::new(structure::Attribute::String(s), byte_offsets));
                 }
+                Token::Directive(name) => {
+                    nodes.push(ParentNode::new(structure::NodeKind::Directive(name), byte_offsets));
+                }
                 _ => todo!("{:?}", tok),
             }
         } else {
