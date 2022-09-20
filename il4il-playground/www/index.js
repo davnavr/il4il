@@ -10,7 +10,8 @@ const TABS = [
         content: (tab) => {
             const editor = new codemirror.EditorView({
                 extensions: [ codemirror.basicSetup ],
-                parent: tab
+                parent: tab,
+                doc: ".section metadata {\n  .name \"MyModule\";\n}\n",
             });
         },
     },
