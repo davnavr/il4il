@@ -22,7 +22,8 @@ const LANGUAGE = language.LRLanguage.define({
 
 const COMPLETION = LANGUAGE.data.of({
     autocomplete: autocomplete.completeFromList([
-        { label: ".section", type: "keyword" }
+        { label: ".section", type: "keyword", info: "Declares a section within the module" },
+        { label: ".format", type: "keyword", info: "Declare the minimum format version of the module" },
     ])
 });
 
