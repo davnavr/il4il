@@ -1,42 +1,62 @@
 #![doc = include_str!("../README.md")]
 
 use wasm_bindgen::prelude::*;
-use std::rc::Rc;
 
 #[derive(Default)]
 #[wasm_bindgen]
-pub struct AssemblerErrors {
+pub struct Errors {
     errors: Vec<il4il_asm::error::Error>,
+}
+
+#[wasm_bindgen]
+impl Errors {
+    pub fn count(&self) -> usize {
+        self.errors.len()
+    }
+
+    pub fn get(&self, index: usize) -> String {
+        self.errors.get(index).map(|e| e.to_string()).unwrap_or_default()
+    }
+}
+
+#[derive(Default)]
+pub struct Assembler<'a> {
+    string_cache: il4il_asm::cache::StringCache<'a>,
+    module: il4il::module::Module<'a>,
+}
+
+impl<'a> Assembler<'a> {
+    pub fn assemble(&'a mut self, s: &str) -> Errors {
+        match il4il_asm::assemble(s, &self.string_cache) {
+            Ok(module) => {
+                self.module = module;
+                Default::default()
+            }
+            Err(errors) => Errors {
+                errors: errors.into_assembly_error(),
+            },
+        }
+    }
 }
 
 /// Encapsulates all IL4IL assembler state.
 #[wasm_bindgen]
 pub struct Playground {
-    string_cache: Rc<il4il_asm::cache::StringCache<'static>>,
-    module: Option<Rc<il4il::module::Module<'static>>>,
+    assembler: Assembler<'static>,
 }
 
 #[wasm_bindgen]
 impl Playground {
     pub fn new() -> Self {
         Self {
-            string_cache: Default::default(),
-            module: None,
+            assembler: Default::default(),
         }
     }
 
     // TODO: Avoid string copying!
-    pub fn assemble(&mut self, s: &str) -> AssemblerErrors {
-        match il4il_asm::assemble(s, &self.string_cache) {
-            Ok(module) => {
-                self.module = Some(Rc::new(module));
-                Default::default()
-            }
-            Err(errors) => {
-                AssemblerErrors {
-                    errors: errors.into_assembly_error(),
-                }
-            }
-        }
+    pub fn assemble(&mut self, s: &str) -> Errors {
+        // let e: &mut Assembler<'_> = unsafe { std::mem::transmute(&mut self.assembler) };
+        // e.assemble(s)
+        Default::default()
     }
 }

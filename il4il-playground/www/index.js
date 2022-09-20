@@ -14,6 +14,17 @@ const TABS = [
                 parent: tab,
                 doc: ".section metadata {\n  .name \"MyModule\";\n}\n",
             });
+
+            const state = playground.Playground.new();
+            const compile_button = document.getElementById("button-compile");
+
+            compile_button.addEventListener("click", () => {
+                let buffer = ""; // TODO: Avoid string duplication
+                for (const line of editor.state.doc) {
+                    buffer += line + '\n';
+                }
+                const errors = state.assemble(buffer);
+            });
         },
     },
     {
