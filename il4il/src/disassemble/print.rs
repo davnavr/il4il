@@ -334,6 +334,21 @@ impl<'a, 'b, P: Print> PrintContent<'a, 'b, P> {
         })
     }
 
+    pub fn list(&mut self) -> PrintList<'a, '_, P> {
+        PrintList {
+            helper: PrintHelper {
+                result: std::mem::replace(&mut self.0.result, Ok(())).and_then(|_| {
+                    self.0.printer.destination.print_str(" [")?;
+                    self.0.printer.print_new_line()?;
+                    self.0.printer.indent();
+                    Ok(())
+                }),
+                printer: self.0.printer,
+            },
+            has_items: false,
+        }
+    }
+
     pub fn finish(&mut self) -> Result {
         std::mem::replace(&mut self.0.result, Ok(()))?;
         self.0.printer.destination.print_char(';')?;
@@ -356,6 +371,45 @@ impl<'a, 'b, P: Print> PrintBlock<'a, 'b, P> {
         self.0.printer.print_new_line()?;
         self.0.printer.flush_indentation()?;
         self.0.printer.destination.print_char('}')
+    }
+}
+
+pub(super) struct PrintList<'a, 'b, P: Print> {
+    helper: PrintHelper<'a, 'b, P>,
+    has_items: bool,
+}
+
+impl<'a, 'b, P: Print> PrintList<'a, 'b, P> {
+    pub fn with_print<F: FnOnce(&mut P) -> Result>(&mut self, f: F) -> &mut Self {
+        self.helper.result = std::mem::replace(&mut self.helper.result, Ok(())).and_then(|_| {
+            if self.has_items {
+                self.helper.printer.destination.print_char(',')?;
+                self.helper.printer.print_new_line()?;
+                self.helper.printer.flush_indentation()?;
+            }
+            f(&mut self.helper.printer.destination)
+        });
+        self.has_items = true;
+        self
+    }
+
+    pub fn items_with_print<I: IntoIterator, F: FnMut(I::Item, &mut P) -> Result>(&mut self, items: I, mut f: F) -> &mut Self {
+        for item in items {
+            self.with_print(|p| f(item, p));
+        }
+        self
+    }
+
+    pub fn display_items<'t, T: std::fmt::Display + 't, I: IntoIterator<Item = &'t T>>(&mut self, items: I) -> &mut Self {
+        self.items_with_print(items, |item, p| p.print_fmt(format_args!("{item}")))
+    }
+
+    pub fn finish(&mut self) -> Result {
+        std::mem::replace(&mut self.helper.result, Ok(()))?;
+        self.helper.printer.dedent();
+        self.helper.printer.print_new_line()?;
+        self.helper.printer.flush_indentation()?;
+        self.helper.printer.destination.print_char(']')
     }
 }
 

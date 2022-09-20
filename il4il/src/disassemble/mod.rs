@@ -51,22 +51,21 @@ impl Disassemble for crate::module::section::Section<'_> {
     fn disassemble<P: Print>(&self, output: &mut Printer<P>) -> Result {
         use crate::module::section::SectionKind;
 
-        output
-            .print_directive("section")
-            .with_attributes(|a| {
-                a.print_display(match self.kind() {
-                    SectionKind::Metadata => "metadata",
-                    SectionKind::Symbol => "symbol",
-                    SectionKind::Type => "type",
-                    _ => "TODO",
-                })
+        let mut directive = output.print_directive("section");
+        let content = directive.with_attributes(|a| {
+            a.print_display(match self.kind() {
+                SectionKind::Metadata => "metadata",
+                SectionKind::Symbol => "symbol",
+                SectionKind::Type => "type",
+                _ => "TODO",
             })
-            .block()
-            .with_printer(|p| match self {
-                Self::Metadata(metadata) => disassemble_many(metadata.iter(), p),
-                _ => todo!(),
-            })
-            .finish()
+        });
+
+        match self {
+            Self::Metadata(metadata) => content.block().with_printer(|p| disassemble_many(metadata.iter(), p)).finish(),
+            Self::Type(types) => content.list().display_items(types.iter()).finish(),
+            _ => todo!(),
+        }
     }
 }
 
