@@ -1,0 +1,23 @@
+@top Root { node* }
+
+start { Word | Directive }
+
+attribute { Word | String | Integer }
+
+Block { "{" node* "}" }
+
+content { ";" | Block }
+
+node { start attribute* content }
+
+@tokens {
+    Word { $[a-zA-Z] $[a-zA-Z_0-9]+ }
+    Directive { "." $[a-zA-Z]+ }
+    String { '"' (!["\\] | "\\" _)* '"' }
+    Integer { ("0" (($[bB] $[01] $[01_]*)|($[xX] $[0-9a-fA-F] $[0-9a-fA-F_]*))) | $[0-9]+ }
+    space { $[ \t\n\r]+ }
+    "{" "}" ";"
+}
+
+@skip { space }
+@detectDelim

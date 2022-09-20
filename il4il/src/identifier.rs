@@ -106,6 +106,13 @@ impl Id {
         Ok(Self::new(std::str::from_utf8(bytes)?)?)
     }
 
+    pub fn from_cow(s: Cow<'_, str>) -> Result<Cow<'_, Id>, ParseError> {
+        Ok(match s {
+            Cow::Borrowed(borrowed) => Cow::Borrowed(Id::new(borrowed)?),
+            Cow::Owned(owned) => Cow::Owned(Identifier::from_string(owned)?),
+        })
+    }
+
     /// Converts a boxed identifier into a boxed string.
     #[must_use]
     pub fn into_boxed_str(self: Box<Id>) -> Box<str> {

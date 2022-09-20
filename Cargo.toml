@@ -6,5 +6,8 @@ members = [
     "il4il_loader",
     "il4il_vm",
     "il4il_c",
-    "il4il-run"
+    "il4il_asm",
+    "il4il-run",
+    "il4il-as",
+    "il4il-playground",
 ]
